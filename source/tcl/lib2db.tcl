@@ -3,13 +3,17 @@
 # created 17.11.2010 by Andreas Gruebl
 #
 
-set files [split [glob timing/*.lib] " "]
+set ICPRO_DIR                    [getenv "ICPRO_DIR"]
+set libname [getenv "LIB"]
+set block [getenv "BLOCK"]
+set RESULTS_DIR [getenv "RESULTS_DIR"]
 
-foreach file $files {
-	read_lib $file
-	set libname [lindex [split [lindex [split $file "/"] [expr [llength [split $file "/"]]-1]] "."] 0]
-	write_lib -output timing/${libname}.db $libname
-}
+set file $RESULTS_DIR/abstract/$libname/$block.lib
+set output $RESULTS_DIR/abstract/$libname/$block.db
+
+read_lib $file
+append block "_wc"
+write_lib -output $output $block
 
 exit
 
