@@ -18,6 +18,7 @@
                 </subStep>
             </cell>
         </step>
+        <!--
         <step class="rc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/rtl_compiler</stepBaseDir>
             <subStep name="compile">
@@ -26,6 +27,7 @@
                 <after>genLIB</after>
             </subStep>
         </step>
+        -->
 <!--
         <step class="encounter">
             <stepBaseDir>components/fg_miniasic/units/top/rtl2gds/encounter</stepBaseDir>
