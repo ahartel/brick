@@ -10,7 +10,7 @@ def options(opt):
 def configure(conf):
     # if the rundir is not set, create a unique rundir
     if (not conf.env.CURRENT_RUNDIR):
-        tempdir = tempfile.mkdtemp(dir='rundirs')
+        tempdir = tempfile.mkdtemp(dir='build')
         # save tempdir path to config environment
         conf.env.CURRENT_RUNDIR = conf.path.find_node(tempdir).abspath()
         # create results directory
@@ -62,8 +62,10 @@ def build(bld):
                 CURRENT_RUNDIR.make_node('results/abstract/'+libName).mkdir()
                 # create cds.lib in build directory
                 bld (
+                    rule = brick.createCdsLibFile,
                     name = libName+cellName+'createCdsLib',
-                    rule = "echo 'INCLUDE " + bld.env.ICPRO_DIR + '/' + cdsLibFile + "' > cds.lib",
+                    target = bld.path.make_node('build/cds.lib'),
+                    source = bld.path.find_node(cdsLibFile),
                 )
                 # which substeps to perform
                 substeps = cell.getElementsByTagName('subStep')
@@ -80,14 +82,17 @@ def build(bld):
                         os.environ['TECHLIB'] = techlib
                         os.environ['CELLBASEDIR'] = cellBaseDir
 
-                        INPUT = [bld.path.make_node(cellBaseDir+'/'+skillScript),bld.path.make_node(cellBaseDir+'/scripts/'+cellName+'.absgen.il')]
                         OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lef')
                         bld(
-                            name = libName+cellName+'genLEF',
-                            after = libName+cellName+'createCdsLib',
-                            rule   = 'abstract -hi -nogui -replay ' + bld.env.ICPRO_DIR + '/' + cellBaseDir + '/' + skillScript + ' -log ' + CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/abstract_' + cellName + '.log',
-                            source = INPUT,
-                            target = OUTPUT,
+                            rule   = brick.genLEF,
+                            source = [
+                                bld.path.make_node(cellBaseDir+'/'+skillScript),
+                                bld.path.make_node(cellBaseDir+'/scripts/'+cellName+'.absgen.il'),
+                            ],
+                            target = [
+                                OUTPUT,
+                                CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/abstract_' + cellName + '.log',
+                            ]
                         )
                     #
                     # genDB
@@ -96,13 +101,14 @@ def build(bld):
                         os.environ['LIB'] = libName
                         os.environ['BLOCK'] = cellName
 
-                        INPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lib')
+                        INPUT = CURRENT_RUNDIR.find_node('results/abstract/'+libName+'/'+cellName+'.lib')
                         OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.db')
                         bld(
-                            name = libName+cellName+'genLEF',
-                            after = libName+cellName+'createCdsLib',
-                            rule   = 'dc_shell-t -f ../source/tcl/lib2db.tcl',
-                            source = INPUT,
+                            rule   = brick.genDB,
+                            source = [
+                                CURRENT_RUNDIR.find_node('results/abstract/'+libName+'/'+cellName+'.lib'),
+                                bld.path.find_resource('source/tcl/lib2db.tcl'),
+                            ],
                             target = OUTPUT,
                         )
 
@@ -115,24 +121,27 @@ def build(bld):
 
                         # schematic2verilog
                         INPUT = bld.path.make_node(cdsLibPath + '/' + cellName + '/schematic/sch.oa')
-                        os.system('ls -l '+INPUT.abspath())
-                        OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v')
-                        os.system('ls -l '+OUTPUT.abspath())
                         bld(
-                            name = libName+cellName+'schematic2verilog',
-                            after = libName+cellName+'createCdsLib',
-                            rule = 'virtuoso -nograph -replay ../source/skill/schem2func.il -log ' + CURRENT_RUNDIR.make_node('logfiles').abspath() + '/abstract_' + cellName + '.genfunc.log && cp ' + bld.path.make_node(cdsLibPath).abspath() + '/' + cellName + '/functional/verilog.v ' + CURRENT_RUNDIR.abspath() + '/results/abstract/' + libName + '/' + cellName + '_functional.v',
-                            source = INPUT,
-                            target = OUTPUT,
+                            rule = brick.schematic2verilog,
+                            source = [
+                                INPUT,
+                                bld.path.find_resource('source/skill/schem2func.il'),
+                            ],
+                            target = [
+                                bld.path.make_node(cdsLibPath + '/' + cellName + '/functional/verilog.v'),
+                                CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v'),
+                                CURRENT_RUNDIR.make_node('logfiles' + '/abstract_' + cellName + '.genfunc.log'),
+                            ],
                         )
                         # verilog2lib
-                        INPUT = OUTPUT
+                        INPUT = CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v')
                         OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lib')
                         bld(
-                            name = libName+cellName+'verilog2lib',
-                            after = libName+cellName+'schematic2verilog',
-                            rule = '../source/perl/verilog2lib.pl ' + INPUT.abspath() + ' ' + OUTPUT.abspath(),
-                            source = INPUT,
+                            rule = brick.verilog2lib,
+                            source = [
+                                INPUT,
+                                bld.path.find_resource('source/perl/verilog2lib.pl'),
+                            ],
                             target = OUTPUT,
                         )
 
@@ -150,20 +159,19 @@ def build(bld):
             # iterate over substeps
             substeps = step.getElementsByTagName('subStep')
             for substep in substeps:
-                OUTPUT = CURRENT_RUNDIR.make_node('results/rtl_compiler/'+brick.getTextNodeValue(substep,'outputFile'))
                 substepName = substep.getAttribute('name').encode('ascii')
-                if (len(substep.getElementsByTagName('after')) > 0):
-                    afterName = brick.getTextNodeValue(substep,'after')
-                else:
-                    afterName = ''
                 TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-
+                OUTPUT = CURRENT_RUNDIR.make_node('results/rtl_compiler/'+brick.getTextNodeValue(substep,'outputFile'))
                 bld(
-                    name = 'compile',
-#                    after = afterName,
-                    rule   = 'rc -64 -f ' + bld.env.ICPRO_DIR + '/' + stepBaseDir + '/' + TCLscript + ' -logfile ' + CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/rtl_compiler.log',
-                    source = [stepBaseDir+'/'+TCLscript,],
-                    target =  OUTPUT,
+                    #rule   = 'rc -64 -f ' + bld.env.ICPRO_DIR + '/' + stepBaseDir + '/' + TCLscript + ' -logfile ' + CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/rtl_compiler.log',
+                    rule   = brick.rtl_compiler,
+                    source = [
+                        stepBaseDir+'/'+TCLscript,
+                    ],
+                    target = [
+                        OUTPUT,
+                        CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/rtl_compiler.log',
+                    ]
                 )
         #
         # encounter
