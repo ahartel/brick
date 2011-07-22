@@ -12,7 +12,29 @@
                 <subStep name="genLEF">
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
+                <!--
                 <subStep name="genDB">
+                </subStep>
+                -->
+                <subStep name="genLIB">
+                </subStep>
+            </cell>
+            <cell name="vdd_esd" lib="miniasic_esd">
+                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
+                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
+                <subStep name="genLEF">
+                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+            </cell>
+            <cell name="gnd_pad_2" lib="miniasic_esd">
+                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
+                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
+                <subStep name="genLEF">
+                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
@@ -26,21 +48,20 @@
                 <after>genLIB</after>
             </subStep>
         </step>
-<!--
+        <!--
         <step class="encounter">
-            <stepBaseDir>components/fg_miniasic/units/top/rtl2gds/encounter</stepBaseDir>
+            <stepBaseDir>components/mccfc/units/top/rtl2gds/encounter</stepBaseDir>
             <subStep name="bind">
                 <TCLscript>scripts/bind.tcl</TCLscript>
                 <outputFile>results/encounter/Top_pins_enc/Top_pins_bind.enc</outputFile>
-                <after>compile</after>
             </subStep>
             <subStep name="floorplan">
                 <TCLscript>scripts/floorplan.tcl</TCLscript>
-                <outputFile>results/encounter/Top_pins_enc/Top_pins_bind.enc</outputFile>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_floorplan.enc</outputFile>
                 <after>bind</after>
             </subStep>
         </step>
--->
+        -->
     </tasks>
 </brICk>
 

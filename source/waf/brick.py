@@ -13,6 +13,12 @@ def getTextNodeValue(tree,nodeName):
 # Tasks
 #
 
+def encounter(task):
+    TCLscript = task.inputs[0].abspath()
+    logFile = task.outputs[1].abspath()
+    cmd = 'encounter -init %s -nowin -overwrite -log %s' % (TCLscript,logFile)
+    return task.exec_command(cmd)
+
 def rtl_compiler(task):
     TCLscript = task.inputs[0].abspath()
     logFile = task.outputs[1].abspath()
@@ -31,8 +37,7 @@ def genDB(task):
 
 def createCdsLibFile(task):
     src = task.inputs[0].abspath()
-    tgt = task.outputs[0].abspath()
-    cmd = "echo 'INCLUDE %s' > %s" % (src,tgt)
+    cmd = "echo 'INCLUDE %s' >> cds.lib" % (src)
     return task.exec_command(cmd)
 
 def schematic2verilog(task):

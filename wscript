@@ -64,7 +64,6 @@ def build(bld):
                 bld (
                     rule = brick.createCdsLibFile,
                     name = libName+cellName+'createCdsLib',
-                    target = bld.path.make_node('build/cds.lib'),
                     source = bld.path.find_node(cdsLibFile),
                 )
                 # which substeps to perform
@@ -76,23 +75,24 @@ def build(bld):
                     #
                     if (substepName == 'genLEF'):
                         skillScript = brick.getTextNodeValue(substep,'skillScript')
-                        os.environ['LIB'] = libName
-                        os.environ['BLOCK'] = cellName
-                        os.environ['ANALIB'] = analib
-                        os.environ['TECHLIB'] = techlib
-                        os.environ['CELLBASEDIR'] = cellBaseDir
 
-                        OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lef')
+                        OUTPUT = [
+                            CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lef'),
+                            CURRENT_RUNDIR.make_node('logfiles/abstract_' + cellName + '.log'),
+                        ]
+                        INPUT = [
+                            bld.path.make_node(cellBaseDir+'/'+skillScript),
+                            bld.path.make_node(cellBaseDir+'/scripts/'+cellName+'.absgen.il'),
+                        ]
                         bld(
-                            rule   = brick.genLEF,
-                            source = [
-                                bld.path.make_node(cellBaseDir+'/'+skillScript),
-                                bld.path.make_node(cellBaseDir+'/scripts/'+cellName+'.absgen.il'),
-                            ],
-                            target = [
-                                OUTPUT,
-                                CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/abstract_' + cellName + '.log',
-                            ]
+                            # export some variables first, before running the abstract generation
+                            # since these variables are cell-specific, they have to be export for each task seperately
+                            rule = """
+                                export LIB=%s && export BLOCK=%s &&
+                                export ANALIB=%s && export TECHLIB=%s &&
+                                export CELLBASEDIR=%s && abstract -hi -nogui -replay %s -log %s""" % (libName,cellName,analib,techlib,cellBaseDir,INPUT[0].abspath(),OUTPUT[1].abspath()),
+                            source = INPUT,
+                            target = OUTPUT,
                         )
                     #
                     # genDB
@@ -120,28 +120,33 @@ def build(bld):
                         os.environ['BLOCK'] = cellName
 
                         # schematic2verilog
-                        INPUT = bld.path.make_node(cdsLibPath + '/' + cellName + '/schematic/sch.oa')
+                        INPUT = [
+                            bld.path.make_node(cdsLibPath + '/' + cellName + '/schematic/sch.oa'),
+                            bld.path.find_resource('source/skill/schem2func.il'),
+                        ]
+                        OUTPUT = [
+                            bld.path.make_node(cdsLibPath + '/' + cellName + '/functional/verilog.v'),
+                            CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v'),
+                            CURRENT_RUNDIR.make_node('logfiles' + '/abstract_' + cellName + '.genfunc.log'),
+                        ]
                         bld(
-                            rule = brick.schematic2verilog,
-                            source = [
-                                INPUT,
-                                bld.path.find_resource('source/skill/schem2func.il'),
-                            ],
-                            target = [
-                                bld.path.make_node(cdsLibPath + '/' + cellName + '/functional/verilog.v'),
-                                CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v'),
-                                CURRENT_RUNDIR.make_node('logfiles' + '/abstract_' + cellName + '.genfunc.log'),
-                            ],
+#                            rule = brick.schematic2verilog,
+                            rule = """
+                                export LIB=%s && export BLOCK=%s &&
+                                virtuoso -nograph -replay %s -log %s && cp %s %s""" % (libName,cellName,INPUT[1].abspath(),OUTPUT[2].abspath(),OUTPUT[0].abspath(),OUTPUT[1].abspath()),
+                            source = INPUT,
+                            target = OUTPUT,
                         )
+
                         # verilog2lib
-                        INPUT = CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v')
+                        INPUT = [
+                            CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v'),
+                            bld.path.find_resource('source/perl/verilog2lib.pl'),
+                        ]
                         OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lib')
                         bld(
                             rule = brick.verilog2lib,
-                            source = [
-                                INPUT,
-                                bld.path.find_resource('source/perl/verilog2lib.pl'),
-                            ],
+                            source = INPUT,
                             target = OUTPUT,
                         )
 
@@ -155,7 +160,7 @@ def build(bld):
             CURRENT_RUNDIR.make_node('results/rtl_compiler/reports').mkdir()
             # get base dir of this step and export it
             stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
-            os.environ['STEP_BASE_DIR'] = bld.env.ICPRO_DIR+'/'+stepBaseDir
+            os.environ['STEP_BASE_RC'] = bld.env.ICPRO_DIR+'/'+stepBaseDir
             # iterate over substeps
             substeps = step.getElementsByTagName('subStep')
             for substep in substeps:
@@ -182,22 +187,31 @@ def build(bld):
             # TODO: move dir to config
             CURRENT_RUNDIR.make_node('results/encounter/Top_pins_enc').mkdir()
             stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
+            # export the stepBaseDir
+            os.environ['STEP_BASE_ENC'] = bld.env.ICPRO_DIR+'/'+stepBaseDir
+            # list to hold substep results
+            results = {}
+            # iterate over substeps
             substeps = step.getElementsByTagName('subStep')
             for substep in substeps:
-                OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
                 substepName = substep.getAttribute('name').encode('ascii')
-                if (len(substep.getElementsByTagName('after')) > 0):
-                    afterName = brick.getTextNodeValue(substep,'after')
-                else:
-                    afterName = ''
                 TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                # declare list of source files
+                INPUT = []
+                # if this substep has a preceding substep, make this one dependend on its output
+                if (len(substep.getElementsByTagName('after')) > 0):
+                    INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+                INPUT.append(stepBaseDir+'/'+TCLscript)
 
+                OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
+                results[substepName] = OUTPUT
                 bld(
-                    name = substepName,
-                    after = afterName,
-                    rule = 'encounter -init '+ bld.env.ICPRO_DIR + '/units/top/rtl2gds/encounter/' + TCLscript + ' -nowin -log ' + bld.env.CURRENT_RUNDIR + '/logfiles/encounter_'+substepName+'.log',
-                    source = [stepBaseDir+'/'+TCLscript,],
-                    target = OUTPUT,
+                    rule = brick.encounter,
+                    source = INPUT,
+                    target = [
+                        OUTPUT,
+                        CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log')
+                    ]
                 )
 
 
