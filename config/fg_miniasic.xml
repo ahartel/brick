@@ -5,14 +5,14 @@
         <step class="abstract">
             <analib>UMC_18_CMOS</analib>
             <techlib>UMC_18_CMOS_FAR</techlib>
-            <cell name="digital_pad" lib="miniasic_esd">
+            <cell name="analog_IO" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
                 <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
                 <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
-                <!--
+        <!--
                 <subStep name="genDB">
                 </subStep>
                 -->
@@ -48,7 +48,6 @@
                 <after>genLIB</after>
             </subStep>
         </step>
-        <!--
         <step class="encounter">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/encounter</stepBaseDir>
             <subStep name="bind">
@@ -61,7 +60,6 @@
                 <after>bind</after>
             </subStep>
         </step>
-        -->
     </tasks>
 </brICk>
 

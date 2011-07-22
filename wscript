@@ -74,6 +74,9 @@ def build(bld):
                     # genLEF
                     #
                     if (substepName == 'genLEF'):
+                        bld.add_group('abstract_genLEF_'+cellName)
+                        bld.set_group('abstract_genLEF_'+cellName)
+
                         skillScript = brick.getTextNodeValue(substep,'skillScript')
 
                         OUTPUT = [
@@ -116,8 +119,7 @@ def build(bld):
                     # genLIB
                     #
                     if (substepName == 'genLIB'):
-                        os.environ['LIB'] = libName
-                        os.environ['BLOCK'] = cellName
+                        bld.set_group('abstract')
 
                         # schematic2verilog
                         INPUT = [
@@ -130,7 +132,6 @@ def build(bld):
                             CURRENT_RUNDIR.make_node('logfiles' + '/abstract_' + cellName + '.genfunc.log'),
                         ]
                         bld(
-#                            rule = brick.schematic2verilog,
                             rule = """
                                 export LIB=%s && export BLOCK=%s &&
                                 virtuoso -nograph -replay %s -log %s && cp %s %s""" % (libName,cellName,INPUT[1].abspath(),OUTPUT[2].abspath(),OUTPUT[0].abspath(),OUTPUT[1].abspath()),
@@ -168,7 +169,6 @@ def build(bld):
                 TCLscript = brick.getTextNodeValue(substep,'TCLscript')
                 OUTPUT = CURRENT_RUNDIR.make_node('results/rtl_compiler/'+brick.getTextNodeValue(substep,'outputFile'))
                 bld(
-                    #rule   = 'rc -64 -f ' + bld.env.ICPRO_DIR + '/' + stepBaseDir + '/' + TCLscript + ' -logfile ' + CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/rtl_compiler.log',
                     rule   = brick.rtl_compiler,
                     source = [
                         stepBaseDir+'/'+TCLscript,
@@ -199,9 +199,9 @@ def build(bld):
                 # declare list of source files
                 INPUT = []
                 # if this substep has a preceding substep, make this one dependend on its output
+                INPUT.append(stepBaseDir+'/'+TCLscript)
                 if (len(substep.getElementsByTagName('after')) > 0):
                     INPUT.append(results[brick.getTextNodeValue(substep,'after')])
-                INPUT.append(stepBaseDir+'/'+TCLscript)
 
                 OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
                 results[substepName] = OUTPUT
