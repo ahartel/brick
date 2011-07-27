@@ -175,7 +175,7 @@ def build(bld):
                     ],
                     target = [
                         OUTPUT,
-                        CURRENT_RUNDIR.make_node('logfiles/').abspath() + '/rtl_compiler.log',
+                        CURRENT_RUNDIR.make_node('logfiles/rtl_compiler.log'),
                     ]
                 )
         #
