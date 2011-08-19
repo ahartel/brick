@@ -25,7 +25,14 @@ def rtl_compiler(task):
     cmd = 'rc -64 -f %s -overwrite -logfile %s' % (TCLscript,logFile)
     return task.exec_command(cmd)
 
-def genLEF(task):
+def dc_shell(task):
+    TCLscript = task.inputs[0].abspath()
+    logFile = task.outputs[1].abspath()
+    cmd = 'dc_shell -f %s | tee %s 2>&1' % (TCLscript,logFile)
+    return task.exec_command(cmd)
+
+def genLEF(task,test):
+    print test
     mainSkillScript = task.inputs[0].abspath()
     logFile = task.outputs[1].abspath()
     cmd = 'abstract -hi -nogui -replay %s -log %s' % (mainSkillScript,logFile)
