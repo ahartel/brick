@@ -14,6 +14,8 @@
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
+                <subStep name="genDB">
+                </subStep>
             </cell>
             <cell name="fc_repeater_block_left" lib="fc_serial_l1">
                 <cellBaseDir>components/ncf-hicann-fc/units/fc_serial_l1/abstract</cellBaseDir>
@@ -23,6 +25,8 @@
                     <skillScript>scripts/fc_serial_l1.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
                 </subStep>
             </cell>
             <cell name="analog_IO" lib="miniasic_esd">
@@ -34,6 +38,8 @@
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
+                <subStep name="genDB">
+                </subStep>
             </cell>
             <cell name="vdd_esd" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
@@ -43,6 +49,8 @@
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
                 </subStep>
             </cell>
             <cell name="gnd_pad_2" lib="miniasic_esd">
@@ -54,6 +62,8 @@
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
+                <subStep name="genDB">
+                </subStep>
             </cell>
             <cell name="digital_pad" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
@@ -64,12 +74,36 @@
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
+                <subStep name="genDB">
+                </subStep>
+            </cell>
+            <cell name="digital_out" lib="miniasic_esd">
+                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
+                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
+                <subStep name="genLEF">
+                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
             </cell>
         </step>
+        <!--
         <step class="rc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/rtl_compiler</stepBaseDir>
             <subStep name="compile">
                 <TCLscript>scripts/Top_pins.rtl.tcl</TCLscript>
+                <outputFile>Top_pins.v</outputFile>
+                <after>genLIB</after>
+            </subStep>
+        </step>
+        -->
+        <step class="dc">
+            <stepBaseDir>components/mccfc/units/top/rtl2gds/dc_shell</stepBaseDir>
+            <subStep name="compile">
+                <TCLscript>scripts/Top_pins.dc.tcl</TCLscript>
                 <outputFile>Top_pins.v</outputFile>
                 <after>genLIB</after>
             </subStep>
@@ -85,7 +119,211 @@
                 <outputFile>results/encounter/Top_pins_enc/Top_pins_floorplan.enc</outputFile>
                 <after>bind</after>
             </subStep>
+            <subStep name="place">
+                <TCLscript>scripts/place.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_place.enc</outputFile>
+                <after>floorplan</after>
+            </subStep>
         </step>
     </tasks>
+    <tests>
+        <sources>
+            <group name="testbench">
+                components/mccfc/units/top/source/tb/tb_top.sv,
+                <!--
+                components/mccfc/units/top/source/tb/jtag_test_prog.sv,
+                -->
+            </group>
+            <group name="toplevel">
+                components/mccfc/units/top/source/rtl/Top.sv,
+                components/mccfc/units/top/source/rtl/Top_pins.sv,
+                components/mccfc/units/top/source/rtl/padring.sv,
+                components/mccfc/units/top/source/rtl/l1_if.sv,
+                components/mccfc/units/top/source/rtl/top_pin_analog_if.sv,
+            </group>
+            <group name="hicannCtrl">
+                components/ncf-hicann/units/hicann_top/source/hicann_pkg.sv,
+                components/ncf-hicann/units/hicann_top/source/ocp.svh,
+                components/ncf-hicann/units/hicann_top/source/chipctrl.sv,
+                components/ncf-hicann/units/hicann_top/source/clockgen.sv,
+                components/ncf-hicann/units/hicann_top/source/linktagid.sv,
+                components/ncf-hicann/units/hicann_top/source/linktagid_pipe.sv,
+                components/ncf-hicann/units/hicann_top/source/tagidfifo.sv,
+                components/ncf-hicann/units/hicann_top/source/smfifoadapter.sv,
+                components/ncf-hicann/units/hicann_top/source/fifoadaptermux.sv,
+                components/ncf-hicann/units/hicann_top/source/hicannbus.sv,
+                components/ncf-hicann/units/hicann_top/source/busmux1.sv,
+                components/ncf-hicann/units/hicann_top/source/busmux2.sv,
+                components/ncf-hicann/units/hicann_top/source/busmux4.sv,
+                components/ncf-hicann/units/hicann_top/source/busmux8.sv,
+                components/ncf-hicann/units/hicann_top/source/l1switchctrl.sv,
+                components/ncf-hicann/units/hicann_top/source/repeaterctrl.sv,
+                components/ncf-hicann/units/hicann_top/source/neuronctrl.sv,
+                components/ncf-hicann/units/hicann_top/source/neuronbuilder.sv,
+                components/ncf-hicann/units/hicann_top/source/sramctrl.sv,
+                components/ncf-hicann/units/hicann_top/source/wsl1_repeater_wrap.v,
+                components/ncf-hicann/units/hicann_top/source/wsl1_repeater_spl1_wrap.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/systemverilog/jtag_hicann.sv,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/jtag_to_hicann_sync.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/hicann_to_jtag_sync.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/feedback_sync2.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/hold_reg_clk_fast.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/data_reg_clk_slow.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/jtag_tap_fsm.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/tdo_switch.v,
+                components/ncf-hicann/units/jtag_top/source/rtl/verilog/custom_test_logic_hicann.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/dncif_cfg_ctrl.sv,
+                components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/dnc_if_config.sv,
+                components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/dnc_if.sv,
+                components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/dnc_rx_ocp_gen.sv,
+                components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/dnc_tx_ocp_gen.sv,
+                components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/spl1_config.sv,
+                components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/spl1.sv,
+                components/ncf-hicann/units/stdp_v2/source/stdp_v2_pkg.sv,
+                components/ncf-hicann/units/stdp_v2/source/slice_ctrl.sv,
+                components/ncf-hicann/units/stdp_v2/source/weight_update.sv,
+                components/ncf-hicann/units/stdp_v2/source/auto_update.sv,
+                components/ncf-hicann/units/stdp_v2/source/syndrv_trans.sv,
+                components/ncf-hicann/units/stdp_v2/source/stdpctrl2.sv,
+                components/ncf-hicann/units/fgateCtrl/source/FG_RAM.sv,
+                components/ncf-hicann/units/fgateCtrl/source/fgateCtrlSlave.sv,
+                components/ncf-hicann/units/fgateCtrl/source/fgateCtrl.sv,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_rx_data.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/dc_bal_mux.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/dec_lut_6b5b.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/link_sts_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/dec_10_8_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/dec_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_tx_data.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_rst_set.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_reset_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/data_test_mux.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/crc_unit.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/decoder_10_8.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/enc_lut_5b6b.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_rx_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_sts.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/link_init.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/enc_lut_3b4b.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/proto_link_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_data.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/link_control.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/enc_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/enc_10_8_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/coding_10_8_unit.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/link_rx_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/dec_lut_4b3b.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/hicann_link_ctrl_top.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/crc_vector.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/link_tx_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_rst_tx.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/hicann_link_channel.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/crc_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_rx_cmd.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_ctrl.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/encoder_10_8.v,
+                components/ncf-hicann/units/link_ctrl_top/source/rtl/verilog/protocol_tx_ctrl.v,
+                components/ncf-hicann/units/async_fifo/source/rtl/verilog/async_fifo.v,
+                components/ncf-hicann/units/async_fifo/source/rtl/verilog/fifomem.v,
+                components/ncf-hicann/units/async_fifo/source/rtl/verilog/rptr_empty_ctrl.v,
+                components/ncf-hicann/units/async_fifo/source/rtl/verilog/sync_r2w.v,
+                components/ncf-hicann/units/async_fifo/source/rtl/verilog/sync_w2r.v,
+                components/ncf-hicann/units/async_fifo/source/rtl/verilog/wptr_full_ctrl.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/l1tol2_if.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/fifomem_sync.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/l1ev_ctrl.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/l1ev_gen.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/l2ev_tx_ctrl.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/rptr_empty_ctrl_sync.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/sync_fifo_l1.v,
+                components/ncf-hicann/units/l1tol2_if/source/rtl/verilog/wptr_full_ctrl_sync.v,
+                components/ncf-hicann/units/l2tol1_if/source/rtl/verilog/l2tol1_if.v,
+                components/ncf-hicann/units/l2tol1_if/source/rtl/verilog/l1event_ctrl.v,
+                components/ncf-hicann/units/l2tol1_if/source/rtl/verilog/l2packet_ctrl.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/no_x_gen.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/dnc_if_control.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/dnc_tx_packet_control.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/feedback_sync_2ocp.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/hicann_half_speed_sync.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/test_ctrl_top.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/hicann_systime_count.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/hicann_reset_syn.v,
+                components/ncf-hicann/units/dnc_if/source/rtl/verilog/linkclk2fclk_sync.v,
+            </group>
+            <group name="arq">
+                components/ncf-hicann/units/arq/source/rtl/vhdl/toolkit.vhd,
+                components/ncf-hicann/units/arq/source/rtl/vhdl/packet_tinypacket.vhd,
+                components/ncf-hicann/units/arq/source/rtl/vhdl/arq.vhd,
+                components/ncf-hicann/units/arq/source/rtl/vhdl/packet_buffer_vlsi.vhd,
+                components/ncf-hicann/units/arq/source/rtl/vhdl/duplex_tinypacket.vhd,
+                components/ncf-hicann/units/arq/source/rtl/vhdl/arqtop.vhd,
+            </group>
+        </sources>
+        <searchpaths>
+            components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/,
+            components/ncf-hicann/units/dnc_if/source/rtl/verilog/,
+            components/ncf-hicann/units/arq/source/rtl/vhdl/,
+            components/ncf-hicann/units/hicann_top/source/,
+            components/mccfc/units/top/source/tb/,
+            components/mccfc/units/top/source/rtl/,
+            components/ncf-hicann/units/fgateCtrl/source/,
+        </searchpaths>
+        <testcases>
+            <testcase name="top_rtl_tc0">
+                <sources name="rtl">testbench,toplevel,hicannCtrl,arq</sources>
+                <!--
+                <sources name="systemC">systemc</sources>
+                -->
+                <!--
+    conf.env['VERILOG_SEARCH_PATHS'] = [
+        '-INCDIR',os.environ['ICPRO_DIR']+'/units/sramctrl/source/rtl/',
+        '-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/rtl/',
+        '-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/tb/classes/',
+        '-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/tb/',
+        '-INCDIR',os.environ['ICPRO_DIR']+'/units/s2pp/source/tc65nm/',
+				'-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/tb/',
+    ]
+    conf.env['DC_SHELL_OPTIONS']     = ['-f', conf.env['TESTENV_PATH']+'/compile_netlists.tcl', '-x', '"set CHIPROOT '+os.environ['ICPRO_DIR']+'"']
+    conf.env['SIMULATION_TOPLEVEL'] = 'worklib.Tb_top:module'
+    -->
+                <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCVHDL" mode="rtl">-v93,-smartorder</option>
+                <option tool="NCVHDL" mode="mixed-signal">-v93,-smartorder</option>
+                <option tool="NCVLOG_SV" mode="rtl">-use5x,-errormax,1,-64bit,-linedebug,-sv,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG_SV" mode="mixed-signal">-use5x,-errormax,1,-64bit,-linedebug,-sv,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCVLOG_VAMS" mode="rtl">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG_VAMS" mode="mixed-signal">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCELAB_OPTIONS" mode="rtl">
+                    -NO_TCHK_XGEN', -notimingchecks,
+                    -access, +rwc,
+                    -timescale, 1ns/10ps,
+                    -maxdelays,-64bit,
+                </option>
+                <option tool="NCELAB_OPTIONS" mode="mixed-signal">
+                    -NO_TCHK_XGEN', -notimingchecks,
+                    -access, +rwc,
+                    -timescale, 1ns/10ps,
+                    -maxdelays,-64bit,
+                    cds_globals,
+                    -modelpath,"/cad/libs/tsmc/oa/models/include.scs(ttall)",
+                    -discipline,logic,
+                    -amsconnrules, ConnRules_12V_full_fast, ConnRules_12V_full_fast, -iereport,
+                    -amsfastspice,
+                    <!--
+        #            '-disres', 'detailed',
+        #        '-libverbose',
+        -->
+                </option>
+                <option tool="NSIM_OPTIONS" mode="mixed-signal">
+                    -licqueue, -gui, -MESSAGES, -64bit
+                </option>
+                <option tool="NSIM_OPTIONS" mode="mixed-signal">
+                    -licqueue, -gui, -MESSAGES, -64bit,
+                    -analogControl, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs
+                </option>
+             </testcase>
+        </testcases>
+    </tests>
 </brICk>
 
