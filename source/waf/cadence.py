@@ -3,6 +3,14 @@ import time
 import re
 import os
 
+def configure(conf):
+    # this is a hack, because, when using ${CURRENT_RUNDIR} directly inside
+    # the rule definition of the TaskChains, the concatenation with the
+    # logfile name introduces a space between them
+    conf.env.NCVLOG_SV_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncvlog_sv.log'
+    conf.env.NCVHDL_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncvhdl.log'
+    conf.env.NCVLOG_VAMS_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncvlog_vams.log'
+    conf.env.NSDFC_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncsdfc.log'
 
 def load_modules(conf):
     p = subprocess.Popen('module purge && module load umc/u18_13 cds/613 ius/82 mmsim/72 syn/2010.03-SP4 && export -p', shell=True, stdout=subprocess.PIPE)
@@ -68,7 +76,7 @@ def verilog_scanner(task):
 from waflib import TaskGen
 TaskGen.declare_chain(
         name         = 'ncvlog sv',
-        rule         = 'ncvlog -logfile logfiles/ncvlog.log ${NCVLOG_SV_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC}',
+        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC}',
         ext_in       = ['.v', '.sv', '.lib.src', '.vp', '.svh'],
         reentrant    = False,
         scan         = verilog_scanner
@@ -76,21 +84,21 @@ TaskGen.declare_chain(
 
 TaskGen.declare_chain(
         name         = 'ncvhdl',
-        rule         = 'ncvhdl -64bit -logfile ncvhdl.log ${NCVHDL_OPTIONS} ${SRC}',
+        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} ${SRC}',
         ext_in       = ['.vhd'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
         name         = 'ncvlog vams',
-        rule         = 'ncvlog -logfile logfiles/ncvlog.log ${NCVLOG_VAMS_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC}',
+        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE} ${NCVLOG_VAMS_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC}',
         ext_in       = ['.vams'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
         name         = 'ncsdfc',
-        rule         = 'ncsdfc -logfile logfiles/ncsdfc.log ${NCSDFC_OPTIONS} ${SRC}',
+        rule         = 'ncsdfc -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC}',
         ext_in       = ['.sdf','.sdf.gz'],
         reentrant    = False,
 )

@@ -1,0 +1,13 @@
+-- from PDKs tools section: artist
+DEFINE analogLib        $CDSHOME/tools/dfII/etc/cdslib/artist/analogLib
+DEFINE basic            $CDSHOME/tools/dfII/etc/cdslib/basic
+DEFINE cdsDefTechLib    $CDSHOME/tools/dfII/etc/cdsDefTechLib
+
+-- from PDKs tools section: ius
+DEFINE connectLib       $IUS_DIR/tools/affirma_ams/etc/connect_lib/connectLib
+ASSIGN connectLib  TMP  $ICPRO_DIR/tmp/cds/connectLibTMP
+DEFINE ieee             $IUS_DIR/tools/inca/files/IEEE
+DEFINE std              $IUS_DIR/tools/inca/files/STD
+DEFINE synopsys         $IUS_DIR/tools/inca/files/SYNOPSYS
+
+
