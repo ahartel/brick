@@ -130,10 +130,72 @@
         <sources>
             <group name="testbench">
                 components/mccfc/units/top/source/tb/tb_top.sv,
-                <!--
-                components/mccfc/units/top/source/tb/jtag_test_prog.sv,
-                -->
+                components/ncf-hicann/units/verification_control/source/behavioral/systemc/verification_control.v,
+                components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_model.v,
+                components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_control.v
             </group>
+            <group name="testbenchC">
+                components/hicann-system/units/stage2_hal/source/s2_types.cpp,
+                components/hicann-system/units/stage2_hal/source/s2comm.cpp,
+                components/hicann-system/units/stage2_hal/source/s2c_tcpip.cpp,
+                components/hicann-system/units/stage2_hal/source/s2c_jtagphys.cpp,
+                components/hicann-system/units/stage2_hal/source/s2c_jtagphys_fpga.cpp,
+                components/hicann-system/units/stage2_hal/source/s2c_jtagphys_full.cpp,
+                components/hicann-system/units/stage2_hal/source/s2c_jtagphys_2fpga.cpp,
+                components/hicann-system/units/stage2_hal/source/ctrlmod.cpp,
+                components/hicann-system/units/stage2_hal/source/synapse_control.cpp,
+                components/hicann-system/units/stage2_hal/source/l1switch_control.cpp,
+                components/hicann-system/units/stage2_hal/source/spl1_control.cpp,
+                components/hicann-system/units/stage2_hal/source/fg_control.cpp,
+                components/hicann-system/units/stage2_hal/source/s2ctrl.cpp,
+                components/hicann-system/units/stage2_hal/source/hicann_ctrl.cpp,
+                components/hicann-system/units/stage2_hal/source/neuronbuilder_control.cpp,
+                components/hicann-system/units/stage2_hal/source/neuron_control.cpp,
+                components/hicann-system/units/stage2_hal/source/fpga_control.cpp,
+                components/hicann-system/units/stage2_hal/source/dnc_control.cpp,
+                components/hicann-system/units/stage2_hal/source/syn_trans.cpp,
+                components/hicann-system/units/jtag_lib/source/jtag_cmdbase.cpp,
+                components/hicann-system/units/stage2_conf/source/stage2_conf.cpp,
+                components/hicann-system/units/stage2_hal/source/repeater_control.cpp,
+                components/hicann-system/units/hicann_test/source/tmag_fpga_i2c.cpp,
+                components/hicann-system/units/hicann_test/source/tmag_p_plltest_multi.cpp,
+                components/hicann-system/units/hicann_test/source/tmag_switchramtest.cpp,
+                components/hicann-system/units/hicann_test/source/tmjs_repeater.cpp,
+                components/hicann-system/units/hicann_test/source/tmsubm2_repeater.cpp,
+                components/hicann-system/units/hicann_test/source/tmjs_stdpctrl.cpp,
+                components/hicann-system/units/hicann_test/source/tmsm_stdpctrl.cpp,
+                components/hicann-system/units/hicann_test/source/tmjs_neuronmem.cpp,
+                components/hicann-system/units/hicann_test/source/tmsubm2_neuronmem.cpp,
+                components/hicann-system/units/hicann_test/source/tmsubm2_stdpctrl.cpp,
+                components/hicann-system/units/hicann_test/source/tm_fgzero.cpp,
+                components/hicann-system/units/hicann_test/source/tm_singleneuron.cpp,
+                components/hicann-system/units/hicann_test/source/tm_fgkeithley.cpp,
+                components/hicann-system/units/hicann_test/source/tm_fgrowinc.cpp,
+                components/hicann-system/units/hicann_test/source/tmsm_neuronout.cpp,
+                components/hicann-system/units/hicann_test/source/tmsm_fg.cpp,
+                components/hicann-system/units/hicann_test/source/tmsm_fgfunctional.cpp,
+                components/hicann-system/units/hicann_test/source/tmsm_neuronsynin.cpp,
+                components/hicann-system/units/hicann_test/source/tm_spl1.cpp,
+                components/hicann-system/units/hicann_test/source/tmag_hcinit.cpp,
+                components/hicann-system/units/hicann_test/source/tm_fgkeithleymean.cpp,
+                components/hicann-system/units/hicann_test/source/tm_l2init.cpp,
+                components/hicann-system/units/hicann_test/source/tm_iboardv2.cpp,
+                components/hicann-system/units/hicann_test/source/tmag_l2onrep.cpp,
+                components/hicann-system/units/hicann_test/source/tm_neuron.cpp,
+                components/hicann-system/units/hicann_test/source/tm_neuronctrl.cpp,
+                components/hicann-system/units/hicann_test/source/tm_neuronctrlv2.cpp,
+                components/hicann-system/units/hicann_test/source/tm_empty.cpp,
+                components/hicann-system/units/hicann_test/source/tmsf_stdpctrl.cpp,
+                components/symap2ic/src/logging/logger.cpp,
+                components/ncf-hicann/units/verification_control/source/behavioral/systemc/verification_control.cpp,
+                components/hicann-system/units/stage2_hal/source/s2c_dncif.cpp,
+                components/hicann-system/units/stage2_hal/source/s2c_jtag.cpp,
+                components/hicann-system/units/arq/source/timer.cpp,
+                components/hicann-system/units/arq/source/nullstream.cpp,
+                components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/testcase.cpp
+            </group>
+            <!--
+            -->
             <group name="toplevel">
                 components/mccfc/units/top/source/rtl/Top.sv,
                 components/mccfc/units/top/source/rtl/Top_pins.sv,
@@ -260,6 +322,7 @@
             </group>
         </sources>
         <searchpaths>
+            components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/,
             components/ncf-hicann/units/dnc_if/source/rtl/systemverilog/,
             components/ncf-hicann/units/dnc_if/source/rtl/verilog/,
             components/ncf-hicann/units/arq/source/rtl/vhdl/,
@@ -267,13 +330,23 @@
             components/mccfc/units/top/source/tb/,
             components/mccfc/units/top/source/rtl/,
             components/ncf-hicann/units/fgateCtrl/source/,
+            components/ncf-hicann/units/verification_control/source/behavioral/systemc,
+            components/ncf-hicann/units/hicann_top/genheader,
+            components/symap2ic/src/logging/,
+            components/hicann-system/global_src/systemc,
+            components/hicann-system/units/stage2_hal/source,
+            components/hicann-system/units/stage2_conf/source/,
+            components/hicann-system/units/hicann_test/source/,
+            components/hicann-system/units/measure/source/,
+            components/hicann-system/units/jtag_lib/source/,
+            components/hicann-system/units/arq/source,
+            /usr/local/boost_1.40/include/,
+            /usr/local/xerces_310/include/
         </searchpaths>
         <testcases>
             <testcase name="top_rtl_tc0">
                 <sources name="rtl">testbench,toplevel,hicannCtrl,arq</sources>
-                <!--
-                <sources name="systemC">systemc</sources>
-                -->
+                <sources name="systemC">testbenchC</sources>
                 <!--
     conf.env['VERILOG_SEARCH_PATHS'] = [
         '-INCDIR',os.environ['ICPRO_DIR']+'/units/sramctrl/source/rtl/',
@@ -294,14 +367,16 @@
                 <option tool="NCVLOG_SV" mode="mixed-signal">-use5x,-errormax,1,-64bit,-linedebug,-sv,-DEFINE,NCSIM_MIXED</option>
                 <option tool="NCVLOG_VAMS" mode="rtl">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM</option>
                 <option tool="NCVLOG_VAMS" mode="mixed-signal">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM_MIXED</option>
-                <option tool="NCELAB_OPTIONS" mode="rtl">
-                    -NO_TCHK_XGEN', -notimingchecks,
+                <option tool="NCELAB" mode="rtl">
+                    tb_top,
+                    -NO_TCHK_XGEN, -notimingchecks,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
                     -maxdelays,-64bit,
                 </option>
-                <option tool="NCELAB_OPTIONS" mode="mixed-signal">
-                    -NO_TCHK_XGEN', -notimingchecks,
+                <option tool="NCELAB" mode="mixed-signal">
+                    tb_top,
+                    -NO_TCHK_XGEN, -notimingchecks,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
                     -maxdelays,-64bit,
@@ -315,13 +390,17 @@
         #        '-libverbose',
         -->
                 </option>
-                <option tool="NSIM_OPTIONS" mode="mixed-signal">
+                <option tool="NCSIM" mode="mixed-signal">
+                    tb_top,
                     -licqueue, -gui, -MESSAGES, -64bit
                 </option>
-                <option tool="NSIM_OPTIONS" mode="mixed-signal">
+                <option tool="NCSIM" mode="mixed-signal">
+                    tb_top,
                     -licqueue, -gui, -MESSAGES, -64bit,
                     -analogControl, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs
                 </option>
+                <option tool="CXXFLAGS" mode="rtl">-DNCSIM,-DUSE_SCTYPES</option>
+                <option tool="CXXFLAGS" mode="mixed-signal">-DNCSIM,-DUSE_SCTYPES</option>
              </testcase>
         </testcases>
     </tests>
