@@ -33,6 +33,15 @@ def configure(conf):
     # save ICPRO_DIR path to config environment
     conf.env.ICPRO_DIR = os.environ['ICPRO_DIR']
 
+    # store configuration file
+    conf.env.CONFIGFILE = conf.options.configfile
+
+    # load project name from configuration
+    xmlconfig = minidom.parse(conf.env.CONFIGFILE) # parse an XML file by name
+    conf.env.PROJECTNAME = brick.getTextNodeValue(xmlconfig,'projectShortName')
+    conf.start_msg("Successfully read XML config file for")
+    conf.end_msg(conf.env.PROJECTNAME)
+
     # which mode to run in?
     conf.env.MODE = conf.options.mode
     if (conf.options.mode == 'functional'):
@@ -63,14 +72,104 @@ def configure(conf):
         conf.env.INCLUDES_BOOST = ['/usr/local/boost_1.40/include']
         conf.env.LIB_BOOST = ['rt']
 
-    # store configuration file
-    conf.env.CONFIGFILE = conf.options.configfile
+        #
+        # Read source file groups
+        #
+        sources = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('sources')[0].getElementsByTagName('group')
+        testcases = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('testcases')
 
-    # load project name from configuration
-    xmlconfig = minidom.parse(conf.env.CONFIGFILE) # parse an XML file by name
-    conf.env.PROJECTNAME = brick.getTextNodeValue(xmlconfig,'projectShortName')
-    conf.start_msg("Successfully read XML config file for")
-    conf.end_msg(conf.env.PROJECTNAME)
+        groups = {}
+        for group in sources:
+            # get group name
+            groupName = group.getAttribute('name').encode('ascii')
+            groups[groupName] = []
+            # get filenames, split them, and remove spaces and line breaks
+            filenames = brick.getText(group.childNodes).encode('ascii')
+            filenames = filenames.replace(" ","")
+            filenames = filenames.replace("\n","")
+            filenames = filenames.split(",")
+            # append filenames to group's file list
+            groups[groupName].extend(filenames)
+            # if there was a trailing comma in the string, the last entry will
+            # be empty, remove it
+            if (len(groups[groupName][len(groups[groupName])-1]) == 0):
+                groups[groupName].pop()
+
+        #
+        # combine source file groups and generate tasks
+        #
+        conf.env.VERILOG_SOURCES = []
+        conf.env.SYSTEMC_SOURCES = []
+        conf.env.CXXFLAGS = []
+        for testcase in testcases:
+            testsources = testcase.getElementsByTagName('sources')
+            for source in testsources:
+                sourceName = source.getAttribute('name').encode('ascii')
+                # get group names, split them, and remove spaces and line breaks
+                groupnames = brick.getText(source.childNodes).encode('ascii')
+                groupnames = groupnames.replace(" ","")
+                groupnames = groupnames.replace("\n","")
+                groupnames = groupnames.split(",")
+                if (sourceName == 'rtl'):
+                    for group in groupnames:
+                        conf.env.VERILOG_SOURCES.extend(groups[group])
+                elif (sourceName == 'systemC'):
+                    for group in groupnames:
+                        conf.env.SYSTEMC_SOURCES.extend(groups[group])
+            # assemble simulation tool options and save to waf environment
+            testoptions = testcase.getElementsByTagName('option')
+            for option in testoptions:
+                optionName = option.getAttribute('tool').encode('ascii')
+                optionMode = option.getAttribute('mode').encode('ascii')
+                # get options, split them, and remove spaces and line breaks
+                optionContent = brick.getText(option.childNodes).encode('ascii')
+                optionContent = optionContent.replace(" ","")
+                optionContent = optionContent.replace("\n","")
+                if (conf.env.MIXED_SIGNAL == True):
+                    if (optionMode == 'mixed-signal'):
+                        if (optionName == 'CXXFLAGS'):
+                            conf.env.CXXFLAGS = optionContent.split(",")
+                        else:
+                            conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+                else:
+                    if (optionMode == 'rtl'):
+                        if (optionName == 'CXXFLAGS'):
+                            conf.env.CXXFLAGS = optionContent.split(",")
+                        else:
+                            conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+
+            print conf.env.NCSIM_OPTIONS
+
+            # set verilog search paths
+            # get string from XML tree
+            searchpaths = brick.getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
+            # remove spaces and line breaks
+            searchpaths = searchpaths.replace(" ","")
+            searchpaths = searchpaths.replace("\n","")
+            # split the string to make it a list
+            searchpaths = searchpaths.split(',')
+            # if there was a trailing comma in the string, the last entry will
+            # be empty, remove it
+            if (len(searchpaths[len(searchpaths)-1]) == 0):
+                searchpaths.pop()
+
+            conf.env['VERILOG_SEARCH_PATHS'] = []
+            pattern = re.compile("^\/")
+            for path in searchpaths:
+                # is this path an absolute path?
+                if pattern.match(path):
+                    conf.env.INCLUDES_SYSTEMC.append(path)
+                    # put an '-INCDIR' in front of every entry (cadence syntax)
+                    conf.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
+                    conf.env['VERILOG_SEARCH_PATHS'].append(path)
+                # or a ICPRO_DIR-relative?
+                else:
+                    conf.env.INCLUDES_SYSTEMC.append(conf.env.ICPRO_DIR+'/'+path)
+                    # put an '-INCDIR' in front of every entry (cadence syntax)
+                    conf.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
+                    # the ../ accounts for the tool's being started inside the build folder
+                    conf.env['VERILOG_SEARCH_PATHS'].append('../'+path)
+
 
     conf.load('cadence')
 
@@ -304,8 +403,6 @@ def build(bld):
     # verification tasks are generated from here on
     # if mode was set to 'verify'
     elif bld.env.MODE == 'functional':
-        sources = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('sources')[0].getElementsByTagName('group')
-        testcases = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('testcases')
 
         CURRENT_RUNDIR.make_node('worklib').mkdir()
         CURRENT_RUNDIR.make_node('rundir').mkdir()
@@ -316,92 +413,6 @@ def build(bld):
         bld (
             rule = "echo 'DEFINE WORK worklib' > hdl.var",
         )
-
-        #
-        # Read source file groups
-        #
-        groups = {}
-        for group in sources:
-            # get group name
-            groupName = group.getAttribute('name').encode('ascii')
-            groups[groupName] = []
-            # get filenames, split them, and remove spaces and line breaks
-            filenames = brick.getText(group.childNodes).encode('ascii')
-            filenames = filenames.replace(" ","")
-            filenames = filenames.replace("\n","")
-            filenames = filenames.split(",")
-            # append filenames to group's file list
-            groups[groupName].extend(filenames)
-            # if there was a trailing comma in the string, the last entry will
-            # be empty, remove it
-            if (len(groups[groupName][len(groups[groupName])-1]) == 0):
-                groups[groupName].pop()
-
-        #
-        # combine source file groups and generate tasks
-        #
-        bld.env.VERILOG_SOURCES = []
-        bld.env.SYSTEMC_SOURCES = []
-        for testcase in testcases:
-            testsources = testcase.getElementsByTagName('sources')
-            for source in testsources:
-                sourceName = source.getAttribute('name').encode('ascii')
-                # get group names, split them, and remove spaces and line breaks
-                groupnames = brick.getText(source.childNodes).encode('ascii')
-                groupnames = groupnames.replace(" ","")
-                groupnames = groupnames.replace("\n","")
-                groupnames = groupnames.split(",")
-                if (sourceName == 'rtl'):
-                    for group in groupnames:
-                        bld.env.VERILOG_SOURCES.extend(groups[group])
-                elif (sourceName == 'systemC'):
-                    for group in groupnames:
-                        bld.env.SYSTEMC_SOURCES.extend(groups[group])
-            # assemble simulation tool options and save to waf environment
-            testoptions = testcase.getElementsByTagName('option')
-            for option in testoptions:
-                optionName = option.getAttribute('tool').encode('ascii')
-                optionMode = option.getAttribute('mode').encode('ascii')
-                # get options, split them, and remove spaces and line breaks
-                optionContent = brick.getText(option.childNodes).encode('ascii')
-                optionContent = optionContent.replace(" ","")
-                optionContent = optionContent.replace("\n","")
-                if (bld.env.MIXED_SIGNAL == True):
-                    if (optionMode == 'mixed-signal'):
-                        bld.env[optionName+'_OPTIONS'] = optionContent.split(",")
-                else:
-                    if (optionMode == 'rtl'):
-                        bld.env[optionName+'_OPTIONS'] = optionContent.split(",")
-
-            # set verilog search paths
-            # get string from XML tree
-            searchpaths = brick.getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
-            # remove spaces and line breaks
-            searchpaths = searchpaths.replace(" ","")
-            searchpaths = searchpaths.replace("\n","")
-            # split the string to make it a list
-            searchpaths = searchpaths.split(',')
-            # if there was a trailing comma in the string, the last entry will
-            # be empty, remove it
-            if (len(searchpaths[len(searchpaths)-1]) == 0):
-                searchpaths.pop()
-
-            bld.env['VERILOG_SEARCH_PATHS'] = []
-            pattern = re.compile("^\/")
-            for path in searchpaths:
-                # is this path an absolute path?
-                if pattern.match(path):
-                    bld.env.INCLUDES_SYSTEMC.append(path)
-                    # put an '-INCDIR' in front of every entry (cadence syntax)
-                    bld.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
-                    bld.env['VERILOG_SEARCH_PATHS'].append(path)
-                # or a ICPRO_DIR-relative?
-                else:
-                    bld.env.INCLUDES_SYSTEMC.append(bld.env.ICPRO_DIR+'/'+path)
-                    # put an '-INCDIR' in front of every entry (cadence syntax)
-                    bld.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
-                    # the ../ accounts for the tool's being started inside the build folder
-                    bld.env['VERILOG_SEARCH_PATHS'].append('../'+path)
 
         # compilation tasks for verilog/VHDL
         VERILOG_SOURCES = []
@@ -422,6 +433,7 @@ def build(bld):
             name = 'libncsc_model.so',
             source = SYSTEMC_SOURCES,
             target = 'ncsc_model',
+            cxxflags = bld.env.CXXFLAGS,
     #        cxxflags        = [ '-g', '-O0', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-unused-variable', '-lsystemc_sh', '-lncscCoSim_sh', '-lncscCoroutines_sh', '-lovm', '-lncsctlm_sh'],
             use = ['SYSTEMC', 'BOOST'],
         )
@@ -432,7 +444,6 @@ def run(bld):
     bld(
         name  = 'elab',
         rule  = 'ncelab ${SIMULATION_TOPLEVEL} -logfile ${CURRENT_RUNDIR}/logfiles/ncelab.log ${NCELAB_OPTIONS} ',
-        after = ['vhdl_compile','verilog_compile'],
         always = True
     )
     # simulation
