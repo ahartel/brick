@@ -318,7 +318,7 @@ def build(bld):
         )
 
         #
-        # Read source files
+        # Read source file groups
         #
         groups = {}
         for group in sources:
@@ -332,6 +332,10 @@ def build(bld):
             filenames = filenames.split(",")
             # append filenames to group's file list
             groups[groupName].extend(filenames)
+            # if there was a trailing comma in the string, the last entry will
+            # be empty, remove it
+            if (len(groups[groupName][len(groups[groupName])-1]) == 0):
+                groups[groupName].pop()
 
         #
         # combine source file groups and generate tasks
@@ -381,14 +385,25 @@ def build(bld):
             # be empty, remove it
             if (len(searchpaths[len(searchpaths)-1]) == 0):
                 searchpaths.pop()
-            # put an '-INCDIR' in front of every entry (cadence syntax)
-            # (the ../ accounts for the tool's being started inside the build
-            # folder)
-            searchpaths = '-INCDIR ../' + ' -INCDIR ../'.join(searchpaths)
-            # and make the string a list again
-            bld.env['VERILOG_SEARCH_PATHS'] = searchpaths.split(' ')
 
-        # compilation
+            bld.env['VERILOG_SEARCH_PATHS'] = []
+            pattern = re.compile("^\/")
+            for path in searchpaths:
+                # is this path an absolute path?
+                if pattern.match(path):
+                    bld.env.INCLUDES_SYSTEMC.append(path)
+                    # put an '-INCDIR' in front of every entry (cadence syntax)
+                    bld.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
+                    bld.env['VERILOG_SEARCH_PATHS'].append(path)
+                # or a ICPRO_DIR-relative?
+                else:
+                    bld.env.INCLUDES_SYSTEMC.append(bld.env.ICPRO_DIR+'/'+path)
+                    # put an '-INCDIR' in front of every entry (cadence syntax)
+                    bld.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
+                    # the ../ accounts for the tool's being started inside the build folder
+                    bld.env['VERILOG_SEARCH_PATHS'].append('../'+path)
+
+        # compilation tasks for verilog/VHDL
         VERILOG_SOURCES = []
         for x in bld.env.VERILOG_SOURCES:
             if (len(x)>0):
@@ -398,18 +413,18 @@ def build(bld):
            source = VERILOG_SOURCES,
         )
 
+        # compilation tasks for systemC
+        SYSTEMC_SOURCES = []
+        for x in bld.env.SYSTEMC_SOURCES:
+            SYSTEMC_SOURCES.append(bld.path.make_node(x))
 
-#       SYSTEMC_SOURCES = []
-#       for x in bld.env.SYSTEMC_SOURCES:
-#           SYSTEMC_SOURCES.append(bld.path.make_node(x))
-#
-#       bld.shlib (
-#           name = 'libncsc_model.so',
-#           source = SYSTEMC_SOURCES,
-#           target = 'ncsc_model',
-#   #        cxxflags        = [ '-g', '-O0', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-unused-variable', '-lsystemc_sh', '-lncscCoSim_sh', '-lncscCoroutines_sh', '-lovm', '-lncsctlm_sh'],
-#           use = ['SYSTEMC', 'BOOST'],
-#       )
+        bld.shlib (
+            name = 'libncsc_model.so',
+            source = SYSTEMC_SOURCES,
+            target = 'ncsc_model',
+    #        cxxflags        = [ '-g', '-O0', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-unused-variable', '-lsystemc_sh', '-lncscCoSim_sh', '-lncscCoroutines_sh', '-lovm', '-lncsctlm_sh'],
+            use = ['SYSTEMC', 'BOOST'],
+        )
 
 
 def run(bld):
