@@ -99,7 +99,6 @@
                 <after>genLIB</after>
             </subStep>
         </step>
-        -->
         <step class="dc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/dc_shell</stepBaseDir>
             <subStep name="compile">
@@ -125,6 +124,7 @@
                 <after>floorplan</after>
             </subStep>
         </step>
+        -->
     </tasks>
     <tests>
         <sources>
@@ -132,8 +132,34 @@
                 components/mccfc/units/top/source/tb/tb_top.sv,
                 components/ncf-hicann/units/verification_control/source/behavioral/systemc/verification_control.v,
                 components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_model.v,
-                components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_control.v
+                components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_control.v,
+                components/ncf-hicann/units/hicann_top/source/tb/fc_repeater_blocks.v,
+                components/ncf-hicann/units/hicann_top/source/tb/fc_anncore.v,
+                components/ncf-hicann/units/hicann_top/source/tb/fc_sram.sv,
+                components/ncf-hicann/units/hicann_top/source/tb/fc_synarray.sv,
+                components/ncf-hicann/units/hicann_top/source/tb/fg_behav.sv,
             </group>
+            <group name="tud_ipdev">
+                components/ncf-hicann/resources/fc_verilog/hicann_outamp_top.v,
+                resources/tud_ipdev/hicann_tx1rx1_ddr_lvds_if/source/rtl/verilog/hicann_tx1rx1_ddr_lvds_if.v,
+                resources/tud_ipdev/tx1rx1_ddr_lvds_if/source/rtl/verilog/tx1rx1_ddr_lvds_if.v,
+                resources/tud_ipdev/current_bias_tx1rx1/source/rtl/verilog/current_bias_tx1rx1.v,
+                resources/tud_ipdev/fc_ghzpll/source/behavioral/verilog/*.v,
+                resources/tud_ipdev/ddr_lvds_if/source/rtl/verilog/*.v,
+                resources/tud_ipdev/tx1rx1_ddr_lvds_if/source/rtl/verilog/clk_speed_detect.v,
+                resources/tud_ipdev/tx1rx1_ddr_lvds_if/source/rtl/verilog/tx1rx1_bondpads.v,
+                resources/tud_ipdev/fc_faradaypads/source/behavioral/verilog/fc_faradaypads.v,
+                resources/tud_ipdev/fc_bondpads/source/behavioral/verilog/BONDPAD.v,
+                resources/tud_ipdev/reset_syn_rx/source/rtl/verilog/reset_syn_rx.v,
+                resources/tud_ipdev/current_bias_ctrl/source/rtl/verilog/current_bias_ctrl.v,
+                resources/tud_ipdev/shift_reg/source/rtl/verilog/shift_reg.v,
+                resources/tud_ipdev/fc_current_bias/source/behavioral/verilog/fc_current_bias_tx1rx1.v,
+                resources/tud_ipdev/fc_current_bias/source/behavioral/verilog/Cal_Current_Ref.v,
+                resources/tud_ipdev/supply_ddr_lvds_if/source/rtl/verilog/supply_ddr_lvds_if.v
+            </group>
+            <!--
+            $CURRENT_RUNDIR/results/abstract/fc_opamp/hicann_outamp_top_functional.v,
+            -->
             <group name="testbenchC">
                 components/hicann-system/units/stage2_hal/source/s2_types.cpp,
                 components/hicann-system/units/stage2_hal/source/s2comm.cpp,
@@ -194,14 +220,32 @@
                 components/hicann-system/units/arq/source/nullstream.cpp,
                 components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/testcase.cpp
             </group>
-            <!--
-            -->
             <group name="toplevel">
                 components/mccfc/units/top/source/rtl/Top.sv,
                 components/mccfc/units/top/source/rtl/Top_pins.sv,
                 components/mccfc/units/top/source/rtl/padring.sv,
                 components/mccfc/units/top/source/rtl/l1_if.sv,
                 components/mccfc/units/top/source/rtl/top_pin_analog_if.sv,
+            </group>
+            <group name="verilog_sources_simonly">
+                 components/ncf-hicann/units/hicann_top/source/tb/verilog/passt_gnd_model.v,
+                 components/ncf-hicann/units/fc_ws_iopads/source/behavioral/verilog/fc_ws_iopads.v,
+                 components/ncf-hicann/units/fc_diffclk_in/source/behavioral/verilog/fc_diffclk_in_fe.v,
+                 components/ncf-hicann/units/dnc_if/source/rtl/verilog/no_x_gen_sim.v,
+                 resources/fsa0a_c_io/FrontEnd/verilog/fsa0a_c_io_supply.v,
+                 resources/fsa0a_c_io/FrontEnd/verilog/fsa0a_c_io.lib.src,
+                 resources/fsa0m_a_sc/FrontEnd/verilog/fsa0m_a_generic_core_30.lib.src,
+                 resources/fsa0a_c_t33_analogesd_io/FrontEnd/verilog/fsa0a_c_t33_analogesd_io_30.lib.src,
+                 resources/fsa0a_c_t33_analogesd_io/FrontEnd/verilog/fsa0a_c_t33_analogesd_io_supply.v,
+            </group>
+            <group name="verilog_lib_files">
+                 $SYNOPSYS/dw/sim_ver/DW_fifo_s1_sf.v,
+                 $SYNOPSYS/dw/sim_ver/DW_fifo_s2_sf.v,
+                 $SYNOPSYS/dw/sim_ver/DW_fifoctl_s1_sf.v,
+                 $SYNOPSYS/dw/sim_ver/DW_fifoctl_s2_sf.v,
+                 $SYNOPSYS/dw/sim_ver/DW_ram_r_w_s_dff.v,
+                 $SYNOPSYS/dw/sim_ver/DW01_cmp6.v,
+                 $SYNOPSYS/dw/sim_ver/DW_ram_2r_w_a_lat.v
             </group>
             <group name="hicannCtrl">
                 components/ncf-hicann/units/hicann_top/source/hicann_pkg.sv,
@@ -312,6 +356,12 @@
                 components/ncf-hicann/units/dnc_if/source/rtl/verilog/hicann_reset_syn.v,
                 components/ncf-hicann/units/dnc_if/source/rtl/verilog/linkclk2fclk_sync.v,
             </group>
+            <group name="macros">
+                $CURRENT_RUNDIR/results/abstract/miniasic_esd/digital_pad_functional.v,
+                $CURRENT_RUNDIR/results/abstract/miniasic_esd/digital_out_functional.v,
+                $CURRENT_RUNDIR/results/abstract/miniasic_esd/analog_IO_functional.v,
+                $CURRENT_RUNDIR/results/abstract/miniasic_esd/vdd_esd_functional.v
+            </group>
             <group name="arq">
                 components/ncf-hicann/units/arq/source/rtl/vhdl/toolkit.vhd,
                 components/ncf-hicann/units/arq/source/rtl/vhdl/packet_tinypacket.vhd,
@@ -345,7 +395,7 @@
         </searchpaths>
         <testcases>
             <testcase name="top_rtl_tc0">
-                <sources name="rtl">testbench,toplevel,hicannCtrl,arq</sources>
+                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_sources_simonly,verilog_lib_files,tud_ipdev</sources>
                 <sources name="systemC">testbenchC</sources>
                 <!--
     conf.env['VERILOG_SEARCH_PATHS'] = [
@@ -372,6 +422,7 @@
                     -NO_TCHK_XGEN, -notimingchecks,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
+                    -loadsc, ./libncsc_model.so,
                     -maxdelays,-64bit,
                 </option>
                 <option tool="NCELAB" mode="mixed-signal">
@@ -379,6 +430,7 @@
                     -NO_TCHK_XGEN, -notimingchecks,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
+                    -loadsc, libncsc_model.so,
                     -maxdelays,-64bit,
                     cds_globals,
                     -modelpath,"/cad/libs/tsmc/oa/models/include.scs(ttall)",
@@ -390,7 +442,7 @@
         #        '-libverbose',
         -->
                 </option>
-                <option tool="NCSIM" mode="mixed-signal">
+                <option tool="NCSIM" mode="rtl">
                     tb_top,
                     -licqueue, -gui, -MESSAGES, -64bit
                 </option>
@@ -399,8 +451,12 @@
                     -licqueue, -gui, -MESSAGES, -64bit,
                     -analogControl, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs
                 </option>
-                <option tool="CXXFLAGS" mode="rtl">-DNCSIM,-DUSE_SCTYPES</option>
-                <option tool="CXXFLAGS" mode="mixed-signal">-DNCSIM,-DUSE_SCTYPES</option>
+                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES</option>
+                <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
+                <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
+                <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
+                <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
+                <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
         </testcases>
     </tests>
