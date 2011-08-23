@@ -23,7 +23,10 @@ PATHS = ['/cad/libs/u18/FARADAY/fsa0a_c/2007Q1v1.3/T33_ANALOGESD_IO resources/fs
     '/cad/libs/u18/FARADAY/fsa0m_a/2008Q3v1.2/T33_GENERIC_IO resources/fsa0m_a_t33_generic_io',
     '/cad/libs/u18/UMC_IMEC_BONDLIB/UMC_IMEC_BONDLIB_V1x3 resources/UMC_IMEC_BONDLIB',
     '/cad/libs/tsmc resources/tsmc',
+    '/afs/kip/projects/vision/p_facets/s_minilink_dncif_2.0/units resources/tud_ipdev'
 ]
+
+TMPS = ['cds/connectLibTMP']
 
 for path in PATHS:
     args = path.split(" ")
@@ -31,6 +34,10 @@ for path in PATHS:
     subprocess.call(['rm','-f', args[1]])
     print("Linking "+args[1]+" to "+args[0])
     subprocess.call(['ln', '-s', args[0], args[1]])
+
+for tmp in TMPS:
+    print("Creating tmp directory ./tmp/"+tmp)
+    subprocess.call(['mkdir', '-p', './tmp/'+tmp])
 
 print("Done\n")
 
