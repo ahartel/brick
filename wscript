@@ -32,6 +32,8 @@ def configure(conf):
 
     # save ICPRO_DIR path to config environment
     conf.env.ICPRO_DIR = os.environ['ICPRO_DIR']
+    # save SYNOPSYS path to config environment (kind of hacky :)
+    conf.env.SYNOPSYS = os.environ['SYNOPSYS']
 
     # store configuration file
     conf.env.CONFIGFILE = conf.options.configfile
@@ -69,9 +71,7 @@ def configure(conf):
         conf.env.LIB_SYSTEMC = ['stdc++', 'gcc_s', 'tbsc', 'scv', 'systemc_sh', 'ncscCoSim_sh', 'ncscCoroutines_sh', 'ncsctlm_sh'] # 'ovm', 
         conf.env.RPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
 
-        conf.env.INCLUDES_BOOST = ['/usr/local/boost_1.40/include']
-        conf.env.LIB_BOOST = ['rt']
-
+        conf.env.USELIBS = ['SYSTEMC']
         #
         # Read source file groups
         #
@@ -87,6 +87,8 @@ def configure(conf):
             filenames = brick.getText(group.childNodes).encode('ascii')
             filenames = filenames.replace(" ","")
             filenames = filenames.replace("\n","")
+            filenames = filenames.replace("$CURRENT_RUNDIR",conf.env.CURRENT_RUNDIR)
+            filenames = filenames.replace("$SYNOPSYS",conf.env.SYNOPSYS)
             filenames = filenames.split(",")
             # append filenames to group's file list
             groups[groupName].extend(filenames)
@@ -100,7 +102,6 @@ def configure(conf):
         #
         conf.env.VERILOG_SOURCES = []
         conf.env.SYSTEMC_SOURCES = []
-        conf.env.CXXFLAGS = []
         for testcase in testcases:
             testsources = testcase.getElementsByTagName('sources')
             for source in testsources:
@@ -120,25 +121,27 @@ def configure(conf):
             testoptions = testcase.getElementsByTagName('option')
             for option in testoptions:
                 optionName = option.getAttribute('tool').encode('ascii')
-                optionMode = option.getAttribute('mode').encode('ascii')
-                # get options, split them, and remove spaces and line breaks
-                optionContent = brick.getText(option.childNodes).encode('ascii')
-                optionContent = optionContent.replace(" ","")
-                optionContent = optionContent.replace("\n","")
-                if (conf.env.MIXED_SIGNAL == True):
-                    if (optionMode == 'mixed-signal'):
-                        if (optionName == 'CXXFLAGS'):
-                            conf.env.CXXFLAGS = optionContent.split(",")
-                        else:
-                            conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+                if re.match('USELIB_',optionName):
+                    optionName = re.sub(r'USELIB\_','',optionName)
+                    optionType = option.getAttribute('type').encode('ascii')
+                    optionContent = brick.getText(option.childNodes).encode('ascii')
+                    optionContent = optionContent.replace(" ","")
+                    optionContent = optionContent.replace("\n","")
+                    # write options to env
+                    conf.env[optionType+'_'+optionName] = optionContent.split(",")
+                    conf.env.USELIBS.append(optionName)
                 else:
-                    if (optionMode == 'rtl'):
-                        if (optionName == 'CXXFLAGS'):
-                            conf.env.CXXFLAGS = optionContent.split(",")
-                        else:
+                    optionMode = option.getAttribute('mode').encode('ascii')
+                    # get options, split them, and remove spaces and line breaks
+                    optionContent = brick.getText(option.childNodes).encode('ascii')
+                    optionContent = optionContent.replace(" ","")
+                    optionContent = optionContent.replace("\n","")
+                    if (conf.env.MIXED_SIGNAL == True):
+                        if (optionMode == 'mixed-signal'):
                             conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
-
-            print conf.env.NCSIM_OPTIONS
+                    else:
+                        if (optionMode == 'rtl'):
+                            conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
 
             # set verilog search paths
             # get string from XML tree
@@ -418,7 +421,19 @@ def build(bld):
         VERILOG_SOURCES = []
         for x in bld.env.VERILOG_SOURCES:
             if (len(x)>0):
-                VERILOG_SOURCES.append(bld.path.make_node(x))
+                pattern1 = re.compile("^\/")
+                pattern2 = re.compile("\*")
+                # is this path an absolute path?
+                if pattern1.match(x):
+                    if pattern2.search(x):
+                        VERILOG_SOURCES.extend(bld.root.ant_glob(x))
+                    else:
+                        VERILOG_SOURCES.append(bld.root.make_node(x))
+                else:
+                    if pattern2.search(x):
+                        VERILOG_SOURCES.extend(bld.path.ant_glob(x))
+                    else:
+                        VERILOG_SOURCES.append(bld.path.make_node(x))
 
         bld (
            source = VERILOG_SOURCES,
@@ -433,9 +448,7 @@ def build(bld):
             name = 'libncsc_model.so',
             source = SYSTEMC_SOURCES,
             target = 'ncsc_model',
-            cxxflags = bld.env.CXXFLAGS,
-    #        cxxflags        = [ '-g', '-O0', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-unused-variable', '-lsystemc_sh', '-lncscCoSim_sh', '-lncscCoroutines_sh', '-lovm', '-lncsctlm_sh'],
-            use = ['SYSTEMC', 'BOOST'],
+            use = bld.env.USELIBS,
         )
 
 
