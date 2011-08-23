@@ -155,7 +155,14 @@
                 resources/tud_ipdev/shift_reg/source/rtl/verilog/shift_reg.v,
                 resources/tud_ipdev/fc_current_bias/source/behavioral/verilog/fc_current_bias_tx1rx1.v,
                 resources/tud_ipdev/fc_current_bias/source/behavioral/verilog/Cal_Current_Ref.v,
-                resources/tud_ipdev/supply_ddr_lvds_if/source/rtl/verilog/supply_ddr_lvds_if.v
+                resources/tud_ipdev/supply_ddr_lvds_if/source/rtl/verilog/supply_ddr_lvds_if.v,
+                resources/tud_ipdev/delay_switch/source/rtl/verilog/delay_switch.v,
+                resources/tud_ipdev/fc_clkmux/source/behavioral/verilog/*.v,
+                resources/tud_ipdev/fc_lvdspads/source/behavioral/verilog/*.v,
+                resources/tud_ipdev/fc_serdes/source/behavioral/verilog/*.v,
+                resources/tud_ipdev/sample_register/source/rtl/verilog/sample_register.v,
+                resources/tud_ipdev/des_mux_sync/source/rtl/verilog/*.v
+
             </group>
             <!--
             $CURRENT_RUNDIR/results/abstract/fc_opamp/hicann_outamp_top_functional.v,
