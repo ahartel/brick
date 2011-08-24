@@ -87,8 +87,11 @@ def configure(conf):
             filenames = brick.getText(group.childNodes).encode('ascii')
             filenames = filenames.replace(" ","")
             filenames = filenames.replace("\n","")
-            filenames = filenames.replace("$CURRENT_RUNDIR",conf.env.CURRENT_RUNDIR)
-            filenames = filenames.replace("$SYNOPSYS",conf.env.SYNOPSYS)
+            # replace env variables
+            m = re.search('(?<=\$)(\w+)', filenames)
+            if m:
+                for group in m.groups():
+                    filenames = filenames.replace("$"+group,conf.env[group])
             filenames = filenames.split(",")
             # append filenames to group's file list
             groups[groupName].extend(filenames)
