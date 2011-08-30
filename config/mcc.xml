@@ -90,7 +90,6 @@
                 </subStep>
             </cell>
         </step>
-        <!--
         <step class="rc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/rtl_compiler</stepBaseDir>
             <subStep name="compile">
@@ -123,8 +122,9 @@
                 <outputFile>results/encounter/Top_pins_enc/Top_pins_place.enc</outputFile>
                 <after>floorplan</after>
             </subStep>
-        </step>
+        <!--
         -->
+        </step>
     </tasks>
     <tests>
         <sources>
@@ -233,6 +233,7 @@
                 components/mccfc/units/top/source/rtl/padring.sv,
                 components/mccfc/units/top/source/rtl/l1_if.sv,
                 components/mccfc/units/top/source/rtl/top_pin_analog_if.sv,
+                components/mccfc/units/top/source/rtl/top_pin_digital_if.sv,
             </group>
             <group name="verilog_sources_simonly">
                  components/ncf-hicann/units/hicann_top/source/tb/verilog/passt_gnd_model.v,
@@ -370,6 +371,7 @@
                 $CURRENT_RUNDIR/results/abstract/miniasic_esd/vdd_esd_functional.v
             </group>
             <group name="arq">
+                components/ncf-hicann/units/arq/source/rtl/vhdl/SY180_16X49X1CM4.vhd,
                 components/ncf-hicann/units/arq/source/rtl/vhdl/toolkit.vhd,
                 components/ncf-hicann/units/arq/source/rtl/vhdl/packet_tinypacket.vhd,
                 components/ncf-hicann/units/arq/source/rtl/vhdl/arq.vhd,
@@ -402,7 +404,7 @@
         </searchpaths>
         <testcases>
             <testcase name="top_rtl_tc0">
-                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_sources_simonly,verilog_lib_files,tud_ipdev</sources>
+                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_sources_simonly,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
                 <!--
     conf.env['VERILOG_SEARCH_PATHS'] = [
@@ -451,12 +453,14 @@
                 </option>
                 <option tool="NCSIM" mode="rtl">
                     tb_top,
-                    -licqueue, -gui, -MESSAGES, -64bit
+                    -licqueue, -gui, -MESSAGES, -64bit,
+                    -input, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
                 <option tool="NCSIM" mode="mixed-signal">
                     tb_top,
                     -licqueue, -gui, -MESSAGES, -64bit,
-                    -analogControl, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs
+                    -analogControl, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs,
+                    -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
                 <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES</option>
                 <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
