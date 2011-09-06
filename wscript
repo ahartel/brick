@@ -475,4 +475,6 @@ class one(BuildContext):
     fun = 'run'
 
 
+def distclean(ctx):
+    print(' Not cleaning anything!')
 
