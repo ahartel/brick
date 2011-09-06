@@ -134,7 +134,7 @@ my %types = ();
 while($line=<BASE>){
 	($dir,$i1,$i2)=split(" ",$line);
 	if($dir eq "input" or $dir eq "output" or $dir eq "inout"){ # is a port processed?
-		if($i2 ne ""){ # if yes, a bus is processed, if not a pin
+		if($i2 =~ "\:"){ # if yes, a bus is processed, if not a pin
 			($fi,$li) = split(":",$i1); # get index values
 			$fi =~ s/\[//;
 			$li =~ s/\]//;
@@ -168,9 +168,9 @@ while($line=<BASE>){
 	my $ignored = 0;
 	($dir,$i1,$i2)=split(" ",$line);
 	if($dir eq "input" or $dir eq "output" or $dir eq "inout"){ # is a port processed?
-		if($i2 ne ""){ # if yes, a bus is processed, if not a pin
+		if($i2 =~ "\:"){ # if yes, a bus is processed, if not a pin
 			$name = $i2;
-			$name =~ s/;//;
+			$name =~ s/[;\\]//;
 			($fi,$li) = split(":",$i1); # get index values
 			$fi =~ s/\[//;
 			$li =~ s/\]//;
@@ -184,7 +184,7 @@ while($line=<BASE>){
 			print NEW "\t\tbus ( $name ) {\n\t\t\tbus_type  : $type;\n\t\t\tdirection : $dir;\n";
 		} else {
 			$name = $i1;
-			$name =~ s/;//;
+			$name =~ s/[;\\]//;
 			# search for pin name in ignored pin list
 			foreach my $ignored_pin (@{$Options{'ignore-pin'}}) {
 				if ($ignored_pin eq $name) {
