@@ -134,7 +134,7 @@ my %types = ();
 while($line=<BASE>){
 	($dir,$i1,$i2)=split(" ",$line);
 	if($dir eq "input" or $dir eq "output" or $dir eq "inout"){ # is a port processed?
-		if($i2 =~ "\:"){ # if yes, a bus is processed, if not a pin
+		if($i1 =~ "\:"){ # if yes, a bus is processed, if not a pin
 			($fi,$li) = split(":",$i1); # get index values
 			$fi =~ s/\[//;
 			$li =~ s/\]//;
@@ -168,7 +168,7 @@ while($line=<BASE>){
 	my $ignored = 0;
 	($dir,$i1,$i2)=split(" ",$line);
 	if($dir eq "input" or $dir eq "output" or $dir eq "inout"){ # is a port processed?
-		if($i2 =~ "\:"){ # if yes, a bus is processed, if not a pin
+		if($i1 =~ "\:"){ # if yes, a bus is processed, if not a pin
 			$name = $i2;
 			$name =~ s/[;\\]//;
 			($fi,$li) = split(":",$i1); # get index values
