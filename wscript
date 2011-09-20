@@ -30,8 +30,8 @@ def configure(conf):
     conf.start_msg('Using brICk rundir')
     conf.end_msg(conf.env.CURRENT_RUNDIR)
 
-    # save ICPRO_DIR path to config environment
-    conf.env.ICPRO_DIR = os.environ['ICPRO_DIR']
+    # save BRICK_DIR path to config environment
+    conf.env.BRICK_DIR = os.environ['BRICK_DIR']
     # save SYNOPSYS path to config environment (kind of hacky :)
     conf.env.SYNOPSYS = os.environ['SYNOPSYS']
 
@@ -168,9 +168,9 @@ def configure(conf):
                     # put an '-INCDIR' in front of every entry (cadence syntax)
                     conf.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
                     conf.env['VERILOG_SEARCH_PATHS'].append(path)
-                # or a ICPRO_DIR-relative?
+                # or a BRICK_DIR-relative?
                 else:
-                    conf.env.INCLUDES_SYSTEMC.append(conf.env.ICPRO_DIR+'/'+path)
+                    conf.env.INCLUDES_SYSTEMC.append(conf.env.BRICK_DIR+'/'+path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
                     conf.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
                     # the ../ accounts for the tool's being started inside the build folder
@@ -316,7 +316,7 @@ def build(bld):
                 CURRENT_RUNDIR.make_node('results/rtl_compiler/reports').mkdir()
                 # get base dir of this step and export it
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
-                os.environ['STEP_BASE_RC'] = bld.env.ICPRO_DIR+'/'+stepBaseDir
+                os.environ['STEP_BASE_RC'] = bld.env.BRICK_DIR+'/'+stepBaseDir
                 # iterate over substeps
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
@@ -344,7 +344,7 @@ def build(bld):
                 CURRENT_RUNDIR.make_node('results/dc_shell/reports').mkdir()
                 # get base dir of this step and export it
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
-                os.environ['STEP_BASE_DC'] = bld.env.ICPRO_DIR+'/'+stepBaseDir
+                os.environ['STEP_BASE_DC'] = bld.env.BRICK_DIR+'/'+stepBaseDir
                 # iterate over substeps
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
@@ -373,7 +373,7 @@ def build(bld):
                 CURRENT_RUNDIR.make_node('results/encounter/Top_pins_enc').mkdir()
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
                 # export the stepBaseDir
-                os.environ['STEP_BASE_ENC'] = bld.env.ICPRO_DIR+'/'+stepBaseDir
+                os.environ['STEP_BASE_ENC'] = bld.env.BRICK_DIR+'/'+stepBaseDir
                 # list to hold substep results
                 results = {}
                 # iterate over substeps
