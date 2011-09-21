@@ -27,6 +27,8 @@ def configure(conf):
             conf.env.CURRENT_RUNDIR = conf.path.find_node(tempdir).abspath()
             # create results directory
             conf.path.find_node(tempdir).make_node('results/').mkdir()
+            conf.path.find_node(tempdir).make_node('logfiles/').mkdir()
+            conf.path.find_node(tempdir).make_node('worklib/').mkdir()
     conf.start_msg('Using brICk rundir')
     conf.end_msg(conf.env.CURRENT_RUNDIR)
 
@@ -88,10 +90,7 @@ def configure(conf):
             filenames = filenames.replace(" ","")
             filenames = filenames.replace("\n","")
             # replace env variables
-            m = re.search('(?<=\$)(\w+)', filenames)
-            if m:
-                for group in m.groups():
-                    filenames = filenames.replace("$"+group,conf.env[group])
+            filenames = brick.replace_env_vars(filenames,conf)
             filenames = filenames.split(",")
             # append filenames to group's file list
             groups[groupName].extend(filenames)
@@ -184,10 +183,28 @@ def build(bld):
     CURRENT_RUNDIR = bld.root.find_node(bld.env.CURRENT_RUNDIR)
     # export results directory
     os.environ['RESULTS_DIR'] = CURRENT_RUNDIR.make_node('results/').abspath()
-    CURRENT_RUNDIR.make_node('logfiles').mkdir()
 
     # load configuration
     xmlconfig = minidom.parse(bld.env.CONFIGFILE) # parse an XML file by name
+    # read libs into dictionary to have access to library paths
+    libraries = {}
+    libs = xmlconfig.getElementsByTagName('libraries')[0].getElementsByTagName('library')
+    bld.add_group('cdslib')
+    bld.set_group('cdslib')
+    bld ( rule = 'echo "" > cds.lib' )
+    for lib in libs:
+        libName = lib.getAttribute('name').encode('ascii')
+        libPath = lib.getAttribute('path').encode('ascii')
+        libPath = brick.replace_env_vars(libPath,bld)
+        libraries[libName] = libPath
+        bld (
+                rule = 'echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
+        )
+
+    bld ( rule = 'echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/worklib" >> cds.lib' )
+    bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var' )
+
+    # start with build jobs or verification jobs
     if (bld.env.MODE == 'build'):
         steps = xmlconfig.getElementsByTagName('tasks')[0].getElementsByTagName('step')
         #
@@ -212,16 +229,8 @@ def build(bld):
                     cellBaseDir = brick.getTextNodeValue(cell,'cellBaseDir')
                     cellName = cell.getAttribute('name').encode('ascii')
                     libName = cell.getAttribute('lib').encode('ascii')
-                    cdsLibFile = brick.getTextNodeValue(cell,'cdsLibFile')
-                    cdsLibPath = brick.getTextNodeValue(cell,'cdsLibPath')
                     # create lib-specific results dir
                     CURRENT_RUNDIR.make_node('results/abstract/'+libName).mkdir()
-                    # create cds.lib in build directory
-                    bld (
-                        rule = brick.createCdsLibFile,
-                        name = libName+cellName+'createCdsLib',
-                        source = bld.path.find_node(cdsLibFile),
-                    )
                     # which substeps to perform
                     substeps = cell.getElementsByTagName('subStep')
                     for substep in substeps:
@@ -242,6 +251,7 @@ def build(bld):
                             INPUT = [
                                 bld.path.make_node(cellBaseDir+'/'+skillScript),
                                 bld.path.make_node(cellBaseDir+'/scripts/'+cellName+'.absgen.il'),
+                                bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa'),
                             ]
                             bld(
                                 # export some variables first, before running the abstract generation
@@ -278,11 +288,11 @@ def build(bld):
 
                             # schematic2verilog
                             INPUT = [
-                                bld.path.make_node(cdsLibPath + '/' + cellName + '/schematic/sch.oa'),
+                                bld.root.make_node(libraries[libName] + '/' + cellName + '/schematic/sch.oa'),
                                 bld.path.find_resource('source/skill/schem2func.il'),
                             ]
                             OUTPUT = [
-                                bld.path.make_node(cdsLibPath + '/' + cellName + '/functional/verilog.v'),
+                                bld.root.make_node(libraries[libName] + '/' + cellName + '/functional/verilog.v'),
                                 CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v'),
                                 CURRENT_RUNDIR.make_node('logfiles' + '/abstract_' + cellName + '.genfunc.log'),
                             ]
@@ -410,15 +420,7 @@ def build(bld):
     # if mode was set to 'verify'
     elif bld.env.MODE == 'functional':
 
-        CURRENT_RUNDIR.make_node('worklib').mkdir()
         CURRENT_RUNDIR.make_node('rundir').mkdir()
-        bld (
-            rule = "echo 'DEFINE worklib "+bld.env.CURRENT_RUNDIR+"/worklib\nINCLUDE ../source/cds/cds.lib\n-- from PDKs tools section: ius\nDEFINE connectLib       $IUS_DIR/tools/affirma_ams/etc/connect_lib/connectLib' > cds.lib",
-        )
-
-        bld (
-            rule = "echo 'DEFINE WORK worklib' > hdl.var",
-        )
 
         # compilation tasks for verilog/VHDL
         VERILOG_SOURCES = []

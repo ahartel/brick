@@ -1,3 +1,5 @@
+import re,os
+
 def getText(nodelist):
     rc = []
     for node in nodelist:
@@ -8,6 +10,17 @@ def getText(nodelist):
 def getTextNodeValue(tree,nodeName):
     return getText(tree.getElementsByTagName(nodeName)[0].childNodes).encode('ascii')
 
+def replace_env_vars(replacestring,context):
+    # replace env variables
+    m = re.search('(?<=\$)(\w+)', replacestring)
+    if m:
+        for group in m.groups():
+            if (context.env[group]):
+                replacestring = re.sub("\$"+group,context.env[group],replacestring)
+            elif (os.environ.has_key(group)):
+                replacestring = re.sub("\$"+group,os.environ[group],replacestring)
+
+    return replacestring
 
 #
 # Tasks

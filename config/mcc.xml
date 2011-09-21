@@ -1,14 +1,36 @@
 <brICk>
     <projectName>FG miniasic</projectName>
     <projectShortName>fg_miniasic</projectShortName>
+    <libraries>
+        <library name="UMC_18_CMOS" path="$BRICK_DIR/resources/u18/artist6.1/UMC_18_CMOS"></library>
+        <library name="UMC_18_CMOS_FAR" path="$BRICK_DIR/resources/u18/artist6.1/UMC_18_CMOS_FAR"></library>
+        <library name="analogLib" path="$CDSDIR/tools/dfII/etc/cdslib/artist/analogLib"></library>
+        <library name="basic" path="$CDSDIR/tools/dfII/etc/cdslib/basic"></library>
+        <library name="cdsDefTechLib" path="$CDSDIR/tools/dfII/etc/cdsDefTechLib"></library>
+        <library name="connectLib" path="$IUS_DIR/tools/affirma_ams/etc/connect_lib/connectLib"></library>
+        <library name="ieee" path="$IUS_DIR/tools/inca/files/IEEE"></library>
+        <library name="std" path="$IUS_DIR/tools/inca/files/STD"></library>
+        <library name="synopsys" path="$IUS_DIR/tools/inca/files/SYNOPSYS"></library>
+        <library name="fsa0a_c_t33_analogesd_io" path="$BRICK_DIR/resources/fsa0a_c_t33_analogesd_io/BackEnd/OA/fsa0a_c_t33_analogesd_io"></library>
+        <library name="fsa0a_c_io" path="$BRICK_DIR/resources/fsa0a_c_io/BackEnd/OA/fsa0a_c_io"></library>
+        <library name="global" path="$BRICK_DIR/components/mccfc/units/global/cdslib/global"></library>
+        <library name="fc_iopads" path="$BRICK_DIR/components/mccfc/units/fc_iopads/cdslib/fc_iopads"></library>
+        <library name="fc_serial_l1" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_serial_l1/cdslib/fc_serial_l1"></library>
+        <library name="fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/fc_floating_gate"></library>
+        <library name="tb_fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/tb_fc_floating_gate"></library>
+        <library name="fc_anncore" path="$BRICK_DIR/components/mccfc/units/fc_anncore/cdslib/fc_anncore"></library>
+        <library name="fc_denmem" path="$BRICK_DIR/components/mccfc/units/fc_denmem/cdslib/fc_denmem"></library>
+        <library name="fc_opamp" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_opamp/cdslib/fc_opamp"></library>
+        <library name="tb_fc_opamp" path="$BRICK_DIR/components/mccfc/units/fc_opamp/cdslib/tb_fc_opamp"></library>
+        <library name="fc_bond_pads" path="$BRICK_DIR/components/mccfc/units/fc_bond_pads/cdslib/fc_bond_pads"></library>
+        <library name="miniasic_esd" path="$BRICK_DIR/components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd"></library>
+    </libraries>
     <tasks>
         <step class="abstract">
             <analib>UMC_18_CMOS</analib>
             <techlib>UMC_18_CMOS_FAR</techlib>
             <cell name="fc_anncore_pins" lib="fc_anncore">
                 <cellBaseDir>components/mccfc/units/fc_anncore/abstract</cellBaseDir>
-                <cdsLibFile>components/mccfc/units/fc_anncore/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/mccfc/units/fc_anncore/cdslib/fc_anncore</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/fc_anncore.absgen.il</skillScript>
                 </subStep>
@@ -20,8 +42,6 @@
             <!--
             <cell name="fc_anncore" lib="fc_anncore">
                 <cellBaseDir>components/mccfc/units/fc_anncore/abstract</cellBaseDir>
-                <cdsLibFile>components/mccfc/units/fc_anncore/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/mccfc/units/fc_anncore/cdslib/fc_anncore</cdsLibPath>
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
@@ -30,8 +50,6 @@
             -->
             <cell name="hicann_outamp_top" lib="fc_opamp">
                 <cellBaseDir>components/ncf-hicann-fc/units/fc_opamp/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/fc_opamp/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/fc_opamp/cdslib/fc_opamp</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/fc_opamp.absgen.il</skillScript>
                 </subStep>
@@ -42,8 +60,6 @@
             </cell>
             <cell name="fc_repeater_block_left" lib="fc_serial_l1">
                 <cellBaseDir>components/ncf-hicann-fc/units/fc_serial_l1/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/fc_serial_l1/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/fc_serial_l1/cdslib/fc_serial_l1</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/fc_serial_l1.absgen.il</skillScript>
                 </subStep>
@@ -54,8 +70,6 @@
             </cell>
             <cell name="analog_IO" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
@@ -66,8 +80,6 @@
             </cell>
             <cell name="vdd_esd" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
@@ -78,8 +90,6 @@
             </cell>
             <cell name="gnd_pad_2" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
@@ -90,8 +100,6 @@
             </cell>
             <cell name="digital_pad" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
@@ -102,8 +110,6 @@
             </cell>
             <cell name="digital_out" lib="miniasic_esd">
                 <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/miniasic_esd/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd</cdsLibPath>
                 <subStep name="genLEF">
                     <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
                 </subStep>
