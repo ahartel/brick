@@ -28,6 +28,7 @@ PATHS = ['/cad/libs/u18/FARADAY/fsa0a_c/2007Q1v1.3/T33_ANALOGESD_IO resources/fs
 
 TMPS = ['cds/connectLibTMP']
 
+subprocess.call(['mkdir', '-p', './resources'])
 for path in PATHS:
     args = path.split(" ")
     print("Removing symbolic link "+args[1])
