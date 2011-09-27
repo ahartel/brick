@@ -19,11 +19,15 @@
         <library name="fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/fc_floating_gate"></library>
         <library name="tb_fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/tb_fc_floating_gate"></library>
         <library name="fc_anncore" path="$BRICK_DIR/components/mccfc/units/fc_anncore/cdslib/fc_anncore"></library>
+        <!--
+        <library name="fc_anncore_old" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_anncore/cdslib/fc_anncore"></library>
+        -->
         <library name="fc_denmem" path="$BRICK_DIR/components/mccfc/units/fc_denmem/cdslib/fc_denmem"></library>
         <library name="fc_opamp" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_opamp/cdslib/fc_opamp"></library>
         <library name="tb_fc_opamp" path="$BRICK_DIR/components/mccfc/units/fc_opamp/cdslib/tb_fc_opamp"></library>
         <library name="fc_bond_pads" path="$BRICK_DIR/components/mccfc/units/fc_bond_pads/cdslib/fc_bond_pads"></library>
         <library name="miniasic_esd" path="$BRICK_DIR/components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd"></library>
+        <library name="fc_diffclk_in" path="$BRICK_DIR/components/ncf-hicann/units/fc_diffclk_in/cdslib/fc_diffclk_in"></library>
     </libraries>
     <tasks>
         <step class="abstract">
@@ -118,6 +122,16 @@
                 <subStep name="genDB">
                 </subStep>
             </cell>
+            <cell name="fc_diffclk_in_fe" lib="fc_diffclk_in">
+                <cellBaseDir>components/ncf-hicann/units/fc_diffclk_in/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_diffclk_in.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+            </cell>
         </step>
         <step class="rc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/rtl_compiler</stepBaseDir>
@@ -164,7 +178,7 @@
                 components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_model.v,
                 components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_control.v,
                 components/ncf-hicann/units/hicann_top/source/tb/fc_repeater_blocks.v,
-                components/ncf-hicann/units/hicann_top/source/tb/fc_anncore.v,
+                components/mccfc/units/top/source/tb/fc_anncore.sv,
                 components/ncf-hicann/units/hicann_top/source/tb/fc_sram.sv,
                 components/ncf-hicann/units/hicann_top/source/tb/fc_synarray.sv,
                 components/ncf-hicann/units/hicann_top/source/tb/fg_behav.sv,
@@ -400,9 +414,9 @@
             <group name="macros">
                 components/mccfc/units/top/source/tb/digital_pad_functional.v,
                 components/mccfc/units/top/source/tb/digital_out_functional.v,
-                $CURRENT_RUNDIR/results/abstract/miniasic_esd/analog_IO_functional.v,
-                $CURRENT_RUNDIR/results/abstract/miniasic_esd/vdd_esd_functional.v,
-                $CURRENT_RUNDIR/results/abstract/miniasic_esd/gnd_pad_2_functional.v
+                components/mccfc/units/top/source/tb/analog_IO_functional.v,
+                components/mccfc/units/top/source/tb/vdd_esd_functional.v,
+                components/mccfc/units/top/source/tb/gnd_pad_2_functional.v
             </group>
             <!--
             components/ncf-hicann/units/arq/source/rtl/vhdl/SY180_16X49X1CM4.vhd,
