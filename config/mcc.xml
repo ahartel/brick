@@ -513,7 +513,7 @@
                     -analogControl, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs,
                     -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
-                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES</option>
+                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2</option>
                 <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
                 <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
                 <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
