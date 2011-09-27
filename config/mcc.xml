@@ -320,6 +320,7 @@
                 components/ncf-hicann/units/hicann_top/source/neuronctrl.sv,
                 components/ncf-hicann/units/hicann_top/source/neuronbuilder.sv,
                 components/ncf-hicann/units/hicann_top/source/sramctrl.sv,
+                components/ncf-hicann/units/hicann_top/source/sramctrl_blmux.sv,
                 components/ncf-hicann/units/hicann_top/source/wsl1_repeater_wrap.v,
                 components/ncf-hicann/units/hicann_top/source/wsl1_repeater_spl1_wrap.v,
                 components/ncf-hicann/units/jtag_top/source/rtl/systemverilog/jtag_hicann.sv,
