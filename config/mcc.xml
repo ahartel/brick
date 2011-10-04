@@ -42,16 +42,9 @@
                 </subStep>
                 <subStep name="genDB">
                 </subStep>
-            </cell>
-            <!--
-            <cell name="fc_anncore" lib="fc_anncore">
-                <cellBaseDir>components/mccfc/units/fc_anncore/abstract</cellBaseDir>
-                <subStep name="genLIB">
-                </subStep>
-                <subStep name="genDB">
+                <subStep name="genGDS">
                 </subStep>
             </cell>
-            -->
             <cell name="hicann_outamp_top" lib="fc_opamp">
                 <cellBaseDir>components/ncf-hicann-fc/units/fc_opamp/abstract</cellBaseDir>
                 <subStep name="genLEF">
@@ -60,6 +53,8 @@
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
                 </subStep>
             </cell>
             <cell name="fc_repeater_block_left" lib="fc_serial_l1">
@@ -71,55 +66,75 @@
                 </subStep>
                 <subStep name="genDB">
                 </subStep>
+                <subStep name="genGDS">
+                </subStep>
             </cell>
-            <cell name="analog_IO" lib="miniasic_esd">
-                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+            <cell name="pad_corner" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
-                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+            </cell>
+            <cell name="analog_IO" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
                 </subStep>
+                <subStep name="genGDS">
+                </subStep>
             </cell>
-            <cell name="vdd_esd" lib="miniasic_esd">
-                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+            <cell name="vdd_esd" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
-                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
                 </subStep>
+                <subStep name="genGDS">
+                </subStep>
             </cell>
-            <cell name="gnd_pad_2" lib="miniasic_esd">
-                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+            <cell name="gnd_pad_2" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
-                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
                 </subStep>
+                <subStep name="genGDS">
+                </subStep>
             </cell>
-            <cell name="digital_pad" lib="miniasic_esd">
-                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+            <cell name="digital_pad" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
-                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
                 </subStep>
+                <subStep name="genGDS">
+                </subStep>
             </cell>
-            <cell name="digital_out" lib="miniasic_esd">
-                <cellBaseDir>components/ncf-hicann-fc/units/miniasic_esd/abstract</cellBaseDir>
+            <cell name="digital_out" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
-                    <skillScript>scripts/miniasic_esd.absgen.il</skillScript>
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
                 </subStep>
             </cell>
             <cell name="fc_diffclk_in_fe" lib="fc_diffclk_in">
@@ -130,6 +145,8 @@
                 <subStep name="genLIB">
                 </subStep>
                 <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
                 </subStep>
             </cell>
         </step>

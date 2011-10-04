@@ -236,6 +236,39 @@ def build(bld):
                     for substep in substeps:
                         substepName = substep.getAttribute('name').encode('ascii')
                         #
+                        # genGDS
+                        #
+                        if (substepName == 'genGDS'):
+                            bld.add_group('abstract_genGDS_'+cellName)
+                            bld.set_group('abstract_genGDS_'+cellName)
+
+                            OUTPUT = [
+                                CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.gds'),
+                            ]
+                            INPUT = [
+                                bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa'),
+                            ]
+                            bld(
+                                # export some variables first, before running the abstract generation
+                                # since these variables are cell-specific, they have to be export for each task seperately
+                                rule = """
+                                    export BLOCK=%s && \
+                                    strmout -library %s -topCell %s \
+                                        -view layout -strmFile %s -logFile %s \
+                                        -templateFile %s -userSkillFile %s
+                                    """ % (
+                                        cellName,
+                                        libName,
+                                        cellName,
+                                        OUTPUT[0].abspath(),
+                                        CURRENT_RUNDIR.make_node('logfiles/'+cellName+'_streamout.log').abspath(),
+                                        bld.path.make_node('source/skill/streamOut.xstrm').abspath(),
+                                        bld.path.make_node('source/skill/set_strmout_cellname.il').abspath()
+                                        ),
+                                source = INPUT,
+                                target = OUTPUT,
+                            )
+                        #
                         # genLEF
                         #
                         if (substepName == 'genLEF'):
