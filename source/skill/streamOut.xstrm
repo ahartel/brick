@@ -1,0 +1,32 @@
+# XStream strmOut template translated from PIPO strmOut template. 
+# Source PIPO strmOut template file: fc_serial_l1.streamOut.il 
+# Destination XSTREAM strmOut template file: fc_serial_l1.streamOut.xstrm 
+# Tue Oct 19 14:46:22 2010
+runDir 	"." 	# Run Directory
+hierDepth 	32 	# Hierarchical Depth to Translate to (0-32)
+flattenPcells 	# (t/nil) 
+maxVertices 	200 	# Limit of Vertices Allowed
+refLibList 	"" 	# Name of File Containing refLibList
+strmVersion 	3 	# Stream Version
+#checkPolygon 	# (t/nil)
+#snapToGrid 	# (t/nil)
+#arrayInstToScalar 	# (t/nil)
+case 	"preserve" 	# upper | lower | preserve
+#ignoreLines 	# (t/nil)
+convertDot 	"ignore" 	# node | polygon | ignore
+#rectToBox 	# (t/nil)
+#pathToPolygon 	# (t/nil)
+#respectGDSIINameLimit 	# (t/nil)
+cellMap 	"" 	# Input Cell Map File
+layerMap 	"" 	# Input Layer Map File
+fontMap 	"" 	# Input Font Map File
+convertPin 	"geometry" 	# geometry | text | geometryAndText | ignore
+pinAttNum 	0 	# Stream Attribute # (1-127) for Preserving Pins
+propMap 	"" 	# Input Property Map File
+#doNotPreservePcellPins 	# (t/nil)
+viaMap 	"" 	# Input Via Map File
+#noObjectProp 	# (t/nil)
+summaryFile 	"" 	# Output Summary File
+techLib 	"" 	# Technology Library
+#noOutputTextDisplays 	# (t/nil)
+objectMap 	"" 	# Input Object Map File
