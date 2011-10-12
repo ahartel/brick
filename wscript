@@ -209,7 +209,7 @@ def build(bld):
     if (bld.env.MODE == 'build'):
         steps_to_run = []
         try:
-            steps_to_run = bld.options.SUBSTEPS.splite(",")
+            steps_to_run = bld.options.substeps.split(",")
         except AttributeError:
             steps_to_run.append('all')
 
