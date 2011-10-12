@@ -15,6 +15,7 @@ def options(opt):
     opt.add_option('--rundir', action='store', default='', help='Allows the user to directly name an already existing rundir')
     opt.add_option('--testcase', action='store', default='', help='Choose a testcase as defined in the configfile')
     opt.add_option('--sim-mixed-signal', action='store_true', default='False', help='Use mixed-signal sources and command options when simulating')
+    opt.add_option('--substeps', action='store', default='all', help='which substeps of the build flow should be run?')
 
 def configure(conf):
     # if the rundir is not set, create a unique rundir
@@ -206,6 +207,12 @@ def build(bld):
 
     # start with build jobs or verification jobs
     if (bld.env.MODE == 'build'):
+        steps_to_run = []
+        try:
+            steps_to_run = bld.options.SUBSTEPS.splite(",")
+        except AttributeError:
+            steps_to_run.append('all')
+
         steps = xmlconfig.getElementsByTagName('tasks')[0].getElementsByTagName('step')
         #
         # step loop
@@ -238,7 +245,7 @@ def build(bld):
                         #
                         # genGDS
                         #
-                        if (substepName == 'genGDS'):
+                        if (substepName == 'genGDS') and brick.runStep(substepName,steps_to_run):
                             bld.add_group('abstract_genGDS_'+cellName)
                             bld.set_group('abstract_genGDS_'+cellName)
 
@@ -248,6 +255,8 @@ def build(bld):
                             INPUT = [
                                 bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa'),
                             ]
+                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
                             bld(
                                 # export some variables first, before running the abstract generation
                                 # since these variables are cell-specific, they have to be export for each task seperately
@@ -267,15 +276,17 @@ def build(bld):
                                         ),
                                 source = INPUT,
                                 target = OUTPUT,
+                                always = always_flag,
                             )
                         #
                         # genLEF
                         #
-                        if (substepName == 'genLEF'):
+                        if (substepName == 'genLEF') and brick.runStep(substepName,steps_to_run):
                             bld.add_group('abstract_genLEF_'+cellName)
                             bld.set_group('abstract_genLEF_'+cellName)
 
                             skillScript = brick.getTextNodeValue(substep,'skillScript')
+                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
 
                             OUTPUT = [
                                 CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lef'),
@@ -286,6 +297,7 @@ def build(bld):
                                 bld.path.make_node(cellBaseDir+'/scripts/'+cellName+'.absgen.il'),
                                 bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa'),
                             ]
+
                             bld(
                                 # export some variables first, before running the abstract generation
                                 # since these variables are cell-specific, they have to be export for each task seperately
@@ -295,14 +307,17 @@ def build(bld):
                                     export CELLBASEDIR=%s && abstract -hi -nogui -replay %s -log %s""" % (libName,cellName,analib,techlib,cellBaseDir,INPUT[0].abspath(),OUTPUT[1].abspath()),
                                 source = INPUT,
                                 target = OUTPUT,
+                                always = always_flag,
                             )
                         #
                         # genDB
                         #
-                        if (substepName == 'genDB'):
-
+                        if (substepName == 'genDB') and brick.runStep(substepName,steps_to_run):
                             INPUT = CURRENT_RUNDIR.find_node('results/abstract/'+libName+'/'+cellName+'.lib')
                             OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.db')
+
+                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
                             bld(
                                 rule = """
                                     export LIB=%s && export BLOCK=%s && dc_shell-t -f ../source/tcl/lib2db.tcl""" % (libName,cellName),
@@ -311,13 +326,15 @@ def build(bld):
                                     bld.path.find_resource('source/tcl/lib2db.tcl'),
                                 ],
                                 target = OUTPUT,
+                                always = always_flag,
                             )
 
                         #
                         # genLIB
                         #
-                        if (substepName == 'genLIB'):
+                        if (substepName == 'genLIB') and brick.runStep(substepName,steps_to_run):
                             bld.set_group('abstract')
+                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
 
                             # schematic2verilog
                             INPUT = [
@@ -327,14 +344,14 @@ def build(bld):
                             OUTPUT = [
                                 bld.root.make_node(libraries[libName] + '/' + cellName + '/functional/verilog.v'),
                                 CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v'),
-                                CURRENT_RUNDIR.make_node('logfiles' + '/abstract_' + cellName + '.genfunc.log'),
                             ]
                             bld(
                                 rule = """
                                     export LIB=%s && export BLOCK=%s &&
-                                    virtuoso -nograph -replay %s -log %s && cp %s %s""" % (libName,cellName,INPUT[1].abspath(),OUTPUT[2].abspath(),OUTPUT[0].abspath(),OUTPUT[1].abspath()),
+                                    virtuoso -nograph -replay %s -log %s && cp %s %s""" % (libName,cellName,INPUT[1].abspath(),bld.path.make_node("logfiles/abstract_"+cellName+".genfunc.log"),OUTPUT[0].abspath(),OUTPUT[1].abspath()),
                                 source = INPUT,
                                 target = OUTPUT,
+                                always = always_flag,
                             )
 
                             # verilog2lib
@@ -347,12 +364,13 @@ def build(bld):
                                 rule = brick.verilog2lib,
                                 source = INPUT,
                                 target = OUTPUT,
+                                always = always_flag,
                             )
 
             #
             # rtl compiler
             #
-            if step.getAttribute('class') == 'rc':
+            if (step.getAttribute('class') == 'rc') and brick.runStep('rc',steps_to_run):
                 bld.add_group('rc')
                 bld.set_group('rc')
                 CURRENT_RUNDIR.make_node('results/rtl_compiler/').mkdir()
@@ -366,6 +384,9 @@ def build(bld):
                     substepName = substep.getAttribute('name').encode('ascii')
                     TCLscript = brick.getTextNodeValue(substep,'TCLscript')
                     OUTPUT = CURRENT_RUNDIR.make_node('results/rtl_compiler/'+brick.getTextNodeValue(substep,'outputFile'))
+
+                    always_flag = brick.checkAlwaysFlag('rc',steps_to_run)
+
                     bld(
                         rule   = brick.rtl_compiler,
                         source = [
@@ -375,12 +396,12 @@ def build(bld):
                             OUTPUT,
                             CURRENT_RUNDIR.make_node('logfiles/rtl_compiler.log'),
                         ],
-    #                    always = True,
+                        always = always_flag,
                     )
             #
             # design compiler
             #
-            if step.getAttribute('class') == 'dc':
+            if (step.getAttribute('class') == 'dc') and brick.runStep('dc',steps_to_run):
                 bld.add_group('dc')
                 bld.set_group('dc')
                 CURRENT_RUNDIR.make_node('results/dc_shell/').mkdir()
@@ -394,6 +415,9 @@ def build(bld):
                     substepName = substep.getAttribute('name').encode('ascii')
                     TCLscript = brick.getTextNodeValue(substep,'TCLscript')
                     OUTPUT = CURRENT_RUNDIR.make_node('results/dc_shell/'+brick.getTextNodeValue(substep,'outputFile'))
+
+                    always_flag = brick.checkAlwaysFlag('dc',steps_to_run)
+
                     bld(
                         rule   = brick.dc_shell,
                         source = [
@@ -403,7 +427,7 @@ def build(bld):
                             OUTPUT,
                             CURRENT_RUNDIR.make_node('logfiles/dc_shell.log'),
                         ],
-    #                    always = True,
+                        always = always_flag,
                     )
 
             #
@@ -414,6 +438,7 @@ def build(bld):
                 bld.set_group('encounter')
                 # TODO: move dir to config
                 CURRENT_RUNDIR.make_node('results/encounter/Top_pins_enc').mkdir()
+                CURRENT_RUNDIR.make_node('results/encounter/reports').mkdir()
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
                 # export the stepBaseDir
                 os.environ['STEP_BASE_ENC'] = bld.env.BRICK_DIR+'/'+stepBaseDir
@@ -423,32 +448,35 @@ def build(bld):
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
                     substepName = substep.getAttribute('name').encode('ascii')
-                    TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                    # declare list of source files
-                    INPUT = []
-                    # if this substep has a preceding substep, make this one dependend on its output
-                    INPUT.append(stepBaseDir+'/'+TCLscript)
-                    if (len(substep.getElementsByTagName('after')) > 0):
-                        INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+                    if brick.runStep(substepName,steps_to_run):
+                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                        # declare list of source files
+                        INPUT = []
+                        # if this substep has a preceding substep, make this one dependend on its output
+                        INPUT.append(stepBaseDir+'/'+TCLscript)
+                        if (len(substep.getElementsByTagName('after')) > 0):
+                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
 
-                    # REMOVE ME!!!
-                    if (substepName == "place"):
-                        blubb = False
-                    else:
-                        blubb = True
-                    # END REMOVE ME!!!
+                        # REMOVE ME!!!
+                        if (substepName == "place"):
+                            blubb = True
+                        else:
+                            blubb = True
+                        # END REMOVE ME!!!
 
-                    OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
-                    results[substepName] = OUTPUT
-                    bld(
-                        rule = brick.encounter,
-                        source = INPUT,
-                        target = [
-                            OUTPUT,
-                            CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log')
-                        ],
-                        always = blubb,
-                    )
+                        OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
+                        results[substepName] = OUTPUT
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
+                        bld(
+                            rule = brick.encounter,
+                            source = INPUT,
+                            target = [
+                                OUTPUT,
+                                CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log')
+                            ],
+                            always = always_flag,
+                        )
     # verification tasks are generated from here on
     # if mode was set to 'verify'
     elif bld.env.MODE == 'functional':
@@ -512,4 +540,5 @@ class one(BuildContext):
 
 def distclean(ctx):
     print(' Not cleaning anything!')
+
 

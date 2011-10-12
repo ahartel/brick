@@ -158,7 +158,6 @@
                 <after>genLIB</after>
             </subStep>
         </step>
-        <!--
         <step class="dc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/dc_shell</stepBaseDir>
             <subStep name="compile">
@@ -167,7 +166,6 @@
                 <after>genLIB</after>
             </subStep>
         </step>
-        -->
         <step class="encounter">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/encounter</stepBaseDir>
             <subStep name="bind">
@@ -183,6 +181,41 @@
                 <TCLscript>scripts/place.tcl</TCLscript>
                 <outputFile>results/encounter/Top_pins_enc/Top_pins_place.enc</outputFile>
                 <after>floorplan</after>
+            </subStep>
+            <subStep name="preCTS">
+                <TCLscript>scripts/prects.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_prects.enc</outputFile>
+                <after>place</after>
+            </subStep>
+            <subStep name="CTS">
+                <TCLscript>scripts/cts.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_cts.enc</outputFile>
+                <after>preCTS</after>
+            </subStep>
+            <subStep name="postCTS">
+                <TCLscript>scripts/postcts.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_postcts.enc</outputFile>
+                <after>CTS</after>
+            </subStep>
+            <subStep name="route">
+                <TCLscript>scripts/route.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_route.enc</outputFile>
+                <after>postCTS</after>
+            </subStep>
+            <subStep name="postroute">
+                <TCLscript>scripts/postroute.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_postroute.enc</outputFile>
+                <after>route</after>
+            </subStep>
+            <subStep name="final">
+                <TCLscript>scripts/final.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins_enc/Top_pins_final.enc</outputFile>
+                <after>postroute</after>
+            </subStep>
+            <subStep name="prepare_export">
+                <TCLscript>scripts/prepare_export.tcl</TCLscript>
+                <outputFile>results/encounter/Top_pins.gds</outputFile>
+                <after>final</after>
             </subStep>
         </step>
     </tasks>

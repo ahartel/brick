@@ -22,6 +22,20 @@ def replace_env_vars(replacestring,context):
 
     return replacestring
 
+def runStep(subStepName,steps_to_run):
+    if steps_to_run[0] == 'all':
+        return True
+    elif subStepName in steps_to_run:
+        return True
+    else:
+        return False
+
+def checkAlwaysFlag(substepName,steps_to_run):
+    if substepName in steps_to_run:
+        return True
+    else:
+        return False
+
 #
 # Tasks
 #
