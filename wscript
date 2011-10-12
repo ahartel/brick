@@ -448,24 +448,18 @@ def build(bld):
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
                     substepName = substep.getAttribute('name').encode('ascii')
+                    TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                    # declare list of source files
+                    INPUT = []
+                    # if this substep has a preceding substep, make this one dependend on its output
+                    INPUT.append(stepBaseDir+'/'+TCLscript)
+                    if (len(substep.getElementsByTagName('after')) > 0):
+                        INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+
+                    OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
+                    results[substepName] = OUTPUT
+
                     if brick.runStep(substepName,steps_to_run):
-                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                        # declare list of source files
-                        INPUT = []
-                        # if this substep has a preceding substep, make this one dependend on its output
-                        INPUT.append(stepBaseDir+'/'+TCLscript)
-                        if (len(substep.getElementsByTagName('after')) > 0):
-                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
-
-                        # REMOVE ME!!!
-                        if (substepName == "place"):
-                            blubb = True
-                        else:
-                            blubb = True
-                        # END REMOVE ME!!!
-
-                        OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
-                        results[substepName] = OUTPUT
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
 
                         bld(
@@ -477,6 +471,48 @@ def build(bld):
                             ],
                             always = always_flag,
                         )
+
+            #
+            # signoff
+            #
+            if step.getAttribute('class') == 'signoff':
+                bld.add_group('signoff')
+                bld.set_group('signoff')
+                stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
+                # export the stepBaseDir
+                os.environ['STEP_BASE_SIGNOFF'] = bld.env.BRICK_DIR+'/'+stepBaseDir
+                # list to hold substep results
+                results = {}
+                # iterate over substeps
+                substeps = step.getElementsByTagName('subStep')
+                for substep in substeps:
+                    substepName = substep.getAttribute('name').encode('ascii')
+                    CURRENT_RUNDIR.make_node('results/signoff/'+substepName).mkdir()
+                    if (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
+                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                    elif brick.runStep(substepName,steps_to_run):
+                        ruleFile = brick.getTextNodeValue(substep,'rulefile')
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
+                        INPUT = [
+                            bld.path.make_node(stepBaseDir+'/'+ruleFile),
+                            CURRENT_RUNDIR.make_node('results/encounter/Top_pins.gds')
+                                ]
+                        # if this substep has a preceding substep, make this one dependend on its output
+                        if (len(substep.getElementsByTagName('after')) > 0):
+                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+
+                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile'))
+                        results[substepName] = OUTPUT
+
+                        bld (
+                            rule = """calibre -drc -turbo -hyper -64 -hier %s | tee %s""" % (bld.path.make_node(stepBaseDir+'/'+ruleFile).abspath(),CURRENT_RUNDIR.make_node('logfiles/signoff_'+substepName+'.log').abspath()),
+                            source = INPUT,
+                            target = OUTPUT,
+                            always = always_flag,
+                        )
+
+
     # verification tasks are generated from here on
     # if mode was set to 'verify'
     elif bld.env.MODE == 'functional':

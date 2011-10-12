@@ -15,7 +15,7 @@
         <library name="fsa0a_c_io" path="$BRICK_DIR/resources/fsa0a_c_io/BackEnd/OA/fsa0a_c_io"></library>
         <library name="global" path="$BRICK_DIR/components/mccfc/units/global/cdslib/global"></library>
         <library name="fc_iopads" path="$BRICK_DIR/components/mccfc/units/fc_iopads/cdslib/fc_iopads"></library>
-        <library name="fc_serial_l1" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_serial_l1/cdslib/fc_serial_l1"></library>
+        <library name="fc_serial_l1" path="$BRICK_DIR/components/mccfc/units/fc_serial_l1/cdslib/fc_serial_l1"></library>
         <library name="fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/fc_floating_gate"></library>
         <library name="tb_fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/tb_fc_floating_gate"></library>
         <library name="fc_anncore" path="$BRICK_DIR/components/mccfc/units/fc_anncore/cdslib/fc_anncore"></library>
@@ -216,6 +216,16 @@
                 <TCLscript>scripts/prepare_export.tcl</TCLscript>
                 <outputFile>results/encounter/Top_pins.gds</outputFile>
                 <after>final</after>
+            </subStep>
+        </step>
+        <step class="signoff">
+            <stepBaseDir>components/mccfc/units/top/signoff</stepBaseDir>
+            <subStep name="drc">
+                <rulefile>calibre/rules/drc.rules</rulefile>
+                <outputFile>drc/Top_pins.drc.results</outputFile>
+                <!--
+                <after>streamInOut</after>
+                -->
             </subStep>
         </step>
     </tasks>
