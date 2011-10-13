@@ -44,6 +44,8 @@
                 </subStep>
                 <subStep name="genGDS">
                 </subStep>
+                <subStep name="genCDL">
+                </subStep>
             </cell>
             <cell name="hicann_outamp_top" lib="fc_opamp">
                 <cellBaseDir>components/ncf-hicann-fc/units/fc_opamp/abstract</cellBaseDir>
@@ -56,6 +58,8 @@
                 </subStep>
                 <subStep name="genGDS">
                 </subStep>
+                <subStep name="genCDL">
+                </subStep>
             </cell>
             <cell name="fc_repeater_block_left" lib="fc_serial_l1">
                 <cellBaseDir>components/ncf-hicann-fc/units/fc_serial_l1/abstract</cellBaseDir>
@@ -67,6 +71,8 @@
                 <subStep name="genDB">
                 </subStep>
                 <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
                 </subStep>
             </cell>
             <cell name="pad_corner" lib="fc_bond_pads">
@@ -88,6 +94,8 @@
                 </subStep>
                 <subStep name="genGDS">
                 </subStep>
+                <subStep name="genCDL">
+                </subStep>
             </cell>
             <cell name="vdd_esd" lib="fc_bond_pads">
                 <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
@@ -99,6 +107,8 @@
                 <subStep name="genDB">
                 </subStep>
                 <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
                 </subStep>
             </cell>
             <cell name="gnd_pad_2" lib="fc_bond_pads">
@@ -112,6 +122,8 @@
                 </subStep>
                 <subStep name="genGDS">
                 </subStep>
+                <subStep name="genCDL">
+                </subStep>
             </cell>
             <cell name="digital_pad" lib="fc_bond_pads">
                 <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
@@ -123,6 +135,8 @@
                 <subStep name="genDB">
                 </subStep>
                 <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
                 </subStep>
             </cell>
             <cell name="digital_out" lib="fc_bond_pads">
@@ -136,6 +150,8 @@
                 </subStep>
                 <subStep name="genGDS">
                 </subStep>
+                <subStep name="genCDL">
+                </subStep>
             </cell>
             <cell name="fc_diffclk_in_fe" lib="fc_diffclk_in">
                 <cellBaseDir>components/ncf-hicann/units/fc_diffclk_in/abstract</cellBaseDir>
@@ -147,6 +163,8 @@
                 <subStep name="genDB">
                 </subStep>
                 <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
                 </subStep>
             </cell>
         </step>
@@ -214,7 +232,9 @@
             </subStep>
             <subStep name="prepare_export">
                 <TCLscript>scripts/prepare_export.tcl</TCLscript>
-                <outputFile>results/encounter/Top_pins.gds</outputFile>
+                <outputFile>results/encounter/Top_pins.gds,
+                    results/encounter/Top_pins.phys.v
+                </outputFile>
                 <after>final</after>
             </subStep>
         </step>
@@ -225,24 +245,37 @@
                 <outputFile>drc/Top_pins.drc.results</outputFile>
             </subStep>
             <subStep name="lvs_netlist">
-                <sourceNetlist>encounter/Top_pins.phys.v</sourceNetlist>
-                <verilogPrimlib>encounter/Top_pins.phys.v</verilogPrimlib>
+                <sourceNetlist>results/encounter/Top_pins.phys.v</sourceNetlist>
+                <verilogPrimlib>
+                     $CURRENT_RUNDIR/results/abstract/fc_serial_l1/fc_repeater_block_left_functional.v,
+                     $CURRENT_RUNDIR/results/abstract/fc_opamp/hicann_outamp_top_functional.v,
+                     $CURRENT_RUNDIR/results/abstract/fc_anncore/fc_anncore_pins_functional.v
+                </verilogPrimlib>
                 <includeNetlists>
-                    calibre/rules/drc.rules,
+                     $BRICK_DIR/resources/fsa0m_a_sc/BackEnd/lvs/fsa0m_a_generic_core_mpg.spi,
+                     $BRICK_DIR/resources/fsa0a_c_io/BackEnd/lvs/fsa0a_c_io_mpg.spi,
+                     $BRICK_DIR/resources/fsa0a_c_t33_analogesd_io/BackEnd/lvs/fsa0a_c_t33_analogesd_io_mpg.spi,
+                     $BRICK_DIR/resources/sram_lib/SY180_16X49X1CM4/SY180_16X49X1CM4.siz,
+                     $CURRENT_RUNDIR/results/abstract/fc_diffclk_in/fc_diffclk_in_fe.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_anncore/fc_anncore_pins.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/digital_out.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/digital_pad.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/analog_IO.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vdd_esd.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/gnd_pad_2.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_opamp/hicann_outamp_top.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_serial_l1/fc_repeater_block_left.cdl,
                 </includeNetlists>
                 <includeVNetlists>
-                    calibre/rules/drc.rules,
                 </includeVNetlists>
-                <outputFile>lvs/Top_pins.src.net</outputFile>
+                <outputFile>lvs_netlist/Top_pins.src.net</outputFile>
             </subStep>
-            <!--
             <subStep name="lvs">
                 <rulefile>calibre/rules/lvs.rules</rulefile>
                 <hcellsFile>calibre/rules/hcells.lst</hcellsFile>
-                <netlist>lvs/Top_pins.src.net</netlist>
+                <netlist>lvs_netlist/Top_pins.src.net</netlist>
                 <outputFile>lvs/svdb</outputFile>
             </subStep>
-            -->
         </step>
     </tasks>
     <tests>

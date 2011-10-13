@@ -204,6 +204,7 @@ def build(bld):
 
     bld ( rule = 'echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/worklib" >> cds.lib' )
     bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var' )
+    bld ( rule = 'cp ${SRC} ${TGT}', source=bld.path.make_node('./source/cds/si.env'), target=CURRENT_RUNDIR.make_node('../si.env') )
 
     # start with build jobs or verification jobs
     if (bld.env.MODE == 'build'):
@@ -328,6 +329,32 @@ def build(bld):
                                 target = OUTPUT,
                                 always = always_flag,
                             )
+                        #
+                        # genCDL
+                        #
+                        if (substepName == 'genCDL') and brick.runStep(substepName,steps_to_run):
+                            bld.add_group('abstract_genCDL_'+libName+'_'+cellName)
+                            INPUT = bld.root.make_node(libraries[libName] + '/' + cellName + '/schematic/sch.oa')
+                            OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.cdl')
+
+                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
+                            bld(
+                                rule = """
+                                    export LIB=%s && export BLOCK=%s &&
+                                    si -batch -command netlist > %s &&
+                                    sed "s/\/ //g" %s > %s &&
+                                    rm %s
+                                """ % (libName,cellName,
+                                        CURRENT_RUNDIR.make_node('logfiles/abstract_'+cellName+'.genCDL.log').abspath(),
+                                        CURRENT_RUNDIR.make_node('../'+cellName+'.cdl').abspath(),
+                                        CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.cdl').abspath(),
+                                        CURRENT_RUNDIR.make_node('../'+cellName+'.cdl').abspath()
+                                    ),
+                                source = INPUT,
+                                target = OUTPUT,
+                                always = always_flag,
+                            )
 
                         #
                         # genLIB
@@ -348,7 +375,7 @@ def build(bld):
                             bld(
                                 rule = """
                                     export LIB=%s && export BLOCK=%s &&
-                                    virtuoso -nograph -replay %s -log %s && cp %s %s""" % (libName,cellName,INPUT[1].abspath(),bld.path.make_node("logfiles/abstract_"+cellName+".genfunc.log"),OUTPUT[0].abspath(),OUTPUT[1].abspath()),
+                                    virtuoso -nograph -replay %s -log %s && cp %s %s""" % (libName,cellName,INPUT[1].abspath(),CURRENT_RUNDIR.make_node("logfiles/abstract_"+cellName+".genfunc.log"),OUTPUT[0].abspath(),OUTPUT[1].abspath()),
                                 source = INPUT,
                                 target = OUTPUT,
                                 always = always_flag,
@@ -454,9 +481,14 @@ def build(bld):
                     # if this substep has a preceding substep, make this one dependend on its output
                     INPUT.append(stepBaseDir+'/'+TCLscript)
                     if (len(substep.getElementsByTagName('after')) > 0):
-                        INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+                        INPUT.extend(results[brick.getTextNodeValue(substep,'after')])
 
-                    OUTPUT = CURRENT_RUNDIR.make_node(brick.getTextNodeValue(substep,'outputFile'))
+                    # read output files
+                    outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
+                    OUTPUT = []
+                    for path in outputFiles:
+                        OUTPUT.append(CURRENT_RUNDIR.make_node(path))
+
                     results[substepName] = OUTPUT
 
                     if brick.runStep(substepName,steps_to_run):
@@ -465,10 +497,7 @@ def build(bld):
                         bld(
                             rule = brick.encounter,
                             source = INPUT,
-                            target = [
-                                OUTPUT,
-                                CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log')
-                            ],
+                            target = OUTPUT,
                             always = always_flag,
                         )
 
@@ -522,16 +551,31 @@ def build(bld):
                     # netlist
                     #
                     elif (substepName == 'lvs_netlist') and brick.runStep(substepName,steps_to_run):
+                        # sourceNetlist
                         sourceNetlist = brick.getTextNodeValue(substep,'sourceNetlist')
-                        includeVNetlists = brick.getTextNodeValue(substep,'includeNetlists')
-                        outputNetlist = brick.getTextNodeValue(substep,'outputFile')
-                        includeNetlists = brick.getTextNodeValue(substep,'includeNetlists')
-                        verilogPrimlib = brick.getTextNodeValue(substep,'verilogPrimlib')
+                        # includeVNetlists
+                        includeVNetlists = brick.getTextNodeAsList(bld,substep,'includeVNetlists')
+                        if len(includeVNetlists) > 0:
+                            includeVNetlists = "-v "+(" -v ".join(includeVNetlists))
+                        else:
+                            includeVNetlists = ""
+                        # includeNetlists
+                        includeNetlists = brick.getTextNodeAsList(bld,substep,'includeNetlists')
+                        if len(includeNetlists) > 0:
+                            includeNetlists = "-s "+(" -s ".join(includeNetlists))
+                        else:
+                            includeNetlists = ""
+                        # verilogPrimlib
+                        verilogPrimlib = brick.getTextNodeAsList(bld,substep,'verilogPrimlib')
+                        if len(verilogPrimlib) > 0:
+                            verilogPrimlib = "-l "+(" -l ".join(verilogPrimlib))
+                        else:
+                            verilogPrimlib = ""
 
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
 
                         INPUT = [
-                            CURRENT_RUNDIR.make_node(sourceNetlist).abspath(),
+                            CURRENT_RUNDIR.make_node(sourceNetlist),
                                 ]
                         # if this substep has a preceding substep, make this one dependend on its output
                         if (len(substep.getElementsByTagName('after')) > 0):
@@ -540,26 +584,27 @@ def build(bld):
                         OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile'))
                         results[substepName] = OUTPUT
 
-                        #bld (
-                        #    rule = """v2lvs %s -v %s -o %s %s -n -w 3 %s >& %s""" %
-                        #    (
+                        bld (
+                            rule = """v2lvs %s -v %s -o %s %s -n -w 3 %s >& %s""" %
+                            (
                                 # INCLUDE_VNETLISTS
-                                #bld.path.make_node(stepBaseDir+'/'+hcells).abspath(),
+                                includeVNetlists,
                                 # source netlist
-                                #bld.path.make_node(stepBaseDir+'/'+ruleFile).abspath(),
+                                CURRENT_RUNDIR.make_node(sourceNetlist).abspath(),
                                 # output netlist
-                                #CURRENT_RUNDIR.make_node('results/signoff/lvs/'+outputNetlist).abspath(),
+                                CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile')).abspath(),
                                 # include netlists
+                                includeNetlists,
                                 # verilog primlib
+                                verilogPrimlib,
                                 # logfile
-                                #CURRENT_RUNDIR.make_node('logfiles/signoff_'+substepName+'.log').abspath()
-                        #    ),
-                        #    source = INPUT,
-                        #    target = OUTPUT,
-                        #    always = always_flag,
-                        #)
-#v2lvs ${INCLUDE_VNETLISTS} -v ${NETLISTSRC} -o ${UNITNAME}.src.net ${INCLUDE_NETLISTS} -n -w 3 \
-#	  ${VERILOG_PRIMLIB} >& ${LOGFILE2};A
+                                CURRENT_RUNDIR.make_node('logfiles/signoff_'+substepName+'.log').abspath()
+                            ),
+                            source = INPUT,
+                            target = OUTPUT,
+                            always = always_flag,
+                        )
+
                     #
                     # lvs
                     #
@@ -572,7 +617,7 @@ def build(bld):
                         INPUT = [
                             bld.path.make_node(stepBaseDir+'/'+ruleFile),
                             CURRENT_RUNDIR.make_node('results/encounter/Top_pins.gds'),
-                            CURRENT_RUNDIR.make_node('results/signoff/'+netlist).abspath(),
+                            CURRENT_RUNDIR.make_node('results/signoff/'+netlist),
                                 ]
                         # if this substep has a preceding substep, make this one dependend on its output
                         if (len(substep.getElementsByTagName('after')) > 0):

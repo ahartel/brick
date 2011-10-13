@@ -10,6 +10,21 @@ def getText(nodelist):
 def getTextNodeValue(tree,nodeName):
     return getText(tree.getElementsByTagName(nodeName)[0].childNodes).encode('ascii')
 
+def getTextNodeAsList(context,tree,nodeName):
+    textnode = getTextNodeValue(tree,nodeName)
+    # remove spaces and line breaks
+    textnode = textnode.replace(" ","")
+    textnode = textnode.replace("\n","")
+    textnode = replace_env_vars(textnode,context)
+    # split the string to make it a list
+    list = textnode.split(',')
+    # if there was a trailing comma in the string, the last entry will
+    # be empty, remove it
+    if (len(list[len(list)-1]) == 0):
+        list.pop()
+
+    return list
+
 def replace_env_vars(replacestring,context):
     # replace env variables
     m = re.search('(?<=\$)(\w+)', replacestring)
