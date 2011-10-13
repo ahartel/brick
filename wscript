@@ -487,10 +487,17 @@ def build(bld):
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
                     substepName = substep.getAttribute('name').encode('ascii')
+                    # create a results folder for each substep
                     CURRENT_RUNDIR.make_node('results/signoff/'+substepName).mkdir()
+                    #
+                    # primetime
+                    #
                     if (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
                         TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                    elif brick.runStep(substepName,steps_to_run):
+                    #
+                    # drc
+                    #
+                    elif (substepName == 'drc') and brick.runStep(substepName,steps_to_run):
                         ruleFile = brick.getTextNodeValue(substep,'rulefile')
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
 
@@ -511,10 +518,84 @@ def build(bld):
                             target = OUTPUT,
                             always = always_flag,
                         )
+                    #
+                    # netlist
+                    #
+                    elif (substepName == 'lvs_netlist') and brick.runStep(substepName,steps_to_run):
+                        sourceNetlist = brick.getTextNodeValue(substep,'sourceNetlist')
+                        includeVNetlists = brick.getTextNodeValue(substep,'includeNetlists')
+                        outputNetlist = brick.getTextNodeValue(substep,'outputFile')
+                        includeNetlists = brick.getTextNodeValue(substep,'includeNetlists')
+                        verilogPrimlib = brick.getTextNodeValue(substep,'verilogPrimlib')
 
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
+                        INPUT = [
+                            CURRENT_RUNDIR.make_node(sourceNetlist).abspath(),
+                                ]
+                        # if this substep has a preceding substep, make this one dependend on its output
+                        if (len(substep.getElementsByTagName('after')) > 0):
+                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+
+                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile'))
+                        results[substepName] = OUTPUT
+
+                        #bld (
+                        #    rule = """v2lvs %s -v %s -o %s %s -n -w 3 %s >& %s""" %
+                        #    (
+                                # INCLUDE_VNETLISTS
+                                #bld.path.make_node(stepBaseDir+'/'+hcells).abspath(),
+                                # source netlist
+                                #bld.path.make_node(stepBaseDir+'/'+ruleFile).abspath(),
+                                # output netlist
+                                #CURRENT_RUNDIR.make_node('results/signoff/lvs/'+outputNetlist).abspath(),
+                                # include netlists
+                                # verilog primlib
+                                # logfile
+                                #CURRENT_RUNDIR.make_node('logfiles/signoff_'+substepName+'.log').abspath()
+                        #    ),
+                        #    source = INPUT,
+                        #    target = OUTPUT,
+                        #    always = always_flag,
+                        #)
+#v2lvs ${INCLUDE_VNETLISTS} -v ${NETLISTSRC} -o ${UNITNAME}.src.net ${INCLUDE_NETLISTS} -n -w 3 \
+#	  ${VERILOG_PRIMLIB} >& ${LOGFILE2};A
+                    #
+                    # lvs
+                    #
+                    elif (substepName == 'lvs') and brick.runStep(substepName,steps_to_run):
+                        ruleFile = brick.getTextNodeValue(substep,'rulefile')
+                        hcells = brick.getTextNodeValue(substep,'hcellsFile')
+                        netlist = brick.getTextNodeValue(substep,'netlist')
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
+                        INPUT = [
+                            bld.path.make_node(stepBaseDir+'/'+ruleFile),
+                            CURRENT_RUNDIR.make_node('results/encounter/Top_pins.gds'),
+                            CURRENT_RUNDIR.make_node('results/signoff/'+netlist).abspath(),
+                                ]
+                        # if this substep has a preceding substep, make this one dependend on its output
+                        if (len(substep.getElementsByTagName('after')) > 0):
+                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+
+                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile'))
+                        results[substepName] = OUTPUT
+
+                        bld (
+                            rule = """calibre -lvs -turbo -hyper -64 -hier -hcell %s -spice %s %s | tee %s""" %
+                            (
+                                bld.path.make_node(stepBaseDir+'/'+hcells).abspath(),
+                                CURRENT_RUNDIR.make_node('results/signoff/'+netlist).abspath(),
+                                bld.path.make_node(stepBaseDir+'/'+ruleFile).abspath(),
+                                CURRENT_RUNDIR.make_node('logfiles/signoff_'+substepName+'.log').abspath()
+                            ),
+                            source = INPUT,
+                            target = OUTPUT,
+                            always = always_flag,
+                        )
 
     # verification tasks are generated from here on
-    # if mode was set to 'verify'
+    # if mode was set to 'functional'
     elif bld.env.MODE == 'functional':
 
         CURRENT_RUNDIR.make_node('rundir').mkdir()

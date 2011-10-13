@@ -223,10 +223,26 @@
             <subStep name="drc">
                 <rulefile>calibre/rules/drc.rules</rulefile>
                 <outputFile>drc/Top_pins.drc.results</outputFile>
-                <!--
-                <after>streamInOut</after>
-                -->
             </subStep>
+            <subStep name="lvs_netlist">
+                <sourceNetlist>encounter/Top_pins.phys.v</sourceNetlist>
+                <verilogPrimlib>encounter/Top_pins.phys.v</verilogPrimlib>
+                <includeNetlists>
+                    calibre/rules/drc.rules,
+                </includeNetlists>
+                <includeVNetlists>
+                    calibre/rules/drc.rules,
+                </includeVNetlists>
+                <outputFile>lvs/Top_pins.src.net</outputFile>
+            </subStep>
+            <!--
+            <subStep name="lvs">
+                <rulefile>calibre/rules/lvs.rules</rulefile>
+                <hcellsFile>calibre/rules/hcells.lst</hcellsFile>
+                <netlist>lvs/Top_pins.src.net</netlist>
+                <outputFile>lvs/svdb</outputFile>
+            </subStep>
+            -->
         </step>
     </tasks>
     <tests>
