@@ -192,17 +192,28 @@ def build(bld):
     libs = xmlconfig.getElementsByTagName('libraries')[0].getElementsByTagName('library')
     bld.add_group('cdslib')
     bld.set_group('cdslib')
-    bld ( rule = 'echo "" > cds.lib' )
+    bld (
+        rule = 'echo "" > ${TGT}',
+        target = CURRENT_RUNDIR.make_node('../cds.lib'),
+        source = bld.path.make_node(bld.env.CONFIGFILE)
+    )
     for lib in libs:
         libName = lib.getAttribute('name').encode('ascii')
         libPath = lib.getAttribute('path').encode('ascii')
         libPath = brick.replace_env_vars(libPath,bld)
         libraries[libName] = libPath
         bld (
-                rule = 'echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
+            rule = 'echo "DEFINE '+libName+' '+libPath+'" >> ${TGT}',
+            target=CURRENT_RUNDIR.make_node('../cds.lib'),
+            source = bld.path.make_node(bld.env.CONFIGFILE)
         )
 
-    bld ( rule = 'echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/worklib" >> cds.lib' )
+    bld ( 
+        rule = 'echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/worklib" >> ${TGT}',
+        target=CURRENT_RUNDIR.make_node('../cds.lib'),
+        source = bld.path.make_node(bld.env.CONFIGFILE)
+    )
+
     bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var' )
     bld ( rule = 'cp ${SRC} ${TGT}', source=bld.path.make_node('./source/cds/si.env'), target=CURRENT_RUNDIR.make_node('../si.env') )
 
