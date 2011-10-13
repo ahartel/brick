@@ -57,7 +57,7 @@ def checkAlwaysFlag(substepName,steps_to_run):
 
 def encounter(task):
     TCLscript = task.inputs[0].abspath()
-    logFile = task.outputs[1].abspath()
+    logFile = task.outputs[0].abspath()
     cmd = 'encounter -init %s -nowin -overwrite -log %s' % (TCLscript,logFile)
     return task.exec_command(cmd)
 

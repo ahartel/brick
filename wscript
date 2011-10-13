@@ -485,7 +485,7 @@ def build(bld):
 
                     # read output files
                     outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
-                    OUTPUT = []
+                    OUTPUT = [CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log')]
                     for path in outputFiles:
                         OUTPUT.append(CURRENT_RUNDIR.make_node(path))
 
