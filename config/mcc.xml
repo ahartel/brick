@@ -23,7 +23,7 @@
         <library name="fc_anncore_old" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_anncore/cdslib/fc_anncore"></library>
         -->
         <library name="fc_denmem" path="$BRICK_DIR/components/mccfc/units/fc_denmem/cdslib/fc_denmem"></library>
-        <library name="fc_opamp" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_opamp/cdslib/fc_opamp"></library>
+        <library name="fc_opamp" path="$BRICK_DIR/components/mccfc/units/fc_opamp/cdslib/fc_opamp"></library>
         <library name="tb_fc_opamp" path="$BRICK_DIR/components/mccfc/units/fc_opamp/cdslib/tb_fc_opamp"></library>
         <library name="fc_bond_pads" path="$BRICK_DIR/components/mccfc/units/fc_bond_pads/cdslib/fc_bond_pads"></library>
         <library name="miniasic_esd" path="$BRICK_DIR/components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd"></library>
