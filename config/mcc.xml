@@ -19,9 +19,6 @@
         <library name="fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/fc_floating_gate"></library>
         <library name="tb_fc_floating_gate" path="$BRICK_DIR/components/mccfc/units/fc_floating_gate/cdslib/tb_fc_floating_gate"></library>
         <library name="fc_anncore" path="$BRICK_DIR/components/mccfc/units/fc_anncore/cdslib/fc_anncore"></library>
-        <!--
-        <library name="fc_anncore_old" path="$BRICK_DIR/components/ncf-hicann-fc/units/fc_anncore/cdslib/fc_anncore"></library>
-        -->
         <library name="fc_denmem" path="$BRICK_DIR/components/mccfc/units/fc_denmem/cdslib/fc_denmem"></library>
         <library name="fc_opamp" path="$BRICK_DIR/components/mccfc/units/fc_opamp/cdslib/fc_opamp"></library>
         <library name="tb_fc_opamp" path="$BRICK_DIR/components/mccfc/units/fc_opamp/cdslib/tb_fc_opamp"></library>
