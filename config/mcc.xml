@@ -97,6 +97,34 @@
                 <subStep name="genCDL">
                 </subStep>
             </cell>
+            <cell name="vpp1_pad" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
+                </subStep>
+            </cell>
+            <cell name="vpp2_pad" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
+                </subStep>
+            </cell>
             <cell name="vdd_esd" lib="fc_bond_pads">
                 <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
@@ -153,12 +181,13 @@
                 <subStep name="genCDL">
                 </subStep>
             </cell>
-            <cell name="fc_diffclk_in_fe" lib="fc_diffclk_in">
-                <cellBaseDir>components/ncf-hicann/units/fc_diffclk_in/abstract</cellBaseDir>
+            <cell name="diff_clk_pad" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
-                    <skillScript>scripts/fc_diffclk_in.absgen.il</skillScript>
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
                 </subStep>
                 <subStep name="genLIB">
+                    <pincapFile>timing/diff_clk_pad_pincap.txt</pincapFile>
                 </subStep>
                 <subStep name="genDB">
                 </subStep>

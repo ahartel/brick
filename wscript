@@ -397,6 +397,12 @@ def build(bld):
                                 CURRENT_RUNDIR.make_node('results/abstract/' + libName + '/' + cellName + '_functional.v'),
                                 bld.path.find_resource('source/perl/verilog2lib.pl'),
                             ]
+                            try:
+                                pincapFile = brick.getTextNodeValue(substep,'pincapFile')
+                                INPUT.append(bld.path.make_node(cellBaseDir+'/'+ pincapFile))
+                            except (IndexError):
+                                pass
+
                             OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lib')
                             bld(
                                 rule = brick.verilog2lib,

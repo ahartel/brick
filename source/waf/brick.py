@@ -99,6 +99,10 @@ def schematic2verilog(task):
 def verilog2lib(task):
     verilogFile = task.inputs[0].abspath()
     libFile = task.outputs[0].abspath()
-    cmd = 'perl ../source/perl/verilog2lib.pl %s %s' % (verilogFile,libFile)
+    try:
+        pexFile = task.inputs[2].abspath()
+        cmd = 'perl ../source/perl/verilog2lib.pl %s %s %s' % (verilogFile,libFile,pexFile)
+    except IndexError:
+        cmd = 'perl ../source/perl/verilog2lib.pl %s %s' % (verilogFile,libFile)
     return task.exec_command(cmd)
 
