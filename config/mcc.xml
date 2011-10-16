@@ -446,7 +446,7 @@
             <group name="verilog_sources_simonly">
                  components/ncf-hicann/units/hicann_top/source/tb/verilog/passt_gnd_model.v,
                  components/ncf-hicann/units/fc_ws_iopads/source/behavioral/verilog/fc_ws_iopads.v,
-                 components/ncf-hicann/units/fc_diffclk_in/source/behavioral/verilog/fc_diffclk_in_fe.v,
+                 components/mccfc/units/top/source/tb/diff_clk_pad_behav.v,
                  components/ncf-hicann/units/dnc_if/source/rtl/verilog/no_x_gen_sim.v,
                  resources/fsa0a_c_io/FrontEnd/verilog/fsa0a_c_io_supply.v,
                  resources/fsa0a_c_io/FrontEnd/verilog/fsa0a_c_io.lib.src,

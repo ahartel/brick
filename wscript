@@ -199,7 +199,7 @@ def build(bld):
         libPath = brick.replace_env_vars(libPath,bld)
         libraries[libName] = libPath
         cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
-    cdslib_rule += ' && echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/worklib" >> cds.lib'
+    cdslib_rule += ' && echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/../worklib" >> cds.lib'
     bld ( 
         rule = cdslib_rule,
         target=CURRENT_RUNDIR.make_node('../cds.lib'),
