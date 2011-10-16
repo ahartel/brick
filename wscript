@@ -667,13 +667,14 @@ def build(bld):
                         INPUT = [
                             bld.path.make_node(stepBaseDir+'/'+ruleFile),
                             CURRENT_RUNDIR.make_node('results/encounter/Top_pins.gds'),
-                            CURRENT_RUNDIR.make_node('results/signoff/'+netlist),
                                 ]
                         # if this substep has a preceding substep, make this one dependend on its output
                         if (len(substep.getElementsByTagName('after')) > 0):
                             INPUT.append(results[brick.getTextNodeValue(substep,'after')])
 
-                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile'))
+                        OUTPUT = [ CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile')),
+                            CURRENT_RUNDIR.make_node('results/signoff/'+netlist),
+                        ]
                         results[substepName] = OUTPUT
 
                         bld (
