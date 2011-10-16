@@ -533,6 +533,47 @@ def build(bld):
                     if (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
                         TCLscript = brick.getTextNodeValue(substep,'TCLscript')
                     #
+                    # generate signoff GDS
+                    #
+                    elif (substepName == 'patch_gds') and brick.runStep(substepName,steps_to_run):
+                        inputFile = brick.getTextNodeValue(substep,'inputFile')
+                        outputFile = brick.getTextNodeValue(substep,'outputFile')
+                        layermap = brick.getTextNodeValue(substep,'layermap')
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                        libName = substep.getElementsByTagName('streamIn')[0].getAttribute('lib').encode('ascii')
+                        cellName = substep.getElementsByTagName('streamIn')[0].getAttribute('cell').encode('ascii')
+
+                        INPUT = [
+                            CURRENT_RUNDIR.make_node(inputFile),
+                            bld.path.make_node(layermap),
+                        ]
+                        OUTPUT = bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa')
+
+                        bld (
+                            rule = """strmin -library %s -topCell %s -view layout -layerMap %s -strmFile %s -logFile %s -snapToGrid
+                                """ % (libName,cellName,INPUT[1].abspath(),INPUT[0].abspath(),CURRENT_RUNDIR.make_node('logfiles/streamin_'+libName+'_'+cellName+'.log')),
+                            source = INPUT,
+                            target = OUTPUT,
+                            always = always_flag
+                        )
+
+                        libName = substep.getElementsByTagName('streamOut')[0].getAttribute('lib').encode('ascii')
+                        cellName = substep.getElementsByTagName('streamOut')[0].getAttribute('cell').encode('ascii')
+                        INPUT = [
+                            bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa'),
+                            bld.path.make_node(layermap),
+                        ]
+                        OUTPUT = CURRENT_RUNDIR.make_node(outputFile)
+
+                        bld (
+                            rule = """strmout -library %s -topCell %s -view layout -snapToGrid -case lower -layerMap %s -strmFile %s -logFile %s""" % (
+                                libName,cellName,INPUT[1].abspath(),OUTPUT.abspath(),CURRENT_RUNDIR.make_node('logfiles/streamout_'+libName+'_'+cellName+'.log')),
+                            source = INPUT,
+                            target = OUTPUT,
+                            always = always_flag
+                        )
+
+                    #
                     # drc
                     #
                     elif (substepName == 'drc') and brick.runStep(substepName,steps_to_run):

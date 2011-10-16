@@ -25,6 +25,8 @@
         <library name="fc_bond_pads" path="$BRICK_DIR/components/mccfc/units/fc_bond_pads/cdslib/fc_bond_pads"></library>
         <library name="miniasic_esd" path="$BRICK_DIR/components/ncf-hicann-fc/units/miniasic_esd/cdslib/miniasic_esd"></library>
         <library name="fc_diffclk_in" path="$BRICK_DIR/components/ncf-hicann/units/fc_diffclk_in/cdslib/fc_diffclk_in"></library>
+        <library name="Top_pins_signoff" path="$BRICK_DIR/components/mccfc/units/top/signoff/cdslib/Top_pins_signoff"></library>
+        <library name="Top_pins_streamin" path="$BRICK_DIR/components/mccfc/units/top/signoff/cdslib/Top_pins_streamin"></library>
     </libraries>
     <tasks>
         <step class="abstract">
@@ -280,6 +282,15 @@
         </step>
         <step class="signoff">
             <stepBaseDir>components/mccfc/units/top/signoff</stepBaseDir>
+            <!--
+            <subStep name="patch_gds">
+                <inputFile>results/encounter/Top_pins.gds</inputFile>
+                <outputFile>results/signoff/Top_pins_signoff.gds</outputFile>
+                <layermap>resources/u18/artist6.1/UMC_18_CMOS/UMC_18_CMOS.layermap</layermap>
+                <streamOut lib="Top_pins_signoff" cell="Top_pins"></streamOut>
+                <streamIn lib="Top_pins_streamin" cell="Top_pins"></streamIn>
+            </subStep>
+            -->
             <subStep name="drc">
                 <rulefile>calibre/rules/drc.rules</rulefile>
                 <outputFile>drc/Top_pins.drc.results</outputFile>
@@ -296,12 +307,15 @@
                      $BRICK_DIR/resources/fsa0a_c_io/BackEnd/lvs/fsa0a_c_io_mpg.spi,
                      $BRICK_DIR/resources/fsa0a_c_t33_analogesd_io/BackEnd/lvs/fsa0a_c_t33_analogesd_io_mpg.spi,
                      $BRICK_DIR/resources/sram_lib/SY180_16X49X1CM4/SY180_16X49X1CM4.siz,
-                     $CURRENT_RUNDIR/results/abstract/fc_diffclk_in/fc_diffclk_in_fe.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/diff_clk_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_anncore/fc_anncore_pins.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/digital_out.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/digital_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/analog_IO.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vdd_esd.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vdd25_pad.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vpp1_pad.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vpp2_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/gnd_pad_2.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_opamp/hicann_outamp_top.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_serial_l1/fc_repeater_block_left.cdl,
