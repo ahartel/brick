@@ -166,6 +166,34 @@
                 <subStep name="genCDL">
                 </subStep>
             </cell>
+            <cell name="gnd_pad_noclamp" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
+                </subStep>
+            </cell>
+            <cell name="gnda_pad_noclamp" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
+                </subStep>
+            </cell>
             <cell name="digital_pad" lib="fc_bond_pads">
                 <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
