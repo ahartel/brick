@@ -27,13 +27,13 @@ def getTextNodeAsList(context,tree,nodeName):
 
 def replace_env_vars(replacestring,context):
     # replace env variables
-    m = re.search('(?<=\$)(\w+)', replacestring)
-    if m:
-        for group in m.groups():
-            if (context.env[group]):
-                replacestring = re.sub("\$"+group,context.env[group],replacestring)
-            elif (os.environ.has_key(group)):
-                replacestring = re.sub("\$"+group,os.environ[group],replacestring)
+    m = re.findall('\$(\w+)', replacestring)
+    for group in m:
+        #for group in m.groups():
+        if (context.env[group]):
+            replacestring = re.sub("\$"+group,context.env[group],replacestring)
+        elif (os.environ.has_key(group)):
+            replacestring = re.sub("\$"+group,os.environ[group],replacestring)
 
     return replacestring
 
@@ -74,7 +74,6 @@ def dc_shell(task):
     return task.exec_command(cmd)
 
 def genLEF(task,test):
-    print test
     mainSkillScript = task.inputs[0].abspath()
     logFile = task.outputs[1].abspath()
     cmd = 'abstract -hi -nogui -replay %s -log %s' % (mainSkillScript,logFile)

@@ -327,7 +327,7 @@
             <subStep name="lvs">
                 <rulefile>calibre/rules/lvs.rules</rulefile>
                 <hcellsFile>calibre/rules/hcells.lst</hcellsFile>
-                <netlist>lvs_netlist/Top_pins.src.net</netlist>
+                <netlist>lvs_netlist/Top_pins.layout.net</netlist>
                 <outputFile>lvs/svdb</outputFile>
             </subStep>
         </step>
