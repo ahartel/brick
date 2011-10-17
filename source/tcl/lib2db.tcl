@@ -3,7 +3,6 @@
 # created 17.11.2010 by Andreas Gruebl
 #
 
-set ICPRO_DIR                    [getenv "ICPRO_DIR"]
 set libname [getenv "LIB"]
 set block [getenv "BLOCK"]
 set RESULTS_DIR [getenv "RESULTS_DIR"]
