@@ -535,9 +535,8 @@ def build(bld):
                     #
                     # generate signoff GDS
                     #
-                    elif (substepName == 'patch_gds') and brick.runStep(substepName,steps_to_run):
+                    elif (substepName == 'streamin') and brick.runStep(substepName,steps_to_run):
                         inputFile = brick.getTextNodeValue(substep,'inputFile')
-                        outputFile = brick.getTextNodeValue(substep,'outputFile')
                         layermap = brick.getTextNodeValue(substep,'layermap')
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
                         libName = substep.getElementsByTagName('streamIn')[0].getAttribute('lib').encode('ascii')
@@ -556,9 +555,13 @@ def build(bld):
                             target = OUTPUT,
                             always = always_flag
                         )
-
+                    elif (substepName == 'streamout') and brick.runStep(substepName,steps_to_run):
+                        outputFile = brick.getTextNodeValue(substep,'outputFile')
+                        layermap = brick.getTextNodeValue(substep,'layermap')
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
                         libName = substep.getElementsByTagName('streamOut')[0].getAttribute('lib').encode('ascii')
                         cellName = substep.getElementsByTagName('streamOut')[0].getAttribute('cell').encode('ascii')
+
                         INPUT = [
                             bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa'),
                             bld.path.make_node(layermap),
@@ -572,7 +575,6 @@ def build(bld):
                             target = OUTPUT,
                             always = always_flag
                         )
-
                     #
                     # drc
                     #
