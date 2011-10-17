@@ -29,7 +29,7 @@ def configure(conf):
             # create results directory
             conf.path.find_node(tempdir).make_node('results/').mkdir()
             conf.path.find_node(tempdir).make_node('logfiles/').mkdir()
-            conf.path.find_node(tempdir).make_node('worklib/').mkdir()
+            conf.path.find_node(tempdir).make_node('../worklib/').mkdir()
     conf.start_msg('Using brICk rundir')
     conf.end_msg(conf.env.CURRENT_RUNDIR)
 
