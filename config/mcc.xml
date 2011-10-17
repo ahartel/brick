@@ -282,15 +282,16 @@
         </step>
         <step class="signoff">
             <stepBaseDir>components/mccfc/units/top/signoff</stepBaseDir>
-            <!--
-            <subStep name="patch_gds">
+            <subStep name="streamin">
                 <inputFile>results/encounter/Top_pins.gds</inputFile>
+                <layermap>resources/u18/artist6.1/UMC_18_CMOS/UMC_18_CMOS.layermap</layermap>
+                <streamIn lib="Top_pins_streamin" cell="Top_pins"></streamIn>
+            </subStep>
+            <subStep name="streamout">
                 <outputFile>results/signoff/Top_pins_signoff.gds</outputFile>
                 <layermap>resources/u18/artist6.1/UMC_18_CMOS/UMC_18_CMOS.layermap</layermap>
                 <streamOut lib="Top_pins_signoff" cell="Top_pins"></streamOut>
-                <streamIn lib="Top_pins_streamin" cell="Top_pins"></streamIn>
             </subStep>
-            -->
             <subStep name="drc">
                 <rulefile>calibre/rules/drc.rules</rulefile>
                 <outputFile>drc/Top_pins.drc.results</outputFile>
