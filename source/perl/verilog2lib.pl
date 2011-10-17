@@ -194,7 +194,7 @@ while($line=<BASE>){
 			}
 			if (!$ignored) {
 				$type = "pin";
-				print NEW "\t\tpin ( $name ) {\n\t\t\tdirection : $dir;\n";
+				print NEW "\t\tpin ( \"$name\" ) {\n\t\t\tdirection : $dir;\n";
 			}
 		}
 		# insert pin parasitics if available
