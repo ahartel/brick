@@ -401,7 +401,7 @@
                 components/hicann-system/units/hicann_test/source/tmag_p_plltest_multi.cpp,
                 components/hicann-system/units/hicann_test/source/tmag_switchramtest.cpp,
                 components/hicann-system/units/hicann_test/source/tmjs_repeater.cpp,
-                components/hicann-system/units/hicann_test/source/tmsubm2_repeater.cpp,
+                components/hicann-system/units/hicann_test/source/tmsubmcc_repeater.cpp,
                 components/hicann-system/units/hicann_test/source/tmjs_stdpctrl.cpp,
                 components/hicann-system/units/hicann_test/source/tmsm_stdpctrl.cpp,
                 components/hicann-system/units/hicann_test/source/tmjs_neuronmem.cpp,
