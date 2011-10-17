@@ -405,7 +405,7 @@
                 components/hicann-system/units/hicann_test/source/tmjs_stdpctrl.cpp,
                 components/hicann-system/units/hicann_test/source/tmsm_stdpctrl.cpp,
                 components/hicann-system/units/hicann_test/source/tmjs_neuronmem.cpp,
-                components/hicann-system/units/hicann_test/source/tmsubm2_neuronmem.cpp,
+                components/hicann-system/units/hicann_test/source/tmsubmcc_neuronmem.cpp,
                 components/hicann-system/units/hicann_test/source/tmsubm2_stdpctrl.cpp,
                 components/hicann-system/units/hicann_test/source/tm_fgzero.cpp,
                 components/hicann-system/units/hicann_test/source/tm_singleneuron.cpp,
