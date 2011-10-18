@@ -360,8 +360,13 @@
                 <outputFile>lvs/svdb</outputFile>
             </subStep>
             <subStep name="primetime">
+                <corners>typ,max,min</corners>
                 <TCLscript>primetime/scripts/run_single.tcl</TCLscript>
-                <outputFile></outputFile>
+                <outputFile>
+                    results/signoff/primetime/Top_pins.typ.sdf.gz,
+                    results/signoff/primetime/Top_pins.min.sdf.gz,
+                    results/signoff/primetime/Top_pins.max.sdf.gz,
+                </outputFile>
             </subStep>
         </step>
     </tasks>
