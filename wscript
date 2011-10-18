@@ -488,13 +488,13 @@ def build(bld):
                     # declare list of source files
                     INPUT = []
                     # if this substep has a preceding substep, make this one dependend on its output
-                    INPUT.append(stepBaseDir+'/'+TCLscript)
+                    INPUT.append(bld.path.make_node(stepBaseDir+'/'+TCLscript))
                     if (len(substep.getElementsByTagName('after')) > 0):
                         INPUT.extend(results[brick.getTextNodeValue(substep,'after')])
 
                     # read output files
                     outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
-                    OUTPUT = [CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log')]
+                    OUTPUT = []
                     for path in outputFiles:
                         OUTPUT.append(CURRENT_RUNDIR.make_node(path))
 
@@ -504,7 +504,7 @@ def build(bld):
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
 
                         bld(
-                            rule = brick.encounter,
+                            rule = """encounter -init %s -nowin -overwrite -log %s""" % (INPUT[0].abspath(),CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log').abspath()),
                             source = INPUT,
                             target = OUTPUT,
                             always = always_flag,
