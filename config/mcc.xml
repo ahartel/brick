@@ -359,6 +359,10 @@
                 <netlist>lvs_netlist/Top_pins.layout.net</netlist>
                 <outputFile>lvs/svdb</outputFile>
             </subStep>
+            <subStep name="primetime">
+                <TCLscript>primetime/scripts/run_single.tcl</TCLscript>
+                <outputFile></outputFile>
+            </subStep>
         </step>
     </tasks>
     <tests>

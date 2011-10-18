@@ -691,6 +691,38 @@ def build(bld):
                             target = OUTPUT,
                             always = always_flag,
                         )
+                    #
+                    # primetime
+                    #
+                    elif (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
+                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+
+                        INPUT = [
+                            bld.path.make_node(stepBaseDir+'/'+TCLscript),
+                            CURRENT_RUNDIR.make_node('results/encounter/Top_pins.gds'),
+                        ]
+                        # if this substep has a preceding substep, make this one dependend on its output
+                        if (len(substep.getElementsByTagName('after')) > 0):
+                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+
+                        OUTPUT = [ CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile')),
+                            CURRENT_RUNDIR.make_node('results/signoff/'+netlist),
+                        ]
+                        results[substepName] = OUTPUT
+
+                        bld (
+                            rule = """calibre -lvs -turbo -hyper -64 -hier -hcell %s -spice %s %s | tee %s""" %
+                            (
+                                bld.path.make_node(stepBaseDir+'/'+hcells).abspath(),
+                                CURRENT_RUNDIR.make_node('results/signoff/'+netlist).abspath(),
+                                bld.path.make_node(stepBaseDir+'/'+ruleFile).abspath(),
+                                CURRENT_RUNDIR.make_node('logfiles/signoff_'+substepName+'.log').abspath()
+                            ),
+                            source = INPUT,
+                            target = OUTPUT,
+                            always = always_flag,
+                        )
 
     # verification tasks are generated from here on
     # if mode was set to 'functional'
