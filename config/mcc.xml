@@ -166,6 +166,34 @@
                 <subStep name="genCDL">
                 </subStep>
             </cell>
+            <cell name="gnd_pad_noclamp" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
+                </subStep>
+            </cell>
+            <cell name="gnda_pad_noclamp" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
+                </subStep>
+            </cell>
             <cell name="digital_pad" lib="fc_bond_pads">
                 <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
@@ -289,7 +317,7 @@
             </subStep>
             <subStep name="streamout">
                 <outputFile>results/signoff/Top_pins_signoff.gds</outputFile>
-                <layermap>resources/u18/artist6.1/UMC_18_CMOS/UMC_18_CMOS.layermap</layermap>
+                <layermap>components/ncf-hicann-fc/units/fc_bond_pads/df2/output/UMC_18_CMOS.layermap.modified</layermap>
                 <streamOut lib="Top_pins_signoff" cell="Top_pins"></streamOut>
             </subStep>
             <subStep name="drc">
