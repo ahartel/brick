@@ -729,19 +729,16 @@
                     -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
                 <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2,-DNO_XERCES</option>
-                <!--
                 <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
                 <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
-                -->
-                <!--
                 <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
                 <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
-                -->
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
              <testcase name="top_netlist_syn">
                 <sources name="rtl">hicannCtrl,testbench,toplevel_syn,arq,macros,verilog_sources_simonly,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
+                <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
                 <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
                 <option tool="NCVHDL" mode="rtl">-v93,-smartorder</option>
@@ -757,6 +754,7 @@
                     -timescale, 1ns/10ps,
                     -loadsc, ./libncsc_model.so,
                     -maxdelays,-64bit,
+                    -sdf_cmd_file,./worklib/Top_pins.sdf_cmd',
                 </option>
                 <option tool="NCELAB" mode="mixed-signal">
                     tb_top,
@@ -787,12 +785,10 @@
                     -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
                 <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2,-DNO_XERCES</option>
-                <!--
                 <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
                 <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
                 <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
                 <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
-                -->
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
 
