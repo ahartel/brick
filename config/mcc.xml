@@ -671,9 +671,11 @@
             components/hicann-system/units/measure/source/,
             components/hicann-system/units/jtag_lib/source/,
             components/hicann-system/units/arq/source,
+        </searchpaths>
+        <!--
             /usr/local/boost_1.40/include/,
             /usr/local/xerces_310/include/
-        </searchpaths>
+            -->
         <testcases>
             <testcase name="top_rtl_tc0">
                 <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_sources_simonly,verilog_lib_files</sources>
@@ -734,11 +736,15 @@
                     -analogControl, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs,
                     -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
-                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2</option>
+                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2,-DNO_XERCES</option>
+                <!--
                 <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
                 <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
+                -->
+                <!--
                 <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
                 <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
+                -->
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
         </testcases>
