@@ -266,7 +266,7 @@
             <stepBaseDir>components/mccfc/units/top/rtl2gds/dc_shell</stepBaseDir>
             <subStep name="compile">
                 <TCLscript>scripts/Top_pins.dc.tcl</TCLscript>
-                <outputFile>Top_pins.v</outputFile>
+                <outputFile>Top_pins.v,Top_pins.sdf</outputFile>
                 <after>genLIB</after>
             </subStep>
         </step>
@@ -452,7 +452,7 @@
                 components/hicann-system/units/stage2_hal/source/dnc_control.cpp,
                 components/hicann-system/units/stage2_hal/source/syn_trans.cpp,
                 components/hicann-system/units/jtag_lib/source/jtag_cmdbase.cpp,
-                components/hicann-system/units/stage2_conf/source/stage2_conf.cpp,
+                components/hicann-system/units/stage2_conf/source/stage2_conf_noXerces.cpp,
                 components/hicann-system/units/stage2_hal/source/repeater_control.cpp,
                 components/hicann-system/units/hicann_test/source/tmag_fpga_i2c.cpp,
                 components/hicann-system/units/hicann_test/source/tmag_p_plltest_multi.cpp,
@@ -492,7 +492,7 @@
                 components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/testcase.cpp
             </group>
             <group name="toplevel_syn">
-                $CURRENT_RUNDIR/results/dc_shell/Top_pins.sv,
+                $CURRENT_RUNDIR/results/dc_shell/Top_pins.v,
                 $CURRENT_RUNDIR/results/dc_shell/Top_pins.sdf,
             </group>
             <group name="toplevel">
@@ -786,11 +786,13 @@
                     -analogControl, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs,
                     -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
-                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2</option>
+                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2,-DNO_XERCES</option>
+                <!--
                 <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
                 <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
                 <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
                 <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
+                -->
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
 

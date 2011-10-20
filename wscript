@@ -450,20 +450,21 @@ def build(bld):
                 for substep in substeps:
                     substepName = substep.getAttribute('name').encode('ascii')
                     TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                    OUTPUT = CURRENT_RUNDIR.make_node('results/dc_shell/'+brick.getTextNodeValue(substep,'outputFile'))
+                    outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
+                    OUTPUT = []
+                    for path in outputFiles:
+                        OUTPUT.append(CURRENT_RUNDIR.make_node('results/dc_shell/'+path))
 
                     always_flag = brick.checkAlwaysFlag('dc',steps_to_run)
 
                     bld(
-                        rule   = brick.dc_shell,
+                        rule = 'dc_shell -f %s | tee %s 2>&1' % (bld.path.make_node(stepBaseDir+'/'+TCLscript).abspath(),CURRENT_RUNDIR.make_node('logfiles/dc_shell.log').abspath()),
                         source = [
                             stepBaseDir+'/'+TCLscript,
                         ],
-                        target = [
-                            OUTPUT,
-                            CURRENT_RUNDIR.make_node('logfiles/dc_shell.log'),
-                        ],
+                        target = OUTPUT,
                         always = always_flag,
+                        update_outputs=True
                     )
 
             #
