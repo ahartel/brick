@@ -79,7 +79,7 @@ def configure(conf):
         # Read source file groups
         #
         sources = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('sources')[0].getElementsByTagName('group')
-        testcases = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('testcases')
+        testcases = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('testcases')[0].getElementsByTagName('testcase')
 
         groups = {}
         for group in sources:
@@ -106,45 +106,47 @@ def configure(conf):
         conf.env.VERILOG_SOURCES = []
         conf.env.SYSTEMC_SOURCES = []
         for testcase in testcases:
-            testsources = testcase.getElementsByTagName('sources')
-            for source in testsources:
-                sourceName = source.getAttribute('name').encode('ascii')
-                # get group names, split them, and remove spaces and line breaks
-                groupnames = brick.getText(source.childNodes).encode('ascii')
-                groupnames = groupnames.replace(" ","")
-                groupnames = groupnames.replace("\n","")
-                groupnames = groupnames.split(",")
-                if (sourceName == 'rtl'):
-                    for group in groupnames:
-                        conf.env.VERILOG_SOURCES.extend(groups[group])
-                elif (sourceName == 'systemC'):
-                    for group in groupnames:
-                        conf.env.SYSTEMC_SOURCES.extend(groups[group])
-            # assemble simulation tool options and save to waf environment
-            testoptions = testcase.getElementsByTagName('option')
-            for option in testoptions:
-                optionName = option.getAttribute('tool').encode('ascii')
-                if re.match('USELIB_',optionName):
-                    optionName = re.sub(r'USELIB\_','',optionName)
-                    optionType = option.getAttribute('type').encode('ascii')
-                    optionContent = brick.getText(option.childNodes).encode('ascii')
-                    optionContent = optionContent.replace(" ","")
-                    optionContent = optionContent.replace("\n","")
-                    # write options to env
-                    conf.env[optionType+'_'+optionName] = optionContent.split(",")
-                    conf.env.USELIBS.append(optionName)
-                else:
-                    optionMode = option.getAttribute('mode').encode('ascii')
-                    # get options, split them, and remove spaces and line breaks
-                    optionContent = brick.getText(option.childNodes).encode('ascii')
-                    optionContent = optionContent.replace(" ","")
-                    optionContent = optionContent.replace("\n","")
-                    if (conf.env.MIXED_SIGNAL == True):
-                        if (optionMode == 'mixed-signal'):
-                            conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+            testcaseName = testcase.getAttribute('name').encode('ascii')
+            if testcaseName == conf.options.testcase:
+                testsources = testcase.getElementsByTagName('sources')
+                for source in testsources:
+                    sourceName = source.getAttribute('name').encode('ascii')
+                    # get group names, split them, and remove spaces and line breaks
+                    groupnames = brick.getText(source.childNodes).encode('ascii')
+                    groupnames = groupnames.replace(" ","")
+                    groupnames = groupnames.replace("\n","")
+                    groupnames = groupnames.split(",")
+                    if (sourceName == 'rtl'):
+                        for group in groupnames:
+                            conf.env.VERILOG_SOURCES.extend(groups[group])
+                    elif (sourceName == 'systemC'):
+                        for group in groupnames:
+                            conf.env.SYSTEMC_SOURCES.extend(groups[group])
+                # assemble simulation tool options and save to waf environment
+                testoptions = testcase.getElementsByTagName('option')
+                for option in testoptions:
+                    optionName = option.getAttribute('tool').encode('ascii')
+                    if re.match('USELIB_',optionName):
+                        optionName = re.sub(r'USELIB\_','',optionName)
+                        optionType = option.getAttribute('type').encode('ascii')
+                        optionContent = brick.getText(option.childNodes).encode('ascii')
+                        optionContent = optionContent.replace(" ","")
+                        optionContent = optionContent.replace("\n","")
+                        # write options to env
+                        conf.env[optionType+'_'+optionName] = optionContent.split(",")
+                        conf.env.USELIBS.append(optionName)
                     else:
-                        if (optionMode == 'rtl'):
-                            conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+                        optionMode = option.getAttribute('mode').encode('ascii')
+                        # get options, split them, and remove spaces and line breaks
+                        optionContent = brick.getText(option.childNodes).encode('ascii')
+                        optionContent = optionContent.replace(" ","")
+                        optionContent = optionContent.replace("\n","")
+                        if (conf.env.MIXED_SIGNAL == True):
+                            if (optionMode == 'mixed-signal'):
+                                conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+                        else:
+                            if (optionMode == 'rtl'):
+                                conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
 
             # set verilog search paths
             # get string from XML tree
