@@ -138,6 +138,20 @@
                 <subStep name="genCDL">
                 </subStep>
             </cell>
+            <cell name="vdda_pad" lib="fc_bond_pads">
+                <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
+                <subStep name="genLEF">
+                    <skillScript>scripts/fc_bond_pads.absgen.il</skillScript>
+                </subStep>
+                <subStep name="genLIB">
+                </subStep>
+                <subStep name="genDB">
+                </subStep>
+                <subStep name="genGDS">
+                </subStep>
+                <subStep name="genCDL">
+                </subStep>
+            </cell>
             <cell name="vdd25_pad" lib="fc_bond_pads">
                 <cellBaseDir>components/mccfc/units/fc_bond_pads/abstract</cellBaseDir>
                 <subStep name="genLEF">
@@ -238,6 +252,7 @@
                 </subStep>
             </cell>
         </step>
+        <!--
         <step class="rc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/rtl_compiler</stepBaseDir>
             <subStep name="compile">
@@ -246,6 +261,7 @@
                 <after>genLIB</after>
             </subStep>
         </step>
+        -->
         <step class="dc">
             <stepBaseDir>components/mccfc/units/top/rtl2gds/dc_shell</stepBaseDir>
             <subStep name="compile">
@@ -342,10 +358,13 @@
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/digital_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/analog_IO.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vdd_esd.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vdda_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vdd25_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vpp1_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/vpp2_pad.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_bond_pads/gnd_pad_2.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/gnd_pad_noclamp.cdl,
+                     $CURRENT_RUNDIR/results/abstract/fc_bond_pads/gnda_pad_noclamp.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_opamp/hicann_outamp_top.cdl,
                      $CURRENT_RUNDIR/results/abstract/fc_serial_l1/fc_repeater_block_left.cdl,
                 </includeNetlists>
