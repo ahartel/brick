@@ -530,7 +530,7 @@ def build(bld):
                     #
                     # generate signoff GDS
                     #
-                    elif (substepName == 'streamin') and brick.runStep(substepName,steps_to_run):
+                    if (substepName == 'streamin') and brick.runStep(substepName,steps_to_run):
                         inputFile = brick.getTextNodeValue(substep,'inputFile')
                         layermap = brick.getTextNodeValue(substep,'layermap')
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
