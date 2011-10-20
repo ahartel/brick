@@ -528,11 +528,6 @@ def build(bld):
                     # create a results folder for each substep
                     CURRENT_RUNDIR.make_node('results/signoff/'+substepName).mkdir()
                     #
-                    # primetime
-                    #
-                    if (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
-                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                    #
                     # generate signoff GDS
                     #
                     elif (substepName == 'streamin') and brick.runStep(substepName,steps_to_run):
@@ -691,6 +686,47 @@ def build(bld):
                             target = OUTPUT,
                             always = always_flag,
                         )
+                    #
+                    # primetime
+                    #
+                    elif (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
+                        os.environ['STEP_BASE_PT'] = bld.env.BRICK_DIR+'/'+stepBaseDir
+                        REPORT_DIR_PT = CURRENT_RUNDIR.make_node('results/signoff/'+substepName+'/reports')
+                        REPORT_DIR_PT.mkdir()
+                        os.environ['REPORT_DIR'] = REPORT_DIR_PT.abspath()
+                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                        outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
+                        corners = brick.getTextNodeAsList(bld,substep,'corners')
+
+                        INPUT = [
+                            bld.path.make_node(stepBaseDir+'/'+TCLscript),
+                            CURRENT_RUNDIR.make_node('results/encounter/Top_pins.v'),
+                            CURRENT_RUNDIR.make_node('results/encounter/Top_pins.sdc'),
+                        ]
+
+                        OUTPUT = []
+                        for outputFile in OutputFiles:
+                            OUTPUT.append(CURRENT_RUNDIR.make_node(outputFile))
+
+                        for corner in corners:
+                            bld (
+                                rule = """
+                                    export DESIGN=Top_pins && NETLIST=%s &&
+                                    export SDCFILE=%s && export CORNER=%s &&
+                                    export SPEFFILE=%s &&
+                                    pt_shell -file %s 2>&1 | tee %s""" %
+                                (
+                                    INPUT[1].abspath(),
+                                    INPUT[2].abspath(),
+                                    corner,
+                                    INPUT[0].abspath(),
+                                    CURRENT_RUNDIR.make_node('logfiles/primetime_'+corner+'.log').abspath()
+                                ),
+                                source = INPUT,
+                                target = OUTPUT,
+                                always = always_flag,
+                            )
 
     # verification tasks are generated from here on
     # if mode was set to 'functional'
