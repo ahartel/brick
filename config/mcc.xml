@@ -491,6 +491,10 @@
                 components/hicann-system/units/arq/source/nullstream.cpp,
                 components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/testcase.cpp
             </group>
+            <group name="toplevel_syn">
+                $CURRENT_RUNDIR/results/dc_shell/Top_pins.sv,
+                $CURRENT_RUNDIR/results/dc_shell/Top_pins.sdf,
+            </group>
             <group name="toplevel">
                 components/mccfc/units/top/source/rtl/Top.sv,
                 components/mccfc/units/top/source/rtl/Top_pins.sv,
@@ -678,18 +682,6 @@
             <testcase name="top_rtl_tc0">
                 <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_sources_simonly,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
-                <!--
-    conf.env['VERILOG_SEARCH_PATHS'] = [
-        '-INCDIR',os.environ['ICPRO_DIR']+'/units/sramctrl/source/rtl/',
-        '-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/rtl/',
-        '-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/tb/classes/',
-        '-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/tb/',
-        '-INCDIR',os.environ['ICPRO_DIR']+'/units/s2pp/source/tc65nm/',
-				'-INCDIR',os.environ['ICPRO_DIR']+'/units/top/source/tb/',
-    ]
-    conf.env['DC_SHELL_OPTIONS']     = ['-f', conf.env['TESTENV_PATH']+'/compile_netlists.tcl', '-x', '"set CHIPROOT '+os.environ['ICPRO_DIR']+'"']
-    conf.env['SIMULATION_TOPLEVEL'] = 'worklib.Tb_top:module'
-    -->
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
                 <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
                 <option tool="NCVHDL" mode="rtl">-v93,-smartorder</option>
@@ -741,6 +733,61 @@
                 <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
+             <testcase name="top_netlist_syn">
+                <sources name="rtl">hicannCtrl,testbench,toplevel_syn,arq,macros,verilog_sources_simonly,verilog_lib_files</sources>
+                <sources name="systemC">testbenchC</sources>
+                <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCVHDL" mode="rtl">-v93,-smartorder</option>
+                <option tool="NCVHDL" mode="mixed-signal">-v93,-smartorder</option>
+                <option tool="NCVLOG_SV" mode="rtl">-use5x,-errormax,1,-64bit,-linedebug,-sv,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG_SV" mode="mixed-signal">-use5x,-errormax,1,-64bit,-linedebug,-sv,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCVLOG_VAMS" mode="rtl">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG_VAMS" mode="mixed-signal">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCELAB" mode="rtl">
+                    tb_top,
+                    -NO_TCHK_XGEN, -notimingchecks,
+                    -access, +rwc,
+                    -timescale, 1ns/10ps,
+                    -loadsc, ./libncsc_model.so,
+                    -maxdelays,-64bit,
+                </option>
+                <option tool="NCELAB" mode="mixed-signal">
+                    tb_top,
+                    -NO_TCHK_XGEN, -notimingchecks,
+                    -access, +rwc,
+                    -timescale, 1ns/10ps,
+                    -loadsc, libncsc_model.so,
+                    -maxdelays,-64bit,
+                    cds_globals,
+                    -modelpath,"/cad/libs/tsmc/oa/models/include.scs(ttall)",
+                    -discipline,logic,
+                    -amsconnrules, ConnRules_12V_full_fast, ConnRules_12V_full_fast, -iereport,
+                    -amsfastspice,
+                    <!--
+        #            '-disres', 'detailed',
+        #        '-libverbose',
+        -->
+                </option>
+                <option tool="NCSIM" mode="rtl">
+                    tb_top,
+                    -licqueue, -gui, -MESSAGES, -64bit,
+                    -input, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
+                </option>
+                <option tool="NCSIM" mode="mixed-signal">
+                    tb_top,
+                    -licqueue, -gui, -MESSAGES, -64bit,
+                    -analogControl, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs,
+                    -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
+                </option>
+                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2</option>
+                <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
+                <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
+                <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
+                <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
+                <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
+             </testcase>
+
         </testcases>
     </tests>
 </brICk>
