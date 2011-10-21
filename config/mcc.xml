@@ -397,12 +397,6 @@
                 components/ncf-hicann/units/verification_control/source/behavioral/systemc/verification_control.v,
                 components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_model.v,
                 components/ncf-hicann/units/hicann_top/source/tb/verilog/dnc_control.v,
-                components/ncf-hicann/units/hicann_top/source/tb/fc_repeater_blocks.v,
-                components/mccfc/units/top/source/tb/fc_anncore.sv,
-                components/ncf-hicann/units/hicann_top/source/tb/fc_sram.sv,
-                components/ncf-hicann/units/hicann_top/source/tb/fc_synarray.sv,
-                components/ncf-hicann/units/hicann_top/source/tb/fg_behav.sv,
-                components/ncf-hicann/resources/fc_verilog/hicann_outamp_top.v,
             </group>
             <group name="tud_ipdev">
                 resources/tud_ipdev/hicann_tx1rx1_ddr_lvds_if/source/rtl/verilog/hicann_tx1rx1_ddr_lvds_if.v,
@@ -492,8 +486,8 @@
                 components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/testcase.cpp
             </group>
             <group name="toplevel_syn">
-                $CURRENT_RUNDIR/results/dc_shell/Top_pins.v,
-                $CURRENT_RUNDIR/results/dc_shell/Top_pins.sdf,
+                netlist_tmp/Top_pins.v,
+                netlist_tmp/Top_pins.sdf,
             </group>
             <group name="toplevel">
                 components/mccfc/units/top/source/rtl/Top.sv,
@@ -507,7 +501,6 @@
             <group name="verilog_sources_simonly">
                  components/ncf-hicann/units/hicann_top/source/tb/verilog/passt_gnd_model.v,
                  components/ncf-hicann/units/fc_ws_iopads/source/behavioral/verilog/fc_ws_iopads.v,
-                 components/mccfc/units/top/source/tb/diff_clk_pad_behav.v,
                  components/ncf-hicann/units/dnc_if/source/rtl/verilog/no_x_gen_sim.v,
                  resources/fsa0a_c_io/FrontEnd/verilog/fsa0a_c_io_supply.v,
                  resources/fsa0a_c_io/FrontEnd/verilog/fsa0a_c_io.lib.src,
@@ -641,7 +634,14 @@
                 components/mccfc/units/top/source/tb/digital_out_functional.v,
                 components/mccfc/units/top/source/tb/analog_IO_functional.v,
                 components/mccfc/units/top/source/tb/vdd_esd_functional.v,
-                components/mccfc/units/top/source/tb/gnd_pad_2_functional.v
+                components/mccfc/units/top/source/tb/gnd_pad_2_functional.v,
+                components/ncf-hicann/units/hicann_top/source/tb/fc_repeater_blocks.v,
+                components/mccfc/units/top/source/tb/fc_anncore.sv,
+                components/ncf-hicann/units/hicann_top/source/tb/fc_sram.sv,
+                components/ncf-hicann/units/hicann_top/source/tb/fc_synarray.sv,
+                components/ncf-hicann/units/hicann_top/source/tb/fg_behav.sv,
+                components/ncf-hicann/resources/fc_verilog/hicann_outamp_top.v,
+                components/mccfc/units/top/source/tb/diff_clk_pad_behav.v,
             </group>
             <!--
             components/ncf-hicann/units/arq/source/rtl/vhdl/SY180_16X49X1CM4.vhd,
@@ -682,7 +682,7 @@
             -->
         <testcases>
             <testcase name="top_rtl_tc0">
-                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_sources_simonly,verilog_lib_files</sources>
+                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
                 <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
@@ -726,7 +726,7 @@
                     tb_top,
                     -licqueue, -gui, -MESSAGES, -64bit,
                     -analogControl, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs,
-                    -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
+                    -input, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
                 </option>
                 <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2,-DNO_XERCES</option>
                 <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
@@ -736,10 +736,10 @@
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
              <testcase name="top_netlist_syn">
-                <sources name="rtl">hicannCtrl,testbench,toplevel_syn,arq,macros,verilog_sources_simonly,verilog_lib_files</sources>
+                <sources name="rtl">testbench,toplevel_syn,macros,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
-                <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM,-DEFINE,BACKANNO</option>
                 <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
                 <option tool="NCVHDL" mode="rtl">-v93,-smartorder</option>
                 <option tool="NCVHDL" mode="mixed-signal">-v93,-smartorder</option>
@@ -749,7 +749,7 @@
                 <option tool="NCVLOG_VAMS" mode="mixed-signal">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM_MIXED</option>
                 <option tool="NCELAB" mode="rtl">
                     tb_top,
-                    -NO_TCHK_XGEN, -notimingchecks,
+                    -NO_TCHK_XGEN,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
                     -loadsc, ./libncsc_model.so,
@@ -758,7 +758,7 @@
                 </option>
                 <option tool="NCELAB" mode="mixed-signal">
                     tb_top,
-                    -NO_TCHK_XGEN, -notimingchecks,
+                    -NO_TCHK_XGEN,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
                     -loadsc, libncsc_model.so,
@@ -776,7 +776,7 @@
                 <option tool="NCSIM" mode="rtl">
                     tb_top,
                     -licqueue, -gui, -MESSAGES, -64bit,
-                    -input, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
+                    -input, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runNetlistSyn.tcl
                 </option>
                 <option tool="NCSIM" mode="mixed-signal">
                     tb_top,
