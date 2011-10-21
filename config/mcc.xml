@@ -749,7 +749,7 @@
                 <option tool="NCVLOG_VAMS" mode="mixed-signal">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM_MIXED</option>
                 <option tool="NCELAB" mode="rtl">
                     tb_top,
-                    -NO_TCHK_XGEN, -notimingchecks,
+                    -NO_TCHK_XGEN,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
                     -loadsc, ./libncsc_model.so,
@@ -758,7 +758,7 @@
                 </option>
                 <option tool="NCELAB" mode="mixed-signal">
                     tb_top,
-                    -NO_TCHK_XGEN, -notimingchecks,
+                    -NO_TCHK_XGEN,
                     -access, +rwc,
                     -timescale, 1ns/10ps,
                     -loadsc, libncsc_model.so,
