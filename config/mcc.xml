@@ -754,7 +754,7 @@
                     -timescale, 1ns/10ps,
                     -loadsc, ./libncsc_model.so,
                     -maxdelays,-64bit,
-                    -sdf_cmd_file,./worklib/Top_pins.sdf_cmd,
+                    -sdf_cmd_file,../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/Top_pins.sdf_cmd,
                 </option>
                 <option tool="NCELAB" mode="mixed-signal">
                     tb_top,
