@@ -319,7 +319,12 @@
             <subStep name="prepare_export">
                 <TCLscript>scripts/prepare_export.tcl</TCLscript>
                 <outputFile>results/encounter/Top_pins.gds,
-                    results/encounter/Top_pins.phys.v
+                    results/encounter/Top_pins.phys.v,
+                    results/encounter/Top_pins.v,
+                    results/encounter/Top_pins.sdc,
+                    results/encounter/Top_pins_RCTYP.spef.gz,
+                    results/encounter/Top_pins_RCBEST.spef.gz,
+                    results/encounter/Top_pins_RCWORST.spef.gz,
                 </outputFile>
                 <after>final</after>
             </subStep>
@@ -380,11 +385,15 @@
             </subStep>
             <subStep name="primetime">
                 <corners>typ,max,min</corners>
+                <spefFile>results/encounter/Top_pins_RCTYP.spef.gz,
+                    results/encounter/Top_pins_RCWORST.spef.gz,
+                    results/encounter/Top_pins_RCBEST.spef.gz
+                </spefFile>
                 <TCLscript>primetime/scripts/run_single.tcl</TCLscript>
                 <outputFile>
                     results/signoff/primetime/Top_pins.typ.sdf.gz,
-                    results/signoff/primetime/Top_pins.min.sdf.gz,
                     results/signoff/primetime/Top_pins.max.sdf.gz,
+                    results/signoff/primetime/Top_pins.min.sdf.gz,
                 </outputFile>
             </subStep>
         </step>

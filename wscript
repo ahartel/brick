@@ -696,11 +696,12 @@ def build(bld):
                         os.environ['STEP_BASE_PT'] = bld.env.BRICK_DIR+'/'+stepBaseDir
                         REPORT_DIR_PT = CURRENT_RUNDIR.make_node('results/signoff/'+substepName+'/reports')
                         REPORT_DIR_PT.mkdir()
-                        os.environ['REPORT_DIR'] = REPORT_DIR_PT.abspath()
+                        os.environ['REPORT_DIR_PT'] = REPORT_DIR_PT.abspath()
                         TCLscript = brick.getTextNodeValue(substep,'TCLscript')
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
                         outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
                         corners = brick.getTextNodeAsList(bld,substep,'corners')
+                        spefFiles = brick.getTextNodeAsList(bld,substep,'spefFile')
 
                         INPUT = [
                             bld.path.make_node(stepBaseDir+'/'+TCLscript),
@@ -709,20 +710,21 @@ def build(bld):
                         ]
 
                         OUTPUT = []
-                        for outputFile in OutputFiles:
-                            OUTPUT.append(CURRENT_RUNDIR.make_node(outputFile))
 
+                        i = 0
                         for corner in corners:
+                            INPUT.append(CURRENT_RUNDIR.make_node(spefFiles[i]))
+                            OUTPUT.append(CURRENT_RUNDIR.make_node(outputFiles[i]))
                             bld (
                                 rule = """
-                                    export DESIGN=Top_pins && NETLIST=%s &&
+                                    export DESIGN=Top_pins && export NETLIST=%s &&
                                     export SDCFILE=%s && export CORNER=%s &&
-                                    export SPEFFILE=%s &&
-                                    pt_shell -file %s 2>&1 | tee %s""" %
-                                (
-                                    INPUT[1].abspath(),
+                                    export SPEFFILE1=%s && export SPEFFILE2='' && 
+                                    pt_shell -file %s 2>&1 > %s"""
+                                    % ( INPUT[1].abspath(),
                                     INPUT[2].abspath(),
                                     corner,
+                                    INPUT[3].abspath(), 
                                     INPUT[0].abspath(),
                                     CURRENT_RUNDIR.make_node('logfiles/primetime_'+corner+'.log').abspath()
                                 ),
@@ -730,6 +732,7 @@ def build(bld):
                                 target = OUTPUT,
                                 always = always_flag,
                             )
+                            i=i+1
 
     # verification tasks are generated from here on
     # if mode was set to 'functional'
