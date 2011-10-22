@@ -489,6 +489,10 @@
                 netlist_tmp/Top_pins.v,
                 netlist_tmp/Top_pins.sdf,
             </group>
+            <group name="toplevel_enc">
+                netlist_tmp/encounter/Top_pins.v,
+                netlist_tmp/encounter/Top_pins.typ.sdf.gz,
+            </group>
             <group name="toplevel">
                 components/mccfc/units/top/source/rtl/Top.sv,
                 components/mccfc/units/top/source/rtl/Top_pins.sv,
@@ -737,6 +741,62 @@
              </testcase>
              <testcase name="top_netlist_syn">
                 <sources name="rtl">testbench,toplevel_syn,macros,verilog_lib_files</sources>
+                <sources name="systemC">testbenchC</sources>
+                <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
+                <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM,-DEFINE,BACKANNO</option>
+                <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCVHDL" mode="rtl">-v93,-smartorder</option>
+                <option tool="NCVHDL" mode="mixed-signal">-v93,-smartorder</option>
+                <option tool="NCVLOG_SV" mode="rtl">-use5x,-errormax,1,-64bit,-linedebug,-sv,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG_SV" mode="mixed-signal">-use5x,-errormax,1,-64bit,-linedebug,-sv,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCVLOG_VAMS" mode="rtl">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM</option>
+                <option tool="NCVLOG_VAMS" mode="mixed-signal">-use5x,-errormax,1,-64bit,-ams,-DEFINE,NCSIM_MIXED</option>
+                <option tool="NCELAB" mode="rtl">
+                    tb_top,
+                    -NO_TCHK_XGEN,
+                    -access, +rwc,
+                    -timescale, 1ns/10ps,
+                    -loadsc, ./libncsc_model.so,
+                    -maxdelays,-64bit,
+                    -sdf_cmd_file,../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/Top_pins.sdf_cmd,
+                </option>
+                <option tool="NCELAB" mode="mixed-signal">
+                    tb_top,
+                    -NO_TCHK_XGEN,
+                    -access, +rwc,
+                    -timescale, 1ns/10ps,
+                    -loadsc, libncsc_model.so,
+                    -maxdelays,-64bit,
+                    cds_globals,
+                    -modelpath,"/cad/libs/tsmc/oa/models/include.scs(ttall)",
+                    -discipline,logic,
+                    -amsconnrules, ConnRules_12V_full_fast, ConnRules_12V_full_fast, -iereport,
+                    -amsfastspice,
+                    <!--
+        #            '-disres', 'detailed',
+        #        '-libverbose',
+        -->
+                </option>
+                <option tool="NCSIM" mode="rtl">
+                    tb_top,
+                    -licqueue, -gui, -MESSAGES, -64bit,
+                    -input, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runNetlistSyn.tcl
+                </option>
+                <option tool="NCSIM" mode="mixed-signal">
+                    tb_top,
+                    -licqueue, -gui, -MESSAGES, -64bit,
+                    -analogControl, ../components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/amsControl.scs,
+                    -input, components/mccfc/units/top/simulation/ncsim/top_rtl_tc0/scripts/runGUI.tcl
+                </option>
+                <option tool="USELIB_NCSIM" type="CXXFLAGS">-DNCSIM,-DUSE_SCTYPES,-DHICANN_V=2,-DNO_XERCES</option>
+                <option tool="USELIB_XERCES" type="LIBPATH">/usr/local/xerces_310/lib/</option>
+                <option tool="USELIB_XERCES" type="LIB">xerces-c</option>
+                <option tool="USELIB_BOOST" type="INCLUDES">/usr/local/boost_1.40/include</option>
+                <option tool="USELIB_BOOST" type="LIBPATH">/usr/local/boost_1.40/lib/</option>
+                <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
+             </testcase>
+             <testcase name="top_netlist_enc">
+                <sources name="rtl">testbench,toplevel_enc,macros,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM,-DEFINE,BACKANNO</option>
