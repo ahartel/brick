@@ -475,7 +475,7 @@
                 components/hicann-system/units/hicann_test/source/tmsm_fg.cpp,
                 components/hicann-system/units/hicann_test/source/tmsm_fgfunctional.cpp,
                 components/hicann-system/units/hicann_test/source/tmsm_neuronsynin.cpp,
-                components/hicann-system/units/hicann_test/source/tm_spl1.cpp,
+                components/hicann-system/units/hicann_test/source/tmah_spl1.cpp,
                 components/hicann-system/units/hicann_test/source/tmag_hcinit.cpp,
                 components/hicann-system/units/hicann_test/source/tm_fgkeithleymean.cpp,
                 components/hicann-system/units/hicann_test/source/tm_l2init.cpp,
@@ -695,7 +695,7 @@
             -->
         <testcases>
             <testcase name="top_rtl_tc0">
-                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_lib_files</sources>
+                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_lib_files,verilog_sources_simonly</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
                 <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
@@ -749,7 +749,7 @@
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
              <testcase name="top_netlist_syn">
-                <sources name="rtl">testbench,toplevel_syn,macros,verilog_lib_files</sources>
+                <sources name="rtl">testbench,toplevel_syn,macros,verilog_lib_files,verilog_sources_simonly</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM,-DEFINE,BACKANNO</option>
@@ -805,7 +805,7 @@
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
              <testcase name="top_netlist_enc">
-                <sources name="rtl">testbench,toplevel_enc,macros,verilog_lib_files</sources>
+                <sources name="rtl">testbench,toplevel_enc,macros,verilog_lib_files,verilog_sources_simonly</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM,-DEFINE,BACKANNO</option>
