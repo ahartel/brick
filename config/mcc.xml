@@ -530,8 +530,10 @@
                  $SYNOPSYS/dw/sim_ver/DW01_cmp6.v,
                  $SYNOPSYS/dw/sim_ver/DW_ram_2r_w_a_lat.v
             </group>
-            <group name="hicannCtrl">
+            <group name="packages">
                 components/ncf-hicann/units/hicann_top/source/hicann_pkg.sv,
+            </group>
+            <group name="hicannCtrl">
                 components/ncf-hicann/units/hicann_top/source/ocp.svh,
                 components/ncf-hicann/units/hicann_top/source/chipctrl.sv,
                 components/ncf-hicann/units/hicann_top/source/clockgen.sv,
@@ -695,7 +697,7 @@
             -->
         <testcases>
             <testcase name="top_rtl_tc0">
-                <sources name="rtl">hicannCtrl,testbench,toplevel,arq,macros,verilog_lib_files</sources>
+                <sources name="rtl">packages,hicannCtrl,testbench,toplevel,arq,macros,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM</option>
                 <option tool="NCVLOG" mode="mixed-signal">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM_MIXED</option>
@@ -749,7 +751,7 @@
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
              <testcase name="top_netlist_syn">
-                <sources name="rtl">testbench,toplevel_syn,macros,verilog_lib_files</sources>
+                <sources name="rtl">packages,testbench,toplevel_syn,macros,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM,-DEFINE,BACKANNO</option>
@@ -805,7 +807,7 @@
                 <option tool="USELIB_BOOST" type="LIB">rt,boost_thread</option>
              </testcase>
              <testcase name="top_netlist_enc">
-                <sources name="rtl">testbench,toplevel_enc,macros,verilog_lib_files</sources>
+                <sources name="rtl">packages,testbench,toplevel_enc,macros,verilog_lib_files</sources>
                 <sources name="systemC">testbenchC</sources>
                 <option tool="NCSDFC" mode="rtl">-output,./worklib/Top_pins.sdf.compiled</option>
                 <option tool="NCVLOG" mode="rtl">-use5x,-errormax,1,-64bit,-DEFINE,NCSIM,-DEFINE,BACKANNO</option>
