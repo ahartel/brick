@@ -1,0 +1,62 @@
+/*
+File Name	:	.cdsinit
+Author		:	Martin Feuerstack-Raible
+Date		:	2001/06/29
+
+Edition history	:
+2001/06/29	mfr	Created from AMS .cdsinit
+2001/09/26	md	Added the custom file
+*/
+printf("BEGIN OF SITE CUSTOMIZATION\n")
+;###########################################################################
+;#                                           
+;# LOAD STANDARD BINDKEYS 
+;#
+;###########################################################################
+printf( "Loading default bindkeys\n" )
+let((bindKeyFile)
+  foreach(bindKeyFile getDirFiles(prependInstallPath("samples/local"))
+    if(rexMatchp("BindKeys.il" bindKeyFile) then
+    unless( !(rexMatchp("icfb" getVersion()) || rexMatchp("icca" getVersion())) &&
+            bindKeyFile == "prBindKeys.il"
+         loadi(strcat(prependInstallPath("samples/local/") bindKeyFile))
+      ) ;unless
+    ) ;if
+  ) ;foreach
+) ;let
+
+;###########################################################################
+;#                                           
+;# LOAD USER CUSTOMIZATION FILE 
+;#
+;############################################################################
+
+if( isFile( "~/.cdsinit_umc" ) then
+   printf( "Loading $HOME/.cdsinit_umc file.\n" )
+   loadi( "~/.cdsinit_umc" )
+  )
+if( isFile( "/cad/libs/umc_kit1.2/CADENCE/UMC18/umc_env.il" ) then
+   printf( "Loading umc_env.il file.\n" )
+   loadi( "/cad/libs/umc_kit1.2/CADENCE/UMC18/umc_env.il" )
+  )
+
+defvar(username, getShellEnvVar("USER"))
+defvar(icpro_dir, getShellEnvVar("ICPRO_DIR"))
+defvar(cdsinit_user, strcat(icpro_dir "/env/user/" username "/cds/.cdsinit_user.il"))
+if( isFile(cdsinit_user) then
+	printf( strcat("Loading " cdsinit_user "\n" ))
+	load(cdsinit_user)
+)
+
+if( isFile( "./layerkeys.il" ) then
+   printf( "Loading layerkeys.il file.\n" )
+   loadi( "./layerkeys.il" )
+  )
+;############################################################################
+;#                                           
+;# THE END! 
+;#
+;#############################################################################
+
+printf("END OF SITE CUSTOMIZATION\n")
+;END OF THE SITE CUSTOMIZATION FILE
