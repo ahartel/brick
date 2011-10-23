@@ -512,6 +512,7 @@
                 components/mccfc/units/top/source/rtl/dnc_if_mcc.sv,
             </group>
             <group name="verilog_sources_simonly">
+                 resources/sram_lib/SY180_16X49X1CM4/SY180_16X49X1CM4.v,
                  components/ncf-hicann/units/hicann_top/source/tb/verilog/passt_gnd_model.v,
                  components/ncf-hicann/units/fc_ws_iopads/source/behavioral/verilog/fc_ws_iopads.v,
                  components/ncf-hicann/units/dnc_if/source/rtl/verilog/no_x_gen_sim.v,
@@ -662,7 +663,6 @@
             components/ncf-hicann/units/arq/source/rtl/vhdl/SY180_16X49X1CM4.vhd,
             -->
             <group name="arq">
-                resources/sram_lib/SY180_16X49X1CM4/SY180_16X49X1CM4.v,
                 components/ncf-hicann/units/arq/source/rtl/vhdl/toolkit.vhd,
                 components/ncf-hicann/units/arq/source/rtl/vhdl/packet_tinypacket.vhd,
                 components/ncf-hicann/units/arq/source/rtl/vhdl/arq.vhd,
