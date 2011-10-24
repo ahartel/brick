@@ -576,7 +576,7 @@ def build(bld):
                     #
                     # drc
                     #
-                    elif (substepName == 'drc') and brick.runStep(substepName,steps_to_run):
+                    elif (substepName == 'drc' or substepName == 'antdrc') and brick.runStep(substepName,steps_to_run):
                         ruleFile = brick.getTextNodeValue(substep,'rulefile')
                         always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
 

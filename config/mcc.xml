@@ -345,6 +345,10 @@
                 <rulefile>calibre/rules/drc.rules</rulefile>
                 <outputFile>drc/Top_pins.drc.results</outputFile>
             </subStep>
+            <subStep name="antdrc">
+                <rulefile>calibre/rules/antdrc.rules</rulefile>
+                <outputFile>drc/Top_pins.antdrc.results</outputFile>
+            </subStep>
             <subStep name="lvs_netlist">
                 <sourceNetlist>results/encounter/Top_pins.phys.v</sourceNetlist>
                 <verilogPrimlib>
