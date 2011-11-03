@@ -567,7 +567,7 @@ def build(bld):
                         OUTPUT = CURRENT_RUNDIR.make_node(outputFile)
 
                         bld (
-                            rule = """strmout -library %s -topCell %s -view layout -snapToGrid -case lower -layerMap %s -strmFile %s -logFile %s""" % (
+                            rule = """strmout -library %s -topCell %s -view layout -snapToGrid -pathToPolygon -case lower -layerMap %s -strmFile %s -logFile %s""" % (
                                 libName,cellName,INPUT[1].abspath(),OUTPUT.abspath(),CURRENT_RUNDIR.make_node('logfiles/streamout_'+libName+'_'+cellName+'.log')),
                             source = INPUT,
                             target = OUTPUT,
@@ -688,6 +688,28 @@ def build(bld):
                             source = INPUT,
                             target = OUTPUT,
                             always = always_flag,
+                        )
+                    #
+                    # eps
+                    #
+                    elif (substepName == 'eps') and brick.runStep(substepName,steps_to_run):
+                        substepName = substep.getAttribute('name').encode('ascii')
+                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                        #outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
+                        OUTPUT = []
+                        #for path in outputFiles:
+                        #    OUTPUT.append(CURRENT_RUNDIR.make_node('results/dc_shell/'+path))
+
+                        always_flag = brick.checkAlwaysFlag('eps',steps_to_run)
+
+                        bld(
+                            rule = 'eps -init %s -overwrite -log %s' % (bld.path.make_node(stepBaseDir+'/'+TCLscript).abspath(),CURRENT_RUNDIR.make_node('logfiles/eps.log').abspath()),
+                            source = [
+                                stepBaseDir+'/'+TCLscript,
+                            ],
+                            target = OUTPUT,
+                            always = always_flag,
+                            update_outputs=True
                         )
                     #
                     # primetime

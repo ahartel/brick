@@ -400,6 +400,13 @@
                     results/signoff/primetime/Top_pins.min.sdf.gz,
                 </outputFile>
             </subStep>
+            <subStep name="eps">
+                <TCLscript>eps/scripts/analyze_power.tcl</TCLscript>
+                <!--
+                <outputFile>Top_pins.v</outputFile>
+                -->
+            </subStep>
+
         </step>
     </tasks>
     <tests>
