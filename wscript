@@ -20,16 +20,20 @@ def options(opt):
 def configure(conf):
     # if the rundir is not set, create a unique rundir
     if (conf.options.rundir):
-        conf.env.CURRENT_RUNDIR = conf.path.find_node('build/'+conf.options.rundir).abspath()
+        rundir = conf.path.make_node('build/'+conf.options.rundir)
+        rundir.mkdir()
+        conf.env.CURRENT_RUNDIR = rundir.abspath()
     else:
         if (not conf.env.CURRENT_RUNDIR):
             tempdir = tempfile.mkdtemp(dir='build')
             # save tempdir path to config environment
             conf.env.CURRENT_RUNDIR = conf.path.find_node(tempdir).abspath()
-            # create results directory
-            conf.path.find_node(tempdir).make_node('results/').mkdir()
-            conf.path.find_node(tempdir).make_node('logfiles/').mkdir()
-            conf.path.find_node(tempdir).make_node('../worklib/').mkdir()
+
+    # create results directory
+    conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('results/').mkdir()
+    conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('logfiles/').mkdir()
+    conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../worklib/').mkdir()
+    # echo the rundir
     conf.start_msg('Using brICk rundir')
     conf.end_msg(conf.env.CURRENT_RUNDIR)
 
