@@ -186,7 +186,6 @@ def configure(conf):
                     conf.env['VERILOG_INC_DIRS'].append('../'+path)
                     # add the path without prefix to SEARCH_PATHS
                     conf.env['VERILOG_SEARCH_PATHS'].append(path)
-            print conf.env['VERILOG_SEARCH_PATHS']
 
     conf.load('cadence')
 
