@@ -546,6 +546,7 @@
                 components/ncf-hicann/units/hicann_top/source/hicann_pkg.sv,
             </group>
             <group name="hicannCtrl">
+                components/ncf-hicann/units/hicann_top/source/hicann_global.svh,
                 components/ncf-hicann/units/hicann_top/source/ocp.svh,
                 components/ncf-hicann/units/hicann_top/source/chipctrl.sv,
                 components/ncf-hicann/units/hicann_top/source/clockgen.sv,
@@ -701,6 +702,7 @@
             components/hicann-system/units/measure/source/,
             components/hicann-system/units/jtag_lib/source/,
             components/hicann-system/units/arq/source,
+            components/ncf-hicann/units/stdp_v2/source,
         </searchpaths>
         <!--
             /usr/local/boost_1.40/include/,
