@@ -24,6 +24,59 @@ def load_modules(conf):
     os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
     return conf
 
+def vhdl_scanner(task):
+    # look for used packages and packages that are defined in the input file
+    input = open(task.inputs[0].abspath(),'r')
+    packages_used = set()
+    packages_defined = set()
+    includes_used = set()
+    for line in input:
+        m0 = re.search('package\s+(\w+)\s+is', line)
+        m1 = re.search('use\s+work\.(\w+)\.', line)
+        if (m0 is not None):
+            packages_defined.add(m0.group(1))
+        if (m1 is not None):
+            packages_used.add(m1.group(1))
+
+    input.close()
+    # now make use of a very cool python feature: set difference
+    packages = packages_used-packages_defined
+    # all dependencies will be put into this list
+    dependencies = []
+    # get an instance of the root node
+    up = "../"
+    for i in range(task.inputs[0].height()-1):
+        up += "../"
+    rootnode = task.inputs[0].find_dir(up)
+    # loop through serach paths to find the file that defines the package
+    for dir in task.env['VERILOG_SEARCH_PATHS']:
+        if (dir == '-INCDIR'):
+            continue
+        # convert dir to waf node
+        dir = rootnode.make_node(os.getcwd()+'/'+dir)
+        # get all system verilog files
+        files = get_vhdl_files_from_include_dir(rootnode,dir)
+        for file in files:
+            packages_loadable = set()
+            input = open(file.abspath(),'r')
+            for line in input:
+                m0 = re.search('package\s+(\w+)\s+is', line)
+                if (m0 is not None):
+                    packages_loadable.add(m0.group(1))
+            input.close()
+            result = packages & packages_loadable
+            if len(result)>0:
+                # append the actual source file
+                #dependencies.append(file)
+                # ... and the generated pseudo-source file
+                dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out').abspath())
+            # add the current file to the depencies if it's an included file
+            if os.path.basename(file.abspath()) in includes_used:
+                dependencies.append(file)
+
+    # return dependencies
+    return (dependencies,[])
+
 def verilog_scanner(task):
     # look for used packages and packages that are defined in the input file
     input = open(task.inputs[0].abspath(),'r')
@@ -47,16 +100,19 @@ def verilog_scanner(task):
     input.close()
     # now make use of a very cool python feature: set difference
     packages = packages_used-packages_defined
+    # all dependencies will be put into this list
     dependencies = []
+    # get an instance of the root node
     up = "../"
     for i in range(task.inputs[0].height()-1):
         up += "../"
     rootnode = task.inputs[0].find_dir(up)
+    # loop through serach paths to find the file that defines the package
     for dir in task.env['VERILOG_SEARCH_PATHS']:
         if (dir == '-INCDIR'):
             continue
-
-        files = get_files_from_include_dir(rootnode,dir)
+        # get all system verilog files
+        files = get_sv_files_from_include_dir(rootnode,dir)
         for file in files:
             packages_loadable = set()
             input = open(file.abspath(),'r')
@@ -67,25 +123,50 @@ def verilog_scanner(task):
             input.close()
             result = packages & packages_loadable
             if len(result)>0:
-                dependencies.append(file)
-
+                # append the actual source file
+                # dependencies.append(file)
+                # ... and the generated pseudo-source file
+                dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out').abspath())
+            # add the current file to the depencies if it's an included file
             if os.path.basename(file.abspath()) in includes_used:
                 dependencies.append(file)
+
+    # return dependencies
     return (dependencies,[])
 
 from waflib import TaskGen
 TaskGen.declare_chain(
         name         = 'ncvlog sv',
+        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.svh',],
+        ext_out      = ['.svh.out',],
+        reentrant    = False,
+        scan         = verilog_scanner,
+)
+
+TaskGen.declare_chain(
+        name         = 'ncvlog sv',
+        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.sv',],
+        ext_out      = ['.sv.out',],
+        reentrant    = False,
+        scan         = verilog_scanner
+)
+
+TaskGen.declare_chain(
+        name         = 'ncvlog verilog2001',
         rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC}',
-        ext_in       = ['.v', '.sv', '.lib.src', '.vp', '.svh'],
+        ext_in       = ['.v', '.lib.src', '.vp', ],
         reentrant    = False,
         scan         = verilog_scanner
 )
 
 TaskGen.declare_chain(
         name         = 'ncvhdl',
-        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} ${SRC}',
+        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
+        ext_out      = ['.vhd.out'],
+        scan         = vhdl_scanner,
         reentrant    = False,
 )
 
@@ -104,13 +185,26 @@ TaskGen.declare_chain(
 )
 
 
-def get_files_from_include_dir(rootnode,dir):
+def get_sv_files_from_include_dir(rootnode,dir):
     import glob
     import waflib
-    content = glob.glob(dir+"/*")
+    content = dir.ant_glob("*.sv")
+    content.extend(dir.ant_glob("*.svh"))
+    content.extend(dir.ant_glob("*.v"))
+    #results = []
+    #for item in content:
+    #    if os.path.isfile(item):
+    #        results.append(rootnode.make_node(os.getcwd()+'/'+item))
+    return content
+
+def get_vhdl_files_from_include_dir(rootnode,dir):
+    import glob
+    import waflib
+    content = glob.glob("components/"+dir+"/*.vhd")
     results = []
     for item in content:
         if os.path.isfile(item):
-            results.append(rootnode.make_node(item))
+            results.append(rootnode.make_node(os.getcwd()+'/'+item))
     return results
+
 
