@@ -546,7 +546,6 @@
                 components/ncf-hicann/units/hicann_top/source/hicann_pkg.sv,
             </group>
             <group name="hicannCtrl">
-                components/ncf-hicann/units/hicann_top/source/hicann_global.svh,
                 components/ncf-hicann/units/hicann_top/source/ocp.svh,
                 components/ncf-hicann/units/hicann_top/source/chipctrl.sv,
                 components/ncf-hicann/units/hicann_top/source/clockgen.sv,

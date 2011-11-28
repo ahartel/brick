@@ -166,22 +166,27 @@ def configure(conf):
                 searchpaths.pop()
 
             conf.env['VERILOG_SEARCH_PATHS'] = []
+            conf.env['VERILOG_INC_DIRS'] = []
             pattern = re.compile("^\/")
             for path in searchpaths:
                 # is this path an absolute path?
                 if pattern.match(path):
                     conf.env.INCLUDES_SYSTEMC.append(path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
-                    conf.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
-                    conf.env['VERILOG_SEARCH_PATHS'].append(path)
+                    conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
+                    conf.env['VERILOG_INC_DIRS'].append(path)
+                    # add the brick dir-relative path to SEARCH_PATHS
+                    conf.env['VERILOG_SEARCH_PATHS'].append(cfg.root.make_node(path).path_from(cfg.root.make_node(os.getcwd())))
                 # or a BRICK_DIR-relative?
                 else:
                     conf.env.INCLUDES_SYSTEMC.append(conf.env.BRICK_DIR+'/'+path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
-                    conf.env['VERILOG_SEARCH_PATHS'].append('-INCDIR')
+                    conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
                     # the ../ accounts for the tool's being started inside the build folder
-                    conf.env['VERILOG_SEARCH_PATHS'].append('../'+path)
-
+                    conf.env['VERILOG_INC_DIRS'].append('../'+path)
+                    # add the path without prefix to SEARCH_PATHS
+                    conf.env['VERILOG_SEARCH_PATHS'].append(path)
+            print conf.env['VERILOG_SEARCH_PATHS']
 
     conf.load('cadence')
 
