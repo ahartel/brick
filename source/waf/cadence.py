@@ -69,7 +69,7 @@ def vhdl_scanner(task):
                 # append the actual source file
                 #dependencies.append(file)
                 # ... and the generated pseudo-source file
-                dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out').abspath())
+                dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out'))
             # add the current file to the depencies if it's an included file
             if os.path.basename(file.abspath()) in includes_used:
                 dependencies.append(file)
@@ -111,6 +111,8 @@ def verilog_scanner(task):
     for dir in task.env['VERILOG_SEARCH_PATHS']:
         if (dir == '-INCDIR'):
             continue
+        # convert dir to waf node
+        dir = rootnode.make_node(os.getcwd()+'/'+dir)
         # get all system verilog files
         files = get_sv_files_from_include_dir(rootnode,dir)
         for file in files:
@@ -126,7 +128,7 @@ def verilog_scanner(task):
                 # append the actual source file
                 # dependencies.append(file)
                 # ... and the generated pseudo-source file
-                dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out').abspath())
+                dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out'))
             # add the current file to the depencies if it's an included file
             if os.path.basename(file.abspath()) in includes_used:
                 dependencies.append(file)
@@ -137,7 +139,7 @@ def verilog_scanner(task):
 from waflib import TaskGen
 TaskGen.declare_chain(
         name         = 'ncvlog sv',
-        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.svh',],
         ext_out      = ['.svh.out',],
         reentrant    = False,
@@ -146,7 +148,7 @@ TaskGen.declare_chain(
 
 TaskGen.declare_chain(
         name         = 'ncvlog sv',
-        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_SEARCH_PATHS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.sv',],
         ext_out      = ['.sv.out',],
         reentrant    = False,
@@ -186,25 +188,13 @@ TaskGen.declare_chain(
 
 
 def get_sv_files_from_include_dir(rootnode,dir):
-    import glob
-    import waflib
     content = dir.ant_glob("*.sv")
     content.extend(dir.ant_glob("*.svh"))
     content.extend(dir.ant_glob("*.v"))
-    #results = []
-    #for item in content:
-    #    if os.path.isfile(item):
-    #        results.append(rootnode.make_node(os.getcwd()+'/'+item))
     return content
 
 def get_vhdl_files_from_include_dir(rootnode,dir):
-    import glob
-    import waflib
-    content = glob.glob("components/"+dir+"/*.vhd")
-    results = []
-    for item in content:
-        if os.path.isfile(item):
-            results.append(rootnode.make_node(os.getcwd()+'/'+item))
-    return results
+    content = dir.ant_glob("*.vhd")
+    return content
 
 
