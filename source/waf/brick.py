@@ -1,5 +1,33 @@
 import re,os
 
+def getSourceGroups(xmlconfig):
+    tests = xmlconfig.getElementsByTagName('tests')
+    try:
+        sources = tests[0].getElementsByTagName('sources')
+        try:
+            groups = sources[0].getElementsByTagName('group')
+        except IndexError:
+            print "No source groups found in xml configuration file"
+            return []
+    except IndexError:
+        print "No sources found in xml configuration file"
+        return []
+    return groups
+
+def getTestCases(xmlconfig):
+    tests = xmlconfig.getElementsByTagName('tests')
+    try:
+        cases = tests[0].getElementsByTagName('testcases')
+        try:
+            case = cases[0].getElementsByTagName('testcase')
+        except IndexError:
+            print "No test case specification found in xml configuration file"
+            return []
+    except IndexError:
+        print "No testcases found in xml configuration file"
+        return []
+    return case
+
 def getText(nodelist):
     rc = []
     for node in nodelist:

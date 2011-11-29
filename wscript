@@ -1,16 +1,18 @@
 import os,sys
 import tempfile
 from xml.dom import minidom
-sys.path.insert(0, os.path.join('./source/waf'))
+sys.path.insert(0, os.path.join('./brick/source/waf'))
 import brick
 from cadence import *
+
+out = 'rundirs/default'
 
 def options(opt):
     # load compiler options for cxx compiler (necessary for systemc testbench)
     opt.load('compiler_c')
     opt.load('compiler_cxx')
     # brICk options
-    opt.add_option('--configfile', action='store', default='', help='XML file containing brICk configuration')
+    opt.add_option('--configfile', action='store', default='brick_config.xml', help='XML file containing brICk configuration')
     opt.add_option('--mode', action='store', default='functional', help='switch between \'>build< chip\' or \'>functional< verification\' mode')
     opt.add_option('--rundir', action='store', default='', help='Allows the user to directly name an already existing rundir')
     opt.add_option('--testcase', action='store', default='', help='Choose a testcase as defined in the configfile')
@@ -18,16 +20,14 @@ def options(opt):
     opt.add_option('--substeps', action='store', default='all', help='which substeps of the build flow should be run?')
 
 def configure(conf):
-    # if the rundir is not set, create a unique rundir
-    if (conf.options.rundir):
-        rundir = conf.path.make_node('build/'+conf.options.rundir)
-        rundir.mkdir()
-        conf.env.CURRENT_RUNDIR = rundir.abspath()
+    # create the rundir for brick's output and logfiles
+    rundir = ''
+    if conf.options.out:
+        rundir = conf.path.make_node(conf.options.out+'/brick-rundir')
     else:
-        if (not conf.env.CURRENT_RUNDIR):
-            tempdir = tempfile.mkdtemp(dir='build')
-            # save tempdir path to config environment
-            conf.env.CURRENT_RUNDIR = conf.path.find_node(tempdir).abspath()
+        rundir = conf.path.make_node(out+'/brick-rundir')
+    rundir.mkdir()
+    conf.env.CURRENT_RUNDIR = rundir.abspath()
 
     # create results directory
     conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('results/').mkdir()
@@ -38,7 +38,7 @@ def configure(conf):
     conf.end_msg(conf.env.CURRENT_RUNDIR)
 
     # save BRICK_DIR path to config environment
-    conf.env.BRICK_DIR = os.environ['BRICK_DIR']
+    conf.env.BRICK_DIR = conf.path.find_node('brick').abspath()
     # save SYNOPSYS path to config environment (kind of hacky :)
     conf.env.SYNOPSYS = os.environ['SYNOPSYS']
 
@@ -82,8 +82,8 @@ def configure(conf):
         #
         # Read source file groups
         #
-        sources = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('sources')[0].getElementsByTagName('group')
-        testcases = xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('testcases')[0].getElementsByTagName('testcase')
+        sources = brick.getSourceGroups(xmlconfig)
+        testcases = brick.getTestCases(xmlconfig)
 
         groups = {}
         for group in sources:
@@ -179,7 +179,7 @@ def configure(conf):
                     conf.env['VERILOG_SEARCH_PATHS'].append(cfg.root.make_node(path).path_from(cfg.root.make_node(os.getcwd())))
                 # or a BRICK_DIR-relative?
                 else:
-                    conf.env.INCLUDES_SYSTEMC.append(conf.env.BRICK_DIR+'/'+path)
+                    conf.env.INCLUDES_SYSTEMC.append(conf.path.abspath()+'/'+path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
                     conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
                     # the ../ accounts for the tool's being started inside the build folder
@@ -210,14 +210,14 @@ def build(bld):
         libraries[libName] = libPath
         cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
     cdslib_rule += ' && echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/../worklib" >> cds.lib'
-    bld ( 
+    bld (
         rule = cdslib_rule,
         target=CURRENT_RUNDIR.make_node('../cds.lib'),
         source = bld.path.make_node(bld.env.CONFIGFILE)
     )
 
     bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var' )
-    bld ( rule = 'cp ${SRC} ${TGT}', source=bld.path.make_node('./source/cds/si.env'), target=CURRENT_RUNDIR.make_node('../si.env') )
+    bld ( rule = 'cp ${SRC} ${TGT}', source=bld.root.make_node(bld.env.BRICK_DIR+'/source/cds/si.env'), target=CURRENT_RUNDIR.make_node('../si.env') )
 
     # start with build jobs or verification jobs
     if (bld.env.MODE == 'build'):
@@ -423,7 +423,7 @@ def build(bld):
                 CURRENT_RUNDIR.make_node('results/rtl_compiler/reports').mkdir()
                 # get base dir of this step and export it
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
-                os.environ['STEP_BASE_RC'] = bld.env.BRICK_DIR+'/'+stepBaseDir
+                os.environ['STEP_BASE_RC'] = bld.path.abspath()+'/'+stepBaseDir
                 # iterate over substeps
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
@@ -454,7 +454,7 @@ def build(bld):
                 CURRENT_RUNDIR.make_node('results/dc_shell/reports').mkdir()
                 # get base dir of this step and export it
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
-                os.environ['STEP_BASE_DC'] = bld.env.BRICK_DIR+'/'+stepBaseDir
+                os.environ['STEP_BASE_DC'] = bld.path.abspath()+'/'+stepBaseDir
                 # iterate over substeps
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
@@ -488,7 +488,7 @@ def build(bld):
                 CURRENT_RUNDIR.make_node('results/encounter/reports').mkdir()
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
                 # export the stepBaseDir
-                os.environ['STEP_BASE_ENC'] = bld.env.BRICK_DIR+'/'+stepBaseDir
+                os.environ['STEP_BASE_ENC'] = bld.path.abspath()+'/'+stepBaseDir
                 # list to hold substep results
                 results = {}
                 # iterate over substeps
@@ -529,7 +529,7 @@ def build(bld):
                 bld.set_group('signoff')
                 stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
                 # export the stepBaseDir
-                os.environ['STEP_BASE_SIGNOFF'] = bld.env.BRICK_DIR+'/'+stepBaseDir
+                os.environ['STEP_BASE_SIGNOFF'] = bld.path.abspath()+'/'+stepBaseDir
                 # list to hold substep results
                 results = {}
                 # iterate over substeps
@@ -723,7 +723,7 @@ def build(bld):
                     # primetime
                     #
                     elif (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
-                        os.environ['STEP_BASE_PT'] = bld.env.BRICK_DIR+'/'+stepBaseDir
+                        os.environ['STEP_BASE_PT'] = bld.path.abspath()+'/'+stepBaseDir
                         REPORT_DIR_PT = CURRENT_RUNDIR.make_node('results/signoff/'+substepName+'/reports')
                         REPORT_DIR_PT.mkdir()
                         os.environ['REPORT_DIR_PT'] = REPORT_DIR_PT.abspath()
