@@ -1,4 +1,56 @@
 import re,os
+from xml.dom import minidom
+
+def getLibsFromConfig(xmlconfig,ctx):
+    """Gets an xmlconfig object as input and returns
+    a dictionary containing the libraries defined in it
+    and their according paths"""
+
+    # read libs into dictionary to have access to library paths
+    libraries = {}
+    libs = xmlconfig.getElementsByTagName('libraries')
+    try:
+        libs = libs[0].getElementsByTagName('library')
+    except IndexError:
+        print "No libraries section defined in xmlconfig"
+
+    for lib in libs:
+        libName = lib.getAttribute('name').encode('ascii')
+        libPath = lib.getAttribute('path').encode('ascii')
+        libPath = replace_env_vars(libPath,ctx)
+        # check if the path is a folder or a file
+        if os.path.isdir(libPath):
+            libraries[libName] = libPath
+        elif os.path.isfile(libPath):
+            parseCdsLib(libPath,libraries,ctx)
+        else:
+            print "WARNING: path "+libPath+" for library "+libName+" not found"
+
+    return libraries
+
+def parseCdsLib(cdsLib,libraries,ctx):
+    f = open(cdsLib, 'r')
+    for line in f:
+        m = re.search(r"DEFINE\s+([\w]+)\s+(.+)", line)
+        if m:
+            libName = m.group(1)
+            libPath = m.group(2)
+            libPath = replace_env_vars(libPath,ctx)
+            # find out if this path is relative
+            m = re.match(r"\.",libPath)
+            if m:
+                libPath = os.path.dirname(cdsLib)+'/'+libPath
+
+            if libName in libraries:
+                print "WARNING: Library "+libName+" is re-defined in cds.lib file "+cdsLib
+            libraries[libName] = libPath
+        else:
+            m = re.search(r"INCLUDE\s+(.+)", line)
+            if m:
+                cdsLibPath = m.group(1)
+                parseCdsLib(cdsLibPath,libraries)
+    f.close()
+
 
 def getSourceGroups(xmlconfig):
     tests = xmlconfig.getElementsByTagName('tests')

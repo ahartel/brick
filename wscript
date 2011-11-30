@@ -37,6 +37,8 @@ def configure(conf):
     conf.start_msg('Using brICk rundir')
     conf.end_msg(conf.env.CURRENT_RUNDIR)
 
+    # save CWD to env
+    conf.env.CWD = os.getcwd()
     # save BRICK_DIR path to config environment
     conf.env.BRICK_DIR = conf.path.find_node('brick').abspath()
     # save SYNOPSYS path to config environment (kind of hacky :)
@@ -48,9 +50,9 @@ def configure(conf):
     # load project name from configuration
     xmlconfig = minidom.parse(conf.env.CONFIGFILE) # parse an XML file by name
     conf.env.PROJECTNAME = brick.getTextNodeValue(xmlconfig,'projectShortName')
-    conf.start_msg("Successfully read XML config file for")
-    conf.end_msg(conf.env.PROJECTNAME)
 
+    # read libs into dictionary to have access to library paths
+    conf.env.libraries = brick.getLibsFromConfig(xmlconfig,conf)
     # which mode to run in?
     conf.env.MODE = conf.options.mode
     if (conf.options.mode == 'functional'):
@@ -182,10 +184,18 @@ def configure(conf):
                     conf.env.INCLUDES_SYSTEMC.append(conf.path.abspath()+'/'+path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
                     conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
-                    # the ../ accounts for the tool's being started inside the build folder
-                    conf.env['VERILOG_INC_DIRS'].append('../'+path)
+                    # the prefix accounts for the tool's being started inside the build folder
+                    prefix = ''
+                    if conf.options.out:
+                        prefix = conf.path.path_from(conf.path.find_node(conf.options.out))
+                    else:
+                        prefix = conf.path.path_from(conf.path.find_node(out))
+                    conf.env['VERILOG_INC_DIRS'].append(prefix+'/'+path)
                     # add the path without prefix to SEARCH_PATHS
                     conf.env['VERILOG_SEARCH_PATHS'].append(path)
+
+    conf.start_msg("Successfully read XML config file for")
+    conf.end_msg(conf.env.PROJECTNAME)
 
     conf.load('cadence')
 
@@ -197,17 +207,11 @@ def build(bld):
 
     # load configuration
     xmlconfig = minidom.parse(bld.env.CONFIGFILE) # parse an XML file by name
-    # read libs into dictionary to have access to library paths
-    libraries = {}
-    libs = xmlconfig.getElementsByTagName('libraries')[0].getElementsByTagName('library')
+
     bld.add_group('cdslib')
     bld.set_group('cdslib')
     cdslib_rule = 'echo "" > cds.lib'
-    for lib in libs:
-        libName = lib.getAttribute('name').encode('ascii')
-        libPath = lib.getAttribute('path').encode('ascii')
-        libPath = brick.replace_env_vars(libPath,bld)
-        libraries[libName] = libPath
+    for libName,libPath in bld.env.libraries.iteritems():
         cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
     cdslib_rule += ' && echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/../worklib" >> cds.lib'
     bld (

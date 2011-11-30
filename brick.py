@@ -64,11 +64,25 @@ def init():
 # end of init
 
 # configure
-def configure(mode):
+def configure(mode,rundir,testcase):
     output = []
-    import datetime
-    jetzt = datetime.datetime.now()
-    cmd = './waf configure --mode '+mode+' --out rundirs/'+jetzt.strftime("%Y%m%d%H%M")
+    if not rundir:
+        import datetime
+        jetzt = datetime.datetime.now()
+        rundir=jetzt.strftime("%Y%m%d%H%M")
+    if not mode:
+        mode = 'build'
+
+    if mode == 'functional' and not testcase:
+        output.append("Testcase has to be given in mode 'functional'")
+        return output
+
+    cmd = ''
+    if mode == 'functional':
+        cmd = './waf configure --mode '+mode+' --out rundirs/'+rundir+" --testcase "+testcase
+    else:
+        cmd = './waf configure --mode '+mode+' --out rundirs/'+rundir
+
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
     for line in p.stdout:
         output.append(line.rstrip())
@@ -85,10 +99,11 @@ def start_gui():
 
 # main
 try:
-    opts,args = getopt.getopt(sys.argv[1:],"h")
+    opts,args = getopt.getopt(sys.argv[1:],"h",["rundir=","mode=","testcase="])
 except getopt.GetoptError, err:
     print str(err)
     sys.exit(2)
+
 
 # try to find out if user
 # wants to start the GUI
@@ -115,8 +130,19 @@ except ValueError:
 try:
     index = args.index('configure')
     output = []
+    mode = 'build'
+    rundir = ''
+    testcase = ''
+    for opt in opts:
+        if opt[0] == '--mode':
+            mode = opt[1]
+        elif opt[0] == '--rundir':
+            rundir = opt[1]
+        elif opt[0] == '--testcase':
+            testcase = opt[1]
+
     try:
-        output = configure(args[index+1])
+        output = configure(mode,rundir,testcase)
     except IndexError:
         print "Please give a mode to configure for: build/functional"
         sys.exit(2)
@@ -124,3 +150,4 @@ try:
         print line
 except ValueError:
     pass
+

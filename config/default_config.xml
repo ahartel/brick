@@ -2,8 +2,16 @@
     <projectName>Empty project</projectName>
     <projectShortName>empty_project</projectShortName>
 
-    <libraries></libraries>
+    <libraries>
+        <library name="UMC_18_CMOS" path="$CWD/resources/u18/artist6.1/UMC_18_CMOS"></library>
+        <library name="UMC_18_CMOS_FAR" path="$CWD/resources/u18/artist6.1/UMC_18_CMOS_FAR"></library>
+        <library name="TSMC" path="$TSMC_DIR/oa/cds.lib"></library>
+    </libraries>
     <tasks></tasks>
-    <tests></tests>
+    <tests>
+        <sources></sources>
+        <searchpaths></searchpaths>
+        <testcases></testcases>
+    </tests>
 </brick>
 
