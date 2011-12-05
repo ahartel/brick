@@ -1,4 +1,5 @@
 import os,sys
+import copy
 import tempfile
 from xml.dom import minidom
 sys.path.insert(0, os.path.join('./brick/source/waf'))
@@ -80,13 +81,20 @@ def configure(conf):
         conf.env.LIB_SYSTEMC = ['stdc++', 'gcc_s', 'tbsc', 'scv', 'systemc_sh', 'ncscCoSim_sh', 'ncscCoroutines_sh', 'ncsctlm_sh'] # 'ovm', 
         conf.env.RPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
 
-        conf.env.USELIBS = ['SYSTEMC']
+        # declare a list for C/C++ include paths
+        conf.env.INCLUDES_SEARCHPATHS = []
+        # and add it to the list of used libs
+        conf.env.USELIBS = ['SEARCHPATHS']
+
         #
         # Read source file groups
         #
+        # The source files that are needed for functional
+        # verification tasks are specified in groups in the
+        # XML file. These groups are combined to compilation
+        # tasks in the next block.
         sources = brick.getSourceGroups(xmlconfig)
         testcases = brick.getTestCases(xmlconfig)
-
         groups = {}
         for group in sources:
             # get group name
@@ -109,8 +117,17 @@ def configure(conf):
         #
         # combine source file groups and generate tasks
         #
+        # This block combines the source groups to lists
+        # for the different functional verification compilation
+        # targets. These are:
+        # * RTL sources (called VERILOG_SOURCES here, but containing also VHDL files)
+        # * SystemC sources that will be compiled into libncsc_model.so
+        # * DPI sources that will be compiled into libdpi.so
+        # * Control software sources that will be compiled into ctrlSW executable
         conf.env.VERILOG_SOURCES = []
         conf.env.SYSTEMC_SOURCES = []
+        conf.env.DPI_SOURCES = []
+        conf.env.SOFTWARE_SOURCES = []
         for testcase in testcases:
             testcaseName = testcase.getAttribute('name').encode('ascii')
             if testcaseName == conf.options.testcase:
@@ -128,6 +145,12 @@ def configure(conf):
                     elif (sourceName == 'systemC'):
                         for group in groupnames:
                             conf.env.SYSTEMC_SOURCES.extend(groups[group])
+                    elif (sourceName == 'DPI'):
+                        for group in groupnames:
+                            conf.env.DPI_SOURCES.extend(groups[group])
+                    elif (sourceName == 'ctrlSW'):
+                        for group in groupnames:
+                            conf.env.SOFTWARE_SOURCES.extend(groups[group])
                 # assemble simulation tool options and save to waf environment
                 testoptions = testcase.getElementsByTagName('option')
                 for option in testoptions:
@@ -173,7 +196,7 @@ def configure(conf):
             for path in searchpaths:
                 # is this path an absolute path?
                 if pattern.match(path):
-                    conf.env.INCLUDES_SYSTEMC.append(path)
+                    conf.env.INCLUDES_SEARCHPATHS.append(path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
                     conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
                     conf.env['VERILOG_INC_DIRS'].append(path)
@@ -181,7 +204,7 @@ def configure(conf):
                     conf.env['VERILOG_SEARCH_PATHS'].append(cfg.root.make_node(path).path_from(cfg.root.make_node(os.getcwd())))
                 # or a BRICK_DIR-relative?
                 else:
-                    conf.env.INCLUDES_SYSTEMC.append(conf.path.abspath()+'/'+path)
+                    conf.env.INCLUDES_SEARCHPATHS.append(conf.path.abspath()+'/'+path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
                     conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
                     # the prefix accounts for the tool's being started inside the build folder
@@ -801,10 +824,37 @@ def build(bld):
         for x in bld.env.SYSTEMC_SOURCES:
             SYSTEMC_SOURCES.append(bld.path.make_node(x))
 
+        use_libs_systemc = copy.copy(bld.env.USELIBS)
+        use_libs_systemc.append('SYSTEMC')
+
         bld.shlib (
             name = 'libncsc_model.so',
             source = SYSTEMC_SOURCES,
             target = 'ncsc_model',
+            use = use_libs_systemc,
+        )
+
+        # compilation tasks for DPI
+        DPI_SOURCES = []
+        for x in bld.env.DPI_SOURCES:
+            DPI_SOURCES.append(bld.path.make_node(x))
+
+        bld.shlib (
+            name = 'libDPI.so',
+            source = DPI_SOURCES,
+            target = 'dpi',
+            use = bld.env.USELIBS,
+        )
+
+        # compilation tasks for independent software
+        SOFTWARE_SOURCES = []
+        for x in bld.env.SOFTWARE_SOURCES:
+            SOFTWARE_SOURCES.append(bld.path.make_node(x))
+
+        bld.program (
+            target = 'ctrlSW',
+            source = SOFTWARE_SOURCES,
+            name = 'ctrlSW',
             use = bld.env.USELIBS,
         )
 
