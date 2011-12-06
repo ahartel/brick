@@ -17,7 +17,6 @@ def options(opt):
     opt.add_option('--mode', action='store', default='functional', help='switch between \'>build< chip\' or \'>functional< verification\' mode')
     opt.add_option('--rundir', action='store', default='', help='Allows the user to directly name an already existing rundir')
     opt.add_option('--testcase', action='store', default='', help='Choose a testcase as defined in the configfile')
-    opt.add_option('--sim-mixed-signal', action='store_true', default='False', help='Use mixed-signal sources and command options when simulating')
     opt.add_option('--substeps', action='store', default='all', help='which substeps of the build flow should be run?')
 
 def configure(conf):
@@ -57,7 +56,6 @@ def configure(conf):
     # which mode to run in?
     conf.env.MODE = conf.options.mode
     if (conf.options.mode == 'functional'):
-        conf.env.MIXED_SIGNAL = conf.options.sim_mixed_signal
         # ugly hacking to make cadence C++ compiler visible to waf compiler_c(xx)
         os.environ['CDSROOT'] = '/cad/products/cds/ius82'
         os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
@@ -135,22 +133,23 @@ def configure(conf):
                 for source in testsources:
                     sourceName = source.getAttribute('name').encode('ascii')
                     # get group names, split them, and remove spaces and line breaks
-                    groupnames = brick.getText(source.childNodes).encode('ascii')
-                    groupnames = groupnames.replace(" ","")
-                    groupnames = groupnames.replace("\n","")
-                    groupnames = groupnames.split(",")
-                    if (sourceName == 'rtl'):
-                        for group in groupnames:
-                            conf.env.VERILOG_SOURCES.extend(groups[group])
-                    elif (sourceName == 'systemC'):
-                        for group in groupnames:
-                            conf.env.SYSTEMC_SOURCES.extend(groups[group])
-                    elif (sourceName == 'DPI'):
-                        for group in groupnames:
-                            conf.env.DPI_SOURCES.extend(groups[group])
-                    elif (sourceName == 'ctrlSW'):
-                        for group in groupnames:
-                            conf.env.SOFTWARE_SOURCES.extend(groups[group])
+                    if source.childNodes:
+                        groupnames = brick.getText(source.childNodes).encode('ascii')
+                        groupnames = groupnames.replace(" ","")
+                        groupnames = groupnames.replace("\n","")
+                        groupnames = groupnames.split(",")
+                        if (sourceName == 'rtl'):
+                            for group in groupnames:
+                                conf.env.VERILOG_SOURCES.extend(groups[group])
+                        elif (sourceName == 'systemC'):
+                            for group in groupnames:
+                                conf.env.SYSTEMC_SOURCES.extend(groups[group])
+                        elif (sourceName == 'DPI'):
+                            for group in groupnames:
+                                conf.env.DPI_SOURCES.extend(groups[group])
+                        elif (sourceName == 'ctrlSW'):
+                            for group in groupnames:
+                                conf.env.SOFTWARE_SOURCES.extend(groups[group])
                 # assemble simulation tool options and save to waf environment
                 testoptions = testcase.getElementsByTagName('option')
                 for option in testoptions:
@@ -165,30 +164,26 @@ def configure(conf):
                         conf.env[optionType+'_'+optionName] = optionContent.split(",")
                         conf.env.USELIBS.append(optionName)
                     else:
-                        optionMode = option.getAttribute('mode').encode('ascii')
                         # get options, split them, and remove spaces and line breaks
                         optionContent = brick.getText(option.childNodes).encode('ascii')
                         optionContent = optionContent.replace(" ","")
                         optionContent = optionContent.replace("\n","")
-                        if (conf.env.MIXED_SIGNAL == True):
-                            if (optionMode == 'mixed-signal'):
-                                conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
-                        else:
-                            if (optionMode == 'rtl'):
-                                conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+                        conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
 
             # set verilog search paths
             # get string from XML tree
-            searchpaths = brick.getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
-            # remove spaces and line breaks
-            searchpaths = searchpaths.replace(" ","")
-            searchpaths = searchpaths.replace("\n","")
-            # split the string to make it a list
-            searchpaths = searchpaths.split(',')
-            # if there was a trailing comma in the string, the last entry will
-            # be empty, remove it
-            if (len(searchpaths[len(searchpaths)-1]) == 0):
-                searchpaths.pop()
+            searchpaths = []
+            if xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('searchpaths')[0].childNodes:
+                searchpaths = brick.getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
+                # remove spaces and line breaks
+                searchpaths = searchpaths.replace(" ","")
+                searchpaths = searchpaths.replace("\n","")
+                # split the string to make it a list
+                searchpaths = searchpaths.split(',')
+                # if there was a trailing comma in the string, the last entry will
+                # be empty, remove it
+                if (len(searchpaths[len(searchpaths)-1]) == 0):
+                    searchpaths.pop()
 
             conf.env['VERILOG_SEARCH_PATHS'] = []
             conf.env['VERILOG_INC_DIRS'] = []
