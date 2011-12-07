@@ -158,7 +158,7 @@ def configure(conf):
                     if re.match('USELIB_',optionName):
                         optionName = re.sub(r'USELIB\_','',optionName)
                         optionType = option.getAttribute('type').encode('ascii')
-                        optionContent = brick.getText(option.childNodes).encode('ascii')
+                        optionContent = brick.replace_env_vars(brick.getText(option.childNodes).encode('ascii'),conf)
                         optionContent = optionContent.replace(" ","")
                         optionContent = optionContent.replace("\n","")
                         # write options to env
