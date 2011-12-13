@@ -11,7 +11,10 @@ import os, sys, shutil
 import subprocess
 # cannot use argparse, because it is not installed on valgol
 import getopt
+from xml.dom import minidom
 from brick_qt import *
+sys.path.insert(0, os.path.join('./brick/source/waf'))
+import brick_waf
 
 class brickContainer:
 
@@ -19,6 +22,7 @@ class brickContainer:
     def __init__(self):
         self.BRICK_DIR = ''
         self.output = []
+        self.config = {}
 
         # find out brick dir
         if os.path.exists('./brick'):
@@ -69,11 +73,22 @@ class brickContainer:
         else:
             self.output.append(".brick_info file not found.")
 
+        self.__load_config()
+
         return
     # end of init
 
+    def __load_config(self):
+        xmlconfig = minidom.parse('./brick_config.xml') # parse an XML file by name
+        self.config['projectname'] = brick_waf.getTextNodeValue(xmlconfig,'projectShortName')
+        self.config['testcases'] = brick_waf.getTestCases(xmlconfig)
+
+    def get_config_value(self,key):
+        return self.config[key]
+
+
     # save state to file
-    def __save_state():
+    def __save_state(self):
         f = open('./.brick_info','w')
         f.write(self.__rundir+"\n")
         f.write(self.__mode+"\n")
@@ -93,17 +108,22 @@ class brickContainer:
     # configure
     def configure(self,mode,rundir,testcase):
         if not rundir:
-            import datetime
-            jetzt = datetime.datetime.now()
-            self.__rundir=jetzt.strftime("%Y%m%d%H%M")
+            if not self.__rundir:
+                self.output.append('No rundir was explecitly given. Setting rundir to current datetime string')
+                import datetime
+                jetzt = datetime.datetime.now()
+                self.__rundir=jetzt.strftime("%Y%m%d%H%M")
         else:
             self.__rundir = rundir
         if not mode:
-            self.__mode = 'build'
+            if not self.__mode:
+                self.output.append('Please give a mode via the --mode option. Mode can be "build" or "functional"')
+                return
         else:
             self.__mode = mode
 
-        self.__testcase = testcase
+        if testcase:
+            self.__testcase = testcase
 
         if self.__mode == 'functional' and not self.__testcase:
             self.output.append("Testcase has to be given in mode 'functional'")
@@ -125,34 +145,32 @@ class brickContainer:
     # end of configure
 
     # build
-    def build():
-        output = []
+    def build(self):
         cmd = './waf build'
         p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         for line in p.stdout:
-            output.append(line.rstrip())
-        return output
+            self.output.append(line.rstrip())
+        return
     # end of build
 
     # run
-    def run():
-        output = []
+    def run(self):
         cmd = './waf run'
         p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         for line in p.stdout:
-            output.append(line.rstrip())
-        return output
+            self.output.append(line.rstrip())
+        return
     # end of run
 
     def flushOutput(self):
-        for line in self.output:
-            print line
+        returnOutput = "\n".join(self.output)
         self.output = []
+        return returnOutput
 
 # start gui
-def start_gui():
+def start_gui(myBrick):
     app = QtGui.QApplication(sys.argv)
-    ex = brickQT(init,configure,build,run)
+    ex = brickQT(myBrick)
     sys.exit(app.exec_())
 # end of start gui
 
@@ -174,7 +192,7 @@ print myBrick.flushOutput()
 # wants to start the GUI
 try:
     args.index('gui')
-    start_gui()
+    start_gui(myBrick)
     # if this is the case, remove other args
     args = []
 except ValueError:
@@ -195,7 +213,7 @@ except ValueError:
 try:
     index = args.index('configure')
     output = []
-    mode = 'build'
+    mode = ''
     rundir = ''
     testcase = ''
     for opt in opts:
@@ -219,9 +237,8 @@ except ValueError:
 # wants to build the project
 try:
     args.index('build')
-    output = build()
-    for line in output:
-        print line
+    myBrick.build()
+    print myBrick.flushOutput()
 except ValueError:
     pass
 
@@ -229,9 +246,8 @@ except ValueError:
 # wants to run the simulation
 try:
     args.index('run')
-    output = run()
-    for line in output:
-        print line
+    myBrick.run()
+    print myBrick.flushOutput()
 except ValueError:
     pass
 

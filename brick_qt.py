@@ -13,24 +13,33 @@ from PyQt4 import QtGui, QtCore
 class brickQT(QtGui.QMainWindow):
 
     def __updateTreeView(self):
-        item = QtGui.QTreeWidgetItem(['hallo'])
-        child = QtGui.QTreeWidgetItem(['kind'])
-        item.addChild(child)
+        item = QtGui.QTreeWidgetItem(['testcases'])
+        for testcase in self.testcases:
+            child = QtGui.QTreeWidgetItem([testcase])
+            item.addChild(child)
         self.topleft.insertTopLevelItem(0,item);
+
+    def __translate_brick_config(self):
+        testcases = self.__myBrick.get_config_value('testcases')
+        self.testcases = []
+        for testcase in testcases:
+            self.testcases.append(testcase.getAttribute('name').encode('ascii'))
+
 
     @QtCore.pyqtSlot()
     def __handleBuild(self):
-        output = self.buildFunction()
+        self.__myBrick.build()
+        output = self.__myBrick.flushOutput()
         self.__publish(output)
 
     @QtCore.pyqtSlot()
     def __handleRun(self):
-        output = self.runFunction()
+        output = self.__myBrick.run()
+        output = self.__myBrick.flushOutput()
         self.__publish(output)
 
     def __publish(self,output):
-        for line in output:
-            self.topright.append(line)
+        self.topright.append(output)
 
     @QtCore.pyqtSlot()
     def __handleConfigure(self):
@@ -41,30 +50,29 @@ class brickQT(QtGui.QMainWindow):
         input,ok = QtGui.QInputDialog.getItem(self,"Select build mode","Which mode do you want to configure?",modes,0,False)
 
         if ok:
-            output = self.configureFunction(str(input),'','')
+            self.__myBrick.configure(str(input),'','')
+            output = self.__myBrick.flushOutput()
             self.__publish(output)
 
-    @QtCore.pyqtSlot()
-    def __handleInit(self):
-        msgBox = QtGui.QMessageBox()
-        msgBox.setInformativeText("Do you really want to initialize brick in this project?")
-        msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-        msgBox.setDefaultButton(QtGui.QMessageBox.Yes )
-        ret = msgBox.exec_()
+#    @QtCore.pyqtSlot()
+#    def __handleInit(self):
+#        msgBox = QtGui.QMessageBox()
+#        msgBox.setInformativeText("Do you really want to initialize brick in this project?")
+#        msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+#        msgBox.setDefaultButton(QtGui.QMessageBox.Yes )
+#        ret = msgBox.exec_()
+#
+#        if ret == QtGui.QMessageBox.No:
+#            pass
+#        elif ret == QtGui.QMessageBox.Yes:
+#            output = self.initFunction()
+#            self.__publish(output)
 
-        if ret == QtGui.QMessageBox.No:
-            pass
-        elif ret == QtGui.QMessageBox.Yes:
-            output = self.initFunction()
-            self.__publish(output)
-
-    def __init__(self,initFunction,configureFunction,buildFunction,runFunction):
+    def __init__(self,myBrick):
         super(brickQT, self).__init__()
 
-        self.initFunction = initFunction
-        self.configureFunction = configureFunction
-        self.buildFunction = buildFunction
-        self.runFunction = runFunction
+        self.__myBrick = myBrick
+        self.__translate_brick_config()
         self.initUI()
 
     def initUI(self):
@@ -77,7 +85,6 @@ class brickQT(QtGui.QMainWindow):
 
         # top right
         self.topright = QtGui.QTextEdit(self)
-#        topright.setFrameShape(QtGui.QFrame.StyledPanel)
 
         # bottom status bar
         self.statusBar()
@@ -87,10 +94,10 @@ class brickQT(QtGui.QMainWindow):
         exitAction.setStatusTip('Exit application')
         exitAction.triggered.connect(self.close)
 
-        initAction = QtGui.QAction('Init', self)
-        initAction.setShortcut('Alt+I')
-        initAction.setStatusTip('Init brICk')
-        initAction.triggered.connect(self.__handleInit)
+        #initAction = QtGui.QAction('Init', self)
+        #initAction.setShortcut('Alt+I')
+        #initAction.setStatusTip('Init brICk')
+        #initAction.triggered.connect(self.__handleInit)
 
         configureAction = QtGui.QAction('(Re-)configure', self)
         configureAction.setShortcut('Alt+C')
@@ -109,7 +116,6 @@ class brickQT(QtGui.QMainWindow):
 
         toolbar = QtGui.QToolBar(self)
         self.addToolBar(toolbar)
-        toolbar.addAction(initAction)
         toolbar.addAction(configureAction)
         toolbar.addAction(buildAction)
         toolbar.addAction(runAction)
