@@ -3,7 +3,7 @@ import copy
 import tempfile
 from xml.dom import minidom
 sys.path.insert(0, os.path.join('./brick/source/waf'))
-import brick
+import brick_waf
 from cadence import *
 
 out = 'rundirs/default'
@@ -49,10 +49,10 @@ def configure(conf):
 
     # load project name from configuration
     xmlconfig = minidom.parse(conf.env.CONFIGFILE) # parse an XML file by name
-    conf.env.PROJECTNAME = brick.getTextNodeValue(xmlconfig,'projectShortName')
+    conf.env.PROJECTNAME = brick_waf.getTextNodeValue(xmlconfig,'projectShortName')
 
     # read libs into dictionary to have access to library paths
-    conf.env.libraries = brick.getLibsFromConfig(xmlconfig,conf)
+    conf.env.libraries = brick_waf.getLibsFromConfig(xmlconfig,conf)
     # which mode to run in?
     conf.env.MODE = conf.options.mode
     if (conf.options.mode == 'functional'):
@@ -91,19 +91,19 @@ def configure(conf):
         # verification tasks are specified in groups in the
         # XML file. These groups are combined to compilation
         # tasks in the next block.
-        sources = brick.getSourceGroups(xmlconfig)
-        testcases = brick.getTestCases(xmlconfig)
+        sources = brick_waf.getSourceGroups(xmlconfig)
+        testcases = brick_waf.getTestCases(xmlconfig)
         groups = {}
         for group in sources:
             # get group name
             groupName = group.getAttribute('name').encode('ascii')
             groups[groupName] = []
             # get filenames, split them, and remove spaces and line breaks
-            filenames = brick.getText(group.childNodes).encode('ascii')
+            filenames = brick_waf.getText(group.childNodes).encode('ascii')
             filenames = filenames.replace(" ","")
             filenames = filenames.replace("\n","")
             # replace env variables
-            filenames = brick.replace_env_vars(filenames,conf)
+            filenames = brick_waf.replace_env_vars(filenames,conf)
             filenames = filenames.split(",")
             # append filenames to group's file list
             groups[groupName].extend(filenames)
@@ -134,7 +134,7 @@ def configure(conf):
                     sourceName = source.getAttribute('name').encode('ascii')
                     # get group names, split them, and remove spaces and line breaks
                     if source.childNodes:
-                        groupnames = brick.getText(source.childNodes).encode('ascii')
+                        groupnames = brick_waf.getText(source.childNodes).encode('ascii')
                         groupnames = groupnames.replace(" ","")
                         groupnames = groupnames.replace("\n","")
                         groupnames = groupnames.split(",")
@@ -157,7 +157,7 @@ def configure(conf):
                     if re.match('USELIB_',optionName):
                         optionName = re.sub(r'USELIB\_','',optionName)
                         optionType = option.getAttribute('type').encode('ascii')
-                        optionContent = brick.replace_env_vars(brick.getText(option.childNodes).encode('ascii'),conf)
+                        optionContent = brick_waf.replace_env_vars(brick_waf.getText(option.childNodes).encode('ascii'),conf)
                         optionContent = optionContent.replace(" ","")
                         optionContent = optionContent.replace("\n","")
                         # write options to env
@@ -165,7 +165,7 @@ def configure(conf):
                         conf.env.USELIBS.append(optionName)
                     else:
                         # get options, split them, and remove spaces and line breaks
-                        optionContent = brick.getText(option.childNodes).encode('ascii')
+                        optionContent = brick_waf.getText(option.childNodes).encode('ascii')
                         optionContent = optionContent.replace(" ","")
                         optionContent = optionContent.replace("\n","")
                         conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
@@ -174,7 +174,7 @@ def configure(conf):
             # get string from XML tree
             searchpaths = []
             if xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('searchpaths')[0].childNodes:
-                searchpaths = brick.getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
+                searchpaths = brick_waf.getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
                 # remove spaces and line breaks
                 searchpaths = searchpaths.replace(" ","")
                 searchpaths = searchpaths.replace("\n","")
@@ -263,13 +263,13 @@ def build(bld):
                 # create results dir for abstracts
                 CURRENT_RUNDIR.make_node('results/abstract/').mkdir()
                 # get library names for abstract generation
-                analib = brick.getTextNodeValue(step,'analib')
-                techlib = brick.getTextNodeValue(step,'techlib')
+                analib = brick_waf.getTextNodeValue(step,'analib')
+                techlib = brick_waf.getTextNodeValue(step,'techlib')
                 # get cells to extract
                 cells = step.getElementsByTagName('cell')
                 for cell in cells:
                     # where ist the current cell and how is it called?
-                    cellBaseDir = brick.getTextNodeValue(cell,'cellBaseDir')
+                    cellBaseDir = brick_waf.getTextNodeValue(cell,'cellBaseDir')
                     cellName = cell.getAttribute('name').encode('ascii')
                     libName = cell.getAttribute('lib').encode('ascii')
                     # create lib-specific results dir
@@ -281,7 +281,7 @@ def build(bld):
                         #
                         # genGDS
                         #
-                        if (substepName == 'genGDS') and brick.runStep(substepName,steps_to_run):
+                        if (substepName == 'genGDS') and brick_waf.runStep(substepName,steps_to_run):
                             bld.add_group('abstract_genGDS_'+cellName)
                             bld.set_group('abstract_genGDS_'+cellName)
 
@@ -291,7 +291,7 @@ def build(bld):
                             INPUT = [
                                 bld.root.make_node(libraries[libName] + '/' + cellName + '/layout/layout.oa'),
                             ]
-                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                            always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                             bld(
                                 # export some variables first, before running the abstract generation
@@ -317,12 +317,12 @@ def build(bld):
                         #
                         # genLEF
                         #
-                        if (substepName == 'genLEF') and brick.runStep(substepName,steps_to_run):
+                        if (substepName == 'genLEF') and brick_waf.runStep(substepName,steps_to_run):
                             bld.add_group('abstract_genLEF_'+cellName)
                             bld.set_group('abstract_genLEF_'+cellName)
 
-                            skillScript = brick.getTextNodeValue(substep,'skillScript')
-                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                            skillScript = brick_waf.getTextNodeValue(substep,'skillScript')
+                            always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                             OUTPUT = [
                                 CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lef'),
@@ -348,11 +348,11 @@ def build(bld):
                         #
                         # genDB
                         #
-                        if (substepName == 'genDB') and brick.runStep(substepName,steps_to_run):
+                        if (substepName == 'genDB') and brick_waf.runStep(substepName,steps_to_run):
                             INPUT = CURRENT_RUNDIR.find_node('results/abstract/'+libName+'/'+cellName+'.lib')
                             OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.db')
 
-                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                            always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                             bld(
                                 rule = """
@@ -367,12 +367,12 @@ def build(bld):
                         #
                         # genCDL
                         #
-                        if (substepName == 'genCDL') and brick.runStep(substepName,steps_to_run):
+                        if (substepName == 'genCDL') and brick_waf.runStep(substepName,steps_to_run):
                             bld.add_group('abstract_genCDL_'+libName+'_'+cellName)
                             INPUT = bld.root.make_node(libraries[libName] + '/' + cellName + '/schematic/sch.oa')
                             OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.cdl')
 
-                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                            always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                             bld(
                                 rule = """
@@ -394,9 +394,9 @@ def build(bld):
                         #
                         # genLIB
                         #
-                        if (substepName == 'genLIB') and brick.runStep(substepName,steps_to_run):
+                        if (substepName == 'genLIB') and brick_waf.runStep(substepName,steps_to_run):
                             bld.set_group('abstract')
-                            always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                            always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                             # schematic2verilog
                             INPUT = [
@@ -422,14 +422,14 @@ def build(bld):
                                 bld.path.find_resource('source/perl/verilog2lib.pl'),
                             ]
                             try:
-                                pincapFile = brick.getTextNodeValue(substep,'pincapFile')
+                                pincapFile = brick_waf.getTextNodeValue(substep,'pincapFile')
                                 INPUT.append(bld.path.make_node(cellBaseDir+'/'+ pincapFile))
                             except (IndexError):
                                 pass
 
                             OUTPUT = CURRENT_RUNDIR.make_node('results/abstract/'+libName+'/'+cellName+'.lib')
                             bld(
-                                rule = brick.verilog2lib,
+                                rule = brick_waf.verilog2lib,
                                 source = INPUT,
                                 target = OUTPUT,
                                 always = always_flag,
@@ -438,25 +438,25 @@ def build(bld):
             #
             # rtl compiler
             #
-            if (step.getAttribute('class') == 'rc') and brick.runStep('rc',steps_to_run):
+            if (step.getAttribute('class') == 'rc') and brick_waf.runStep('rc',steps_to_run):
                 bld.add_group('rc')
                 bld.set_group('rc')
                 CURRENT_RUNDIR.make_node('results/rtl_compiler/').mkdir()
                 CURRENT_RUNDIR.make_node('results/rtl_compiler/reports').mkdir()
                 # get base dir of this step and export it
-                stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
+                stepBaseDir = brick_waf.getTextNodeValue(step,'stepBaseDir')
                 os.environ['STEP_BASE_RC'] = bld.path.abspath()+'/'+stepBaseDir
                 # iterate over substeps
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
                     substepName = substep.getAttribute('name').encode('ascii')
-                    TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                    OUTPUT = CURRENT_RUNDIR.make_node('results/rtl_compiler/'+brick.getTextNodeValue(substep,'outputFile'))
+                    TCLscript = brick_waf.getTextNodeValue(substep,'TCLscript')
+                    OUTPUT = CURRENT_RUNDIR.make_node('results/rtl_compiler/'+brick_waf.getTextNodeValue(substep,'outputFile'))
 
-                    always_flag = brick.checkAlwaysFlag('rc',steps_to_run)
+                    always_flag = brick_waf.checkAlwaysFlag('rc',steps_to_run)
 
                     bld(
-                        rule   = brick.rtl_compiler,
+                        rule   = brick_waf.rtl_compiler,
                         source = [
                             stepBaseDir+'/'+TCLscript,
                         ],
@@ -469,25 +469,25 @@ def build(bld):
             #
             # design compiler
             #
-            if (step.getAttribute('class') == 'dc') and brick.runStep('dc',steps_to_run):
+            if (step.getAttribute('class') == 'dc') and brick_waf.runStep('dc',steps_to_run):
                 bld.add_group('dc')
                 bld.set_group('dc')
                 CURRENT_RUNDIR.make_node('results/dc_shell/').mkdir()
                 CURRENT_RUNDIR.make_node('results/dc_shell/reports').mkdir()
                 # get base dir of this step and export it
-                stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
+                stepBaseDir = brick_waf.getTextNodeValue(step,'stepBaseDir')
                 os.environ['STEP_BASE_DC'] = bld.path.abspath()+'/'+stepBaseDir
                 # iterate over substeps
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
                     substepName = substep.getAttribute('name').encode('ascii')
-                    TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                    outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
+                    TCLscript = brick_waf.getTextNodeValue(substep,'TCLscript')
+                    outputFiles = brick_waf.getTextNodeAsList(bld,substep,'outputFile')
                     OUTPUT = []
                     for path in outputFiles:
                         OUTPUT.append(CURRENT_RUNDIR.make_node('results/dc_shell/'+path))
 
-                    always_flag = brick.checkAlwaysFlag('dc',steps_to_run)
+                    always_flag = brick_waf.checkAlwaysFlag('dc',steps_to_run)
 
                     bld(
                         rule = 'dc_shell -f %s | tee %s 2>&1' % (bld.path.make_node(stepBaseDir+'/'+TCLscript).abspath(),CURRENT_RUNDIR.make_node('logfiles/dc_shell.log').abspath()),
@@ -508,7 +508,7 @@ def build(bld):
                 # TODO: move dir to config
                 CURRENT_RUNDIR.make_node('results/encounter/Top_pins_enc').mkdir()
                 CURRENT_RUNDIR.make_node('results/encounter/reports').mkdir()
-                stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
+                stepBaseDir = brick_waf.getTextNodeValue(step,'stepBaseDir')
                 # export the stepBaseDir
                 os.environ['STEP_BASE_ENC'] = bld.path.abspath()+'/'+stepBaseDir
                 # list to hold substep results
@@ -517,24 +517,24 @@ def build(bld):
                 substeps = step.getElementsByTagName('subStep')
                 for substep in substeps:
                     substepName = substep.getAttribute('name').encode('ascii')
-                    TCLscript = brick.getTextNodeValue(substep,'TCLscript')
+                    TCLscript = brick_waf.getTextNodeValue(substep,'TCLscript')
                     # declare list of source files
                     INPUT = []
                     # if this substep has a preceding substep, make this one dependend on its output
                     INPUT.append(bld.path.make_node(stepBaseDir+'/'+TCLscript))
                     if (len(substep.getElementsByTagName('after')) > 0):
-                        INPUT.extend(results[brick.getTextNodeValue(substep,'after')])
+                        INPUT.extend(results[brick_waf.getTextNodeValue(substep,'after')])
 
                     # read output files
-                    outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
+                    outputFiles = brick_waf.getTextNodeAsList(bld,substep,'outputFile')
                     OUTPUT = []
                     for path in outputFiles:
                         OUTPUT.append(CURRENT_RUNDIR.make_node(path))
 
                     results[substepName] = OUTPUT
 
-                    if brick.runStep(substepName,steps_to_run):
-                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                    if brick_waf.runStep(substepName,steps_to_run):
+                        always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                         bld(
                             rule = """encounter -init %s -nowin -overwrite -log %s""" % (INPUT[0].abspath(),CURRENT_RUNDIR.make_node('/logfiles/encounter_'+substepName+'.log').abspath()),
@@ -549,7 +549,7 @@ def build(bld):
             if step.getAttribute('class') == 'signoff':
                 bld.add_group('signoff')
                 bld.set_group('signoff')
-                stepBaseDir = brick.getTextNodeValue(step,'stepBaseDir')
+                stepBaseDir = brick_waf.getTextNodeValue(step,'stepBaseDir')
                 # export the stepBaseDir
                 os.environ['STEP_BASE_SIGNOFF'] = bld.path.abspath()+'/'+stepBaseDir
                 # list to hold substep results
@@ -563,10 +563,10 @@ def build(bld):
                     #
                     # generate signoff GDS
                     #
-                    if (substepName == 'streamin') and brick.runStep(substepName,steps_to_run):
-                        inputFile = brick.getTextNodeValue(substep,'inputFile')
-                        layermap = brick.getTextNodeValue(substep,'layermap')
-                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                    if (substepName == 'streamin') and brick_waf.runStep(substepName,steps_to_run):
+                        inputFile = brick_waf.getTextNodeValue(substep,'inputFile')
+                        layermap = brick_waf.getTextNodeValue(substep,'layermap')
+                        always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
                         libName = substep.getElementsByTagName('streamIn')[0].getAttribute('lib').encode('ascii')
                         cellName = substep.getElementsByTagName('streamIn')[0].getAttribute('cell').encode('ascii')
 
@@ -583,10 +583,10 @@ def build(bld):
                             target = OUTPUT,
                             always = always_flag
                         )
-                    elif (substepName == 'streamout') and brick.runStep(substepName,steps_to_run):
-                        outputFile = brick.getTextNodeValue(substep,'outputFile')
-                        layermap = brick.getTextNodeValue(substep,'layermap')
-                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                    elif (substepName == 'streamout') and brick_waf.runStep(substepName,steps_to_run):
+                        outputFile = brick_waf.getTextNodeValue(substep,'outputFile')
+                        layermap = brick_waf.getTextNodeValue(substep,'layermap')
+                        always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
                         libName = substep.getElementsByTagName('streamOut')[0].getAttribute('lib').encode('ascii')
                         cellName = substep.getElementsByTagName('streamOut')[0].getAttribute('cell').encode('ascii')
 
@@ -606,9 +606,9 @@ def build(bld):
                     #
                     # drc
                     #
-                    elif (substepName == 'drc' or substepName == 'antdrc') and brick.runStep(substepName,steps_to_run):
-                        ruleFile = brick.getTextNodeValue(substep,'rulefile')
-                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                    elif (substepName == 'drc' or substepName == 'antdrc') and brick_waf.runStep(substepName,steps_to_run):
+                        ruleFile = brick_waf.getTextNodeValue(substep,'rulefile')
+                        always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                         INPUT = [
                             bld.path.make_node(stepBaseDir+'/'+ruleFile),
@@ -616,9 +616,9 @@ def build(bld):
                                 ]
                         # if this substep has a preceding substep, make this one dependend on its output
                         if (len(substep.getElementsByTagName('after')) > 0):
-                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+                            INPUT.append(results[brick_waf.getTextNodeValue(substep,'after')])
 
-                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile'))
+                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick_waf.getTextNodeValue(substep,'outputFile'))
                         results[substepName] = OUTPUT
 
                         bld (
@@ -630,38 +630,38 @@ def build(bld):
                     #
                     # netlist
                     #
-                    elif (substepName == 'lvs_netlist') and brick.runStep(substepName,steps_to_run):
+                    elif (substepName == 'lvs_netlist') and brick_waf.runStep(substepName,steps_to_run):
                         # sourceNetlist
-                        sourceNetlist = brick.getTextNodeValue(substep,'sourceNetlist')
+                        sourceNetlist = brick_waf.getTextNodeValue(substep,'sourceNetlist')
                         # includeVNetlists
-                        includeVNetlists = brick.getTextNodeAsList(bld,substep,'includeVNetlists')
+                        includeVNetlists = brick_waf.getTextNodeAsList(bld,substep,'includeVNetlists')
                         if len(includeVNetlists) > 0:
                             includeVNetlists = "-v "+(" -v ".join(includeVNetlists))
                         else:
                             includeVNetlists = ""
                         # includeNetlists
-                        includeNetlists = brick.getTextNodeAsList(bld,substep,'includeNetlists')
+                        includeNetlists = brick_waf.getTextNodeAsList(bld,substep,'includeNetlists')
                         if len(includeNetlists) > 0:
                             includeNetlists = "-s "+(" -s ".join(includeNetlists))
                         else:
                             includeNetlists = ""
                         # verilogPrimlib
-                        verilogPrimlib = brick.getTextNodeAsList(bld,substep,'verilogPrimlib')
+                        verilogPrimlib = brick_waf.getTextNodeAsList(bld,substep,'verilogPrimlib')
                         if len(verilogPrimlib) > 0:
                             verilogPrimlib = "-l "+(" -l ".join(verilogPrimlib))
                         else:
                             verilogPrimlib = ""
 
-                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                        always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                         INPUT = [
                             CURRENT_RUNDIR.make_node(sourceNetlist),
                                 ]
                         # if this substep has a preceding substep, make this one dependend on its output
                         if (len(substep.getElementsByTagName('after')) > 0):
-                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+                            INPUT.append(results[brick_waf.getTextNodeValue(substep,'after')])
 
-                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile'))
+                        OUTPUT = CURRENT_RUNDIR.make_node('results/signoff/'+brick_waf.getTextNodeValue(substep,'outputFile'))
                         results[substepName] = OUTPUT
 
                         bld (
@@ -672,7 +672,7 @@ def build(bld):
                                 # source netlist
                                 CURRENT_RUNDIR.make_node(sourceNetlist).abspath(),
                                 # output netlist
-                                CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile')).abspath(),
+                                CURRENT_RUNDIR.make_node('results/signoff/'+brick_waf.getTextNodeValue(substep,'outputFile')).abspath(),
                                 # include netlists
                                 includeNetlists,
                                 # verilog primlib
@@ -688,11 +688,11 @@ def build(bld):
                     #
                     # lvs
                     #
-                    elif (substepName == 'lvs') and brick.runStep(substepName,steps_to_run):
-                        ruleFile = brick.getTextNodeValue(substep,'rulefile')
-                        hcells = brick.getTextNodeValue(substep,'hcellsFile')
-                        netlist = brick.getTextNodeValue(substep,'netlist')
-                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
+                    elif (substepName == 'lvs') and brick_waf.runStep(substepName,steps_to_run):
+                        ruleFile = brick_waf.getTextNodeValue(substep,'rulefile')
+                        hcells = brick_waf.getTextNodeValue(substep,'hcellsFile')
+                        netlist = brick_waf.getTextNodeValue(substep,'netlist')
+                        always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
 
                         INPUT = [
                             bld.path.make_node(stepBaseDir+'/'+ruleFile),
@@ -700,9 +700,9 @@ def build(bld):
                                 ]
                         # if this substep has a preceding substep, make this one dependend on its output
                         if (len(substep.getElementsByTagName('after')) > 0):
-                            INPUT.append(results[brick.getTextNodeValue(substep,'after')])
+                            INPUT.append(results[brick_waf.getTextNodeValue(substep,'after')])
 
-                        OUTPUT = [ CURRENT_RUNDIR.make_node('results/signoff/'+brick.getTextNodeValue(substep,'outputFile')),
+                        OUTPUT = [ CURRENT_RUNDIR.make_node('results/signoff/'+brick_waf.getTextNodeValue(substep,'outputFile')),
                             CURRENT_RUNDIR.make_node('results/signoff/'+netlist),
                         ]
                         results[substepName] = OUTPUT
@@ -722,15 +722,15 @@ def build(bld):
                     #
                     # eps
                     #
-                    elif (substepName == 'eps') and brick.runStep(substepName,steps_to_run):
+                    elif (substepName == 'eps') and brick_waf.runStep(substepName,steps_to_run):
                         substepName = substep.getAttribute('name').encode('ascii')
-                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                        #outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
+                        TCLscript = brick_waf.getTextNodeValue(substep,'TCLscript')
+                        #outputFiles = brick_waf.getTextNodeAsList(bld,substep,'outputFile')
                         OUTPUT = []
                         #for path in outputFiles:
                         #    OUTPUT.append(CURRENT_RUNDIR.make_node('results/dc_shell/'+path))
 
-                        always_flag = brick.checkAlwaysFlag('eps',steps_to_run)
+                        always_flag = brick_waf.checkAlwaysFlag('eps',steps_to_run)
 
                         bld(
                             rule = 'eps -init %s -overwrite -log %s' % (bld.path.make_node(stepBaseDir+'/'+TCLscript).abspath(),CURRENT_RUNDIR.make_node('logfiles/eps.log').abspath()),
@@ -744,16 +744,16 @@ def build(bld):
                     #
                     # primetime
                     #
-                    elif (substepName == 'primetime') and brick.runStep(substepName,steps_to_run):
+                    elif (substepName == 'primetime') and brick_waf.runStep(substepName,steps_to_run):
                         os.environ['STEP_BASE_PT'] = bld.path.abspath()+'/'+stepBaseDir
                         REPORT_DIR_PT = CURRENT_RUNDIR.make_node('results/signoff/'+substepName+'/reports')
                         REPORT_DIR_PT.mkdir()
                         os.environ['REPORT_DIR_PT'] = REPORT_DIR_PT.abspath()
-                        TCLscript = brick.getTextNodeValue(substep,'TCLscript')
-                        always_flag = brick.checkAlwaysFlag(substepName,steps_to_run)
-                        outputFiles = brick.getTextNodeAsList(bld,substep,'outputFile')
-                        corners = brick.getTextNodeAsList(bld,substep,'corners')
-                        spefFiles = brick.getTextNodeAsList(bld,substep,'spefFile')
+                        TCLscript = brick_waf.getTextNodeValue(substep,'TCLscript')
+                        always_flag = brick_waf.checkAlwaysFlag(substepName,steps_to_run)
+                        outputFiles = brick_waf.getTextNodeAsList(bld,substep,'outputFile')
+                        corners = brick_waf.getTextNodeAsList(bld,substep,'corners')
+                        spefFiles = brick_waf.getTextNodeAsList(bld,substep,'spefFile')
 
                         INPUT = [
                             bld.path.make_node(stepBaseDir+'/'+TCLscript),
