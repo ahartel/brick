@@ -12,6 +12,12 @@ from PyQt4 import QtGui, QtCore
 
 class brickQT(QtGui.QMainWindow):
 
+    def __updateTreeView(self):
+        item = QtGui.QTreeWidgetItem(['hallo'])
+        child = QtGui.QTreeWidgetItem(['kind'])
+        item.addChild(child)
+        self.topleft.insertTopLevelItem(0,item);
+
     @QtCore.pyqtSlot()
     def __handleBuild(self):
         output = self.buildFunction()
@@ -35,7 +41,7 @@ class brickQT(QtGui.QMainWindow):
         input,ok = QtGui.QInputDialog.getItem(self,"Select build mode","Which mode do you want to configure?",modes,0,False)
 
         if ok:
-            output = self.configureFunction(str(input))
+            output = self.configureFunction(str(input),'','')
             self.__publish(output)
 
     @QtCore.pyqtSlot()
@@ -64,8 +70,10 @@ class brickQT(QtGui.QMainWindow):
     def initUI(self):
 
         # top left
-        topleft = QtGui.QTreeWidget(self)
-#        topleft.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.topleft = QtGui.QTreeWidget(self)
+        self.topleft.setColumnCount(1)
+        self.topleft.setHeaderLabels([''])
+        self.__updateTreeView()
 
         # top right
         self.topright = QtGui.QTextEdit(self)
@@ -108,7 +116,7 @@ class brickQT(QtGui.QMainWindow):
         toolbar.addAction(exitAction)
 
         splitter1 = QtGui.QSplitter(QtCore.Qt.Horizontal)
-        splitter1.addWidget(topleft)
+        splitter1.addWidget(self.topleft)
         splitter1.addWidget(self.topright)
 
         hbox = QtGui.QHBoxLayout()
