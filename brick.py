@@ -89,10 +89,30 @@ def configure(mode,rundir,testcase):
     return output
 # end of configure
 
+# build
+def build():
+    output = []
+    cmd = './waf build'
+    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+    for line in p.stdout:
+        output.append(line.rstrip())
+    return output
+# end of build
+
+# run
+def run():
+    output = []
+    cmd = './waf run'
+    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+    for line in p.stdout:
+        output.append(line.rstrip())
+    return output
+# end of run
+
 # start gui
 def start_gui():
     app = QtGui.QApplication(sys.argv)
-    ex = Example(init,configure)
+    ex = brickQT(init,configure,build,run)
     sys.exit(app.exec_())
 # end of start gui
 
@@ -146,6 +166,26 @@ try:
     except IndexError:
         print "Please give a mode to configure for: build/functional"
         sys.exit(2)
+    for line in output:
+        print line
+except ValueError:
+    pass
+
+# try to find out if user
+# wants to build the project
+try:
+    args.index('build')
+    output = build()
+    for line in output:
+        print line
+except ValueError:
+    pass
+
+# try to find out if user
+# wants to run the simulation
+try:
+    args.index('run')
+    output = run()
     for line in output:
         print line
 except ValueError:

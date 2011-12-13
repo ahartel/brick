@@ -10,7 +10,21 @@ author: Andreas Hartel
 import sys
 from PyQt4 import QtGui, QtCore
 
-class Example(QtGui.QMainWindow):
+class brickQT(QtGui.QMainWindow):
+
+    @QtCore.pyqtSlot()
+    def __handleBuild(self):
+        output = self.buildFunction()
+        self.__publish(output)
+
+    @QtCore.pyqtSlot()
+    def __handleRun(self):
+        output = self.runFunction()
+        self.__publish(output)
+
+    def __publish(self,output):
+        for line in output:
+            self.topright.append(line)
 
     @QtCore.pyqtSlot()
     def __handleConfigure(self):
@@ -22,8 +36,7 @@ class Example(QtGui.QMainWindow):
 
         if ok:
             output = self.configureFunction(str(input))
-            for line in output:
-                self.topright.append(line)
+            self.__publish(output)
 
     @QtCore.pyqtSlot()
     def __handleInit(self):
@@ -37,14 +50,15 @@ class Example(QtGui.QMainWindow):
             pass
         elif ret == QtGui.QMessageBox.Yes:
             output = self.initFunction()
-            for line in output:
-                self.topright.append(line)
+            self.__publish(output)
 
-    def __init__(self,initFunction,configureFunction):
-        super(Example, self).__init__()
+    def __init__(self,initFunction,configureFunction,buildFunction,runFunction):
+        super(brickQT, self).__init__()
 
         self.initFunction = initFunction
         self.configureFunction = configureFunction
+        self.buildFunction = buildFunction
+        self.runFunction = runFunction
         self.initUI()
 
     def initUI(self):
@@ -75,10 +89,22 @@ class Example(QtGui.QMainWindow):
         configureAction.setStatusTip('configure brICk')
         configureAction.triggered.connect(self.__handleConfigure)
 
+        buildAction = QtGui.QAction('Build', self)
+        buildAction.setShortcut('Alt+B')
+        buildAction.setStatusTip('build sources')
+        buildAction.triggered.connect(self.__handleBuild)
+
+        runAction = QtGui.QAction('Run', self)
+        runAction.setShortcut('Alt+R')
+        runAction.setStatusTip('run simulation')
+        runAction.triggered.connect(self.__handleRun)
+
         toolbar = QtGui.QToolBar(self)
         self.addToolBar(toolbar)
         toolbar.addAction(initAction)
         toolbar.addAction(configureAction)
+        toolbar.addAction(buildAction)
+        toolbar.addAction(runAction)
         toolbar.addAction(exitAction)
 
         splitter1 = QtGui.QSplitter(QtCore.Qt.Horizontal)
