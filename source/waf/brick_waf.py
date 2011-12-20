@@ -131,9 +131,64 @@ def checkAlwaysFlag(substepName,steps_to_run):
     else:
         return False
 
-#
+def parseSourceGroups(conf,groups,prefix):
+    result = {}
+    for group in groups:
+        # get group name
+        if prefix:
+            groupName = prefix+'.'+group.getAttribute('name').encode('ascii')
+        else:
+            groupName = group.getAttribute('name').encode('ascii')
+        result[groupName] = []
+        # get filenames, split them, and remove spaces and line breaks
+        filenames = getText(group.childNodes).encode('ascii')
+        filenames = filenames.replace(" ","")
+        filenames = filenames.replace("\n","")
+        # replace env variables
+        filenames = replace_env_vars(filenames,conf)
+        filenames = filenames.split(",")
+        # if this is a relative path and belongs to an included project,
+        # give it a prefix
+        for name in filenames:
+            if prefix:
+                pattern = re.compile("^\/")
+                if not pattern.match(name):
+                    name = 'components/'+prefix+'/'+name
+            # append filenames to group's file list
+            result[groupName].append(name)
+        # if there was a trailing comma in the string, the last entry will
+        # be empty, remove it
+        if (len(result[groupName][len(result[groupName])-1]) == 0):
+            result[groupName].pop()
+
+    return result
+
+def parseSearchPaths(xmlconfig,prefix):
+    # get string from XML tree
+    if xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('searchpaths')[0].childNodes:
+        searchpaths = getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
+        # remove spaces and line breaks
+        searchpaths = searchpaths.replace(" ","")
+        searchpaths = searchpaths.replace("\n","")
+        # split the string to make it a list
+        splitpaths = searchpaths.split(',')
+        searchpaths = []
+        for path in splitpaths:
+            if prefix:
+                pattern = re.compile("^\/")
+                if not pattern.match(path):
+                    path = 'components/'+prefix+'/'+path
+            searchpaths.append(path)
+        # if there was a trailing comma in the string, the last entry will
+        # be empty, remove it
+        if (len(searchpaths[len(searchpaths)-1]) == 0):
+            searchpaths.pop()
+
+    return searchpaths
+
+# -------
 # Tasks
-#
+# -------
 
 def encounter(task):
     TCLscript = task.inputs[0].abspath()

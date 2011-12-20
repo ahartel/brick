@@ -82,8 +82,7 @@ def configure(conf):
             conf.env.RPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
         elif conf.env.simulator =='modeltech':
             from modeltech import *
-            os.system('vlib '+conf.env.CURRENT_RUNDIR+'/../work')
-            os.environ['PATH'] += ':/cad/products/modeltech/10.0/modeltech/gcc-4.3.3-linux/bin/'
+            os.environ['PATH'] += ':/cad/products/modeltech/10.0/modeltech/gcc-4.3.3-linux_x86_64/bin/'
             conf.env.INCLUDES_SYSTEMC = ['/cad/products/modeltech/10.0/modeltech/include/systemc/',
                     ]
         # load compiler options for cxx compiler (necessary for systemc testbench)
@@ -96,7 +95,24 @@ def configure(conf):
         conf.env.INCLUDES_SEARCHPATHS = []
         # and add it to the list of used libs
         conf.env.USELIBS = ['SEARCHPATHS']
+        # look for components whose source groups should be included 
+        conf.env.includes = brick_waf.getTextNodeValue(xmlconfig,'includeComponents')
+        conf.env.includes = conf.env.includes.replace("\n","")
+        conf.env.includes = conf.env.includes.split(",")
 
+        # iterate through includes and do the following for each include
+        # * load source file groups
+        # * load searchpaths
+        groups = {}
+        searchpaths = []
+        for include in conf.env.includes:
+            includeXmlConfig = minidom.parse('components/'+include+'/brick_config.xml')
+            groups.update(brick_waf.parseSourceGroups(conf,brick_waf.getSourceGroups(includeXmlConfig),include))
+            searchpaths.extend(brick_waf.parseSearchPaths(includeXmlConfig,include))
+
+        # load search paths of the main project
+        searchpaths.extend(brick_waf.parseSearchPaths(xmlconfig,''))
+        print searchpaths
         #
         # Read source file groups
         #
@@ -104,29 +120,16 @@ def configure(conf):
         # verification tasks are specified in groups in the
         # XML file. These groups are combined to compilation
         # tasks in the next block.
+        # This block only collects all the source groups,
+        # including those of included brick config files and
+        # extends relative paths of included projects by a 
+        # prefix 'components/<projectpath>'
         sources = brick_waf.getSourceGroups(xmlconfig)
         testcases = brick_waf.getTestCases(xmlconfig)
-        groups = {}
-        for group in sources:
-            # get group name
-            groupName = group.getAttribute('name').encode('ascii')
-            groups[groupName] = []
-            # get filenames, split them, and remove spaces and line breaks
-            filenames = brick_waf.getText(group.childNodes).encode('ascii')
-            filenames = filenames.replace(" ","")
-            filenames = filenames.replace("\n","")
-            # replace env variables
-            filenames = brick_waf.replace_env_vars(filenames,conf)
-            filenames = filenames.split(",")
-            # append filenames to group's file list
-            groups[groupName].extend(filenames)
-            # if there was a trailing comma in the string, the last entry will
-            # be empty, remove it
-            if (len(groups[groupName][len(groups[groupName])-1]) == 0):
-                groups[groupName].pop()
+        groups.update(brick_waf.parseSourceGroups(conf,sources,''))
 
         #
-        # combine source file groups and generate tasks
+        # combine source file groups
         #
         # This block combines the source groups to lists
         # for the different functional verification compilation
@@ -179,25 +182,14 @@ def configure(conf):
                     else:
                         # get options, split them, and remove spaces and line breaks
                         optionContent = brick_waf.getText(option.childNodes).encode('ascii')
+                        optionContent = brick_waf.replace_env_vars(optionContent,conf)
                         optionContent = optionContent.replace(" ","")
                         optionContent = optionContent.replace("\n","")
                         conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
 
-            # set verilog search paths
-            # get string from XML tree
-            searchpaths = []
-            if xmlconfig.getElementsByTagName('tests')[0].getElementsByTagName('searchpaths')[0].childNodes:
-                searchpaths = brick_waf.getTextNodeValue(xmlconfig.getElementsByTagName('tests')[0],'searchpaths')
-                # remove spaces and line breaks
-                searchpaths = searchpaths.replace(" ","")
-                searchpaths = searchpaths.replace("\n","")
-                # split the string to make it a list
-                searchpaths = searchpaths.split(',')
-                # if there was a trailing comma in the string, the last entry will
-                # be empty, remove it
-                if (len(searchpaths[len(searchpaths)-1]) == 0):
-                    searchpaths.pop()
-
+            #
+            # process search paths
+            #
             conf.env['VERILOG_SEARCH_PATHS'] = []
             conf.env['VERILOG_INC_DIRS'] = []
             pattern = re.compile("^\/")
@@ -243,6 +235,11 @@ def build(bld):
     # load configuration
     xmlconfig = minidom.parse(bld.env.CONFIGFILE) # parse an XML file by name
 
+    #
+    # meta build targets
+    #
+    # these targets are necessary for the compilers to
+    # work properly
     bld.add_group('cdslib')
     bld.set_group('cdslib')
     cdslib_rule = 'echo "" > cds.lib'
@@ -257,6 +254,8 @@ def build(bld):
 
     bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var' )
     bld ( rule = 'cp ${SRC} ${TGT}', source=bld.root.make_node(bld.env.BRICK_DIR+'/source/cds/si.env'), target=CURRENT_RUNDIR.make_node('../si.env') )
+
+    bld ( rule = 'vlib work', target='./work')
 
     # start with build jobs or verification jobs
     if (bld.env.MODE == 'build'):
@@ -872,18 +871,7 @@ def build(bld):
 
 
 def run(bld):
-    # elaboration
-    bld(
-        name  = 'elab',
-        rule  = 'ncelab ${SIMULATION_TOPLEVEL} -logfile ${CURRENT_RUNDIR}/logfiles/ncelab.log ${NCELAB_OPTIONS} ',
-        always = True
-    )
-    # simulation
-    bld(
-       rule  = 'ncsim -logfile ${CURRENT_RUNDIR}/logfiles/ncsim.log ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}',
-       after = 'elab',
-       always = True
-    )
+    bld.recurse(bld.env.BRICK_DIR+'/source/waf/'+bld.env.simulator)
 
 from waflib.Build import BuildContext
 class one(BuildContext):

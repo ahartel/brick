@@ -1,0 +1,6 @@
+def run(bld):
+    # simulation
+    bld(
+       rule  = 'vsim -l ${CURRENT_RUNDIR}/logfiles/vsim.log ${SIMULATION_TOPLEVEL} ${VSIM_OPTIONS}',
+       always = True
+    )
