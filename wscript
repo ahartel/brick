@@ -1,10 +1,9 @@
-import os,sys
+import os,sys,re
 import copy
 import tempfile
 from xml.dom import minidom
 sys.path.insert(0, os.path.join('./brick/source/waf'))
 import brick_waf
-from cadence import *
 
 out = 'rundirs/default'
 
@@ -18,6 +17,7 @@ def options(opt):
     opt.add_option('--rundir', action='store', default='', help='Allows the user to directly name an already existing rundir')
     opt.add_option('--testcase', action='store', default='', help='Choose a testcase as defined in the configfile')
     opt.add_option('--substeps', action='store', default='all', help='which substeps of the build flow should be run?')
+    opt.add_option('--simulator', action='store', default='cadence', help='Which simulation software vendor do you want to use? modeltech/[cadence]')
 
 def configure(conf):
     # create the rundir for brick's output and logfiles
@@ -32,7 +32,6 @@ def configure(conf):
     # create results directory
     conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('results/').mkdir()
     conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('logfiles/').mkdir()
-    conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../worklib/').mkdir()
     # echo the rundir
     conf.start_msg('Using brICk rundir')
     conf.end_msg(conf.env.CURRENT_RUNDIR)
@@ -56,28 +55,42 @@ def configure(conf):
     # which mode to run in?
     conf.env.MODE = conf.options.mode
     if (conf.options.mode == 'functional'):
-        # ugly hacking to make cadence C++ compiler visible to waf compiler_c(xx)
-        os.environ['CDSROOT'] = '/cad/products/cds/ius82'
-        os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
+        if not conf.options.simulator:
+            conf.env.simulator = 'cadence'
+        else:
+            conf.env.simulator = conf.options.simulator
+
+        conf.load(conf.env.simulator)
+        if conf.env.simulator == 'cadence':
+            from cadence import *
+            conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../worklib/').mkdir()
+            # ugly hacking to make cadence C++ compiler visible to waf compiler_c(xx)
+            os.environ['CDSROOT'] = '/cad/products/cds/ius82'
+            os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
+            # define systemc-relevant paths
+            conf.env.INCLUDES_SYSTEMC = [os.getenv('CDSROOT')+'/tools/systemc/include_pch',
+                    os.getenv('CDSROOT')+'/tools/tbsc/include',
+                    os.getenv('CDSROOT')+'/tools/vic/include',
+                    os.getenv('CDSROOT')+'/tools/ovm/sc/src',
+                    os.getenv('CDSROOT')+'/tools/systemc/include/tlm']
+            conf.env.LIBPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/install/lib64',
+                    '/cad/products/cds/ius82/tools/lib',
+                    '/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1',
+                    '/cad/products/cds/ius82/tools/lib/64bit/SuSE',
+                    '/cad/products/cds/ius82/tools/systemc/lib/64bit/gnu/4.1']
+            conf.env.LIB_SYSTEMC = ['stdc++', 'gcc_s', 'tbsc', 'scv', 'systemc_sh', 'ncscCoSim_sh', 'ncscCoroutines_sh', 'ncsctlm_sh'] # 'ovm', 
+            conf.env.RPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
+        elif conf.env.simulator =='modeltech':
+            from modeltech import *
+            os.system('vlib '+conf.env.CURRENT_RUNDIR+'/../work')
+            os.environ['PATH'] += ':/cad/products/modeltech/10.0/modeltech/gcc-4.3.3-linux/bin/'
+            conf.env.INCLUDES_SYSTEMC = ['/cad/products/modeltech/10.0/modeltech/include/systemc/',
+                    ]
         # load compiler options for cxx compiler (necessary for systemc testbench)
         conf.load('compiler_c')
         conf.load('compiler_cxx')
 
         conf.env['TESTCASE'] = conf.options.testcase
-
-        # define systemc-relevant paths
-        conf.env.INCLUDES_SYSTEMC = [os.getenv('CDSROOT')+'/tools/systemc/include_pch',
-                                    os.getenv('CDSROOT')+'/tools/tbsc/include',
-                                    os.getenv('CDSROOT')+'/tools/vic/include',
-                                    os.getenv('CDSROOT')+'/tools/ovm/sc/src',
-                                    os.getenv('CDSROOT')+'/tools/systemc/include/tlm']
-        conf.env.LIBPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/install/lib64',
-                '/cad/products/cds/ius82/tools/lib',
-                '/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1',
-                '/cad/products/cds/ius82/tools/lib/64bit/SuSE',
-                '/cad/products/cds/ius82/tools/systemc/lib/64bit/gnu/4.1']
-        conf.env.LIB_SYSTEMC = ['stdc++', 'gcc_s', 'tbsc', 'scv', 'systemc_sh', 'ncscCoSim_sh', 'ncscCoroutines_sh', 'ncsctlm_sh'] # 'ovm', 
-        conf.env.RPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
 
         # declare a list for C/C++ include paths
         conf.env.INCLUDES_SEARCHPATHS = []
@@ -193,29 +206,33 @@ def configure(conf):
                 if pattern.match(path):
                     conf.env.INCLUDES_SEARCHPATHS.append(path)
                     # put an '-INCDIR' in front of every entry (cadence syntax)
-                    conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
-                    conf.env['VERILOG_INC_DIRS'].append(path)
+                    if conf.env.simulator == 'cadence':
+                        conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
+                        conf.env['VERILOG_INC_DIRS'].append(path)
+                    elif conf.env.simulator == 'modeltech':
+                        conf.env['VERILOG_INC_DIRS'].append('+incdir+'+path)
                     # add the brick dir-relative path to SEARCH_PATHS
-                    conf.env['VERILOG_SEARCH_PATHS'].append(cfg.root.make_node(path).path_from(cfg.root.make_node(os.getcwd())))
+                    conf.env['VERILOG_SEARCH_PATHS'].append(conf.root.make_node(path).path_from(conf.root.make_node(os.getcwd())))
                 # or a BRICK_DIR-relative?
                 else:
                     conf.env.INCLUDES_SEARCHPATHS.append(conf.path.abspath()+'/'+path)
-                    # put an '-INCDIR' in front of every entry (cadence syntax)
-                    conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
                     # the prefix accounts for the tool's being started inside the build folder
                     prefix = ''
                     if conf.options.out:
                         prefix = conf.path.path_from(conf.path.find_node(conf.options.out))
                     else:
                         prefix = conf.path.path_from(conf.path.find_node(out))
-                    conf.env['VERILOG_INC_DIRS'].append(prefix+'/'+path)
-                    # add the path without prefix to SEARCH_PATHS
+                    # put an '-INCDIR' in front of every entry (cadence syntax)
+                    if conf.env.simulator == 'cadence':
+                        conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
+                        conf.env['VERILOG_INC_DIRS'].append(prefix+'/'+path)
+                    elif conf.env.simulator == 'modeltech':
+                        conf.env['VERILOG_INC_DIRS'].append('+incdir+'+prefix+'/'+path)
                     conf.env['VERILOG_SEARCH_PATHS'].append(path)
 
     conf.start_msg("Successfully read XML config file for")
     conf.end_msg(conf.env.PROJECTNAME)
 
-    conf.load('cadence')
 
 def build(bld):
     # translate CURRENT_RUNDIR to path node

@@ -23,6 +23,8 @@ class brickContainer:
         self.BRICK_DIR = ''
         self.output = []
         self.config = {}
+        self.__rundir = ''
+        self.__mode = ''
 
         # find out brick dir
         if os.path.exists('./brick'):
@@ -93,6 +95,7 @@ class brickContainer:
         f.write(self.__rundir+"\n")
         f.write(self.__mode+"\n")
         f.write(self.__testcase+"\n")
+        f.write(self.__simulator+"\n")
         f.close()
     # end save state
 
@@ -102,11 +105,14 @@ class brickContainer:
         self.__rundir = f.readline().rstrip()
         self.__mode = f.readline().rstrip()
         self.__testcase = f.readline().rstrip()
+        self.__simulator = f.readline().rstrip()
         f.close()
     # end save state
 
     # configure
-    def configure(self,mode,rundir,testcase):
+    def configure(self,mode,rundir,testcase,simulator):
+        # save variables in object fields and give them default values
+        # rundir
         if not rundir:
             if not self.__rundir:
                 self.output.append('No rundir was explecitly given. Setting rundir to current datetime string')
@@ -115,23 +121,29 @@ class brickContainer:
                 self.__rundir=jetzt.strftime("%Y%m%d%H%M")
         else:
             self.__rundir = rundir
+        # mode
         if not mode:
             if not self.__mode:
                 self.output.append('Please give a mode via the --mode option. Mode can be "build" or "functional"')
                 return
         else:
             self.__mode = mode
-
+        # testcase
         if testcase:
             self.__testcase = testcase
 
         if self.__mode == 'functional' and not self.__testcase:
             self.output.append("Testcase has to be given in mode 'functional'")
             return
+        # simulator
+        if not simulator:
+            self.__simulator = 'cadence'
+        else:
+            self.__simulator = simulator
 
         cmd = ''
         if self.__mode == 'functional':
-            cmd = './waf configure --mode '+self.__mode+' --out rundirs/'+self.__rundir+" --testcase "+self.__testcase
+            cmd = './waf configure --mode '+self.__mode+' --out rundirs/'+self.__rundir+" --testcase "+self.__testcase+" --simulator "+self.__simulator
         else:
             cmd = './waf configure --mode '+self.__mode+' --out rundirs/'+self.__rundir
 
@@ -180,7 +192,7 @@ def start_gui(myBrick):
 
 # parse args and options
 try:
-    opts,args = getopt.getopt(sys.argv[1:],"h",["rundir=","mode=","testcase="])
+    opts,args = getopt.getopt(sys.argv[1:],"h",["rundir=","mode=","testcase=","simulator="])
 except getopt.GetoptError, err:
     print str(err)
     sys.exit(2)
@@ -216,6 +228,7 @@ try:
     mode = ''
     rundir = ''
     testcase = ''
+    simulator = ''
     for opt in opts:
         if opt[0] == '--mode':
             mode = opt[1]
@@ -223,9 +236,12 @@ try:
             rundir = opt[1]
         elif opt[0] == '--testcase':
             testcase = opt[1]
+        elif opt[0] == '--simulator':
+            simulator = opt[1]
+
 
     try:
-        myBrick.configure(mode,rundir,testcase)
+        myBrick.configure(mode,rundir,testcase,simulator)
         print myBrick.flushOutput()
     except IndexError:
         print "Please give a mode to configure for: build/functional"
