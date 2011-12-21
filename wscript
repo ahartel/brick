@@ -112,7 +112,7 @@ def configure(conf):
 
         # load search paths of the main project
         searchpaths.extend(brick_waf.parseSearchPaths(xmlconfig,''))
-        print searchpaths
+
         #
         # Read source file groups
         #
@@ -186,6 +186,7 @@ def configure(conf):
                         optionContent = optionContent.replace(" ","")
                         optionContent = optionContent.replace("\n","")
                         conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
+
 
             #
             # process search paths
