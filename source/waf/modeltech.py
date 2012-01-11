@@ -10,7 +10,7 @@ def configure(conf):
 from waflib import TaskGen
 TaskGen.declare_chain(
         name         = 'vlog sv',
-        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_SV_OPTIONS} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.svh',],
         ext_out      = ['.svh.out',],
         reentrant    = False,
@@ -19,7 +19,7 @@ TaskGen.declare_chain(
 
 TaskGen.declare_chain(
         name         = 'vlog sv',
-        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_SV_OPTIONS} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.sv',],
         ext_out      = ['.sv.out',],
         reentrant    = False,
@@ -28,10 +28,19 @@ TaskGen.declare_chain(
 
 TaskGen.declare_chain(
         name         = 'vlog verilog2001',
-        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} ${VERILOG_INC_DIRS} ${SRC}',
+        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
         ext_in       = ['.v', '.lib.src', '.vp', ],
         reentrant    = False,
         scan         = brick_waf.verilog_scanner
+)
+
+TaskGen.declare_chain(
+        name         = 'vlog VHDL',
+        rule         = 'vcom -l ${VLOG_LOGFILE} ${VLOG_VHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.vhd'],
+        ext_out      = ['.vhd.out'],
+        scan         = brick_waf.vhdl_scanner,
+        reentrant    = False,
 )
 
 

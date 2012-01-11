@@ -62,7 +62,7 @@ def configure(conf):
 
         conf.load(conf.env.simulator)
         if conf.env.simulator == 'cadence':
-            from cadence import *
+            import cadence
             conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../worklib/').mkdir()
             # ugly hacking to make cadence C++ compiler visible to waf compiler_c(xx)
             os.environ['CDSROOT'] = '/cad/products/cds/ius82'
@@ -81,8 +81,12 @@ def configure(conf):
             conf.env.LIB_SYSTEMC = ['stdc++', 'gcc_s', 'tbsc', 'scv', 'systemc_sh', 'ncscCoSim_sh', 'ncscCoroutines_sh', 'ncsctlm_sh'] # 'ovm', 
             conf.env.RPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
         elif conf.env.simulator =='modeltech':
-            from modeltech import *
-            os.environ['PATH'] += ':/cad/products/modeltech/10.0/modeltech/gcc-4.3.3-linux_x86_64/bin/'
+            import modeltech
+            # This is the path to the modeltech compiler
+            # os.environ['PATH'] += ':/cad/products/modeltech/10.0/modeltech/gcc-4.3.3-linux_x86_64/bin/'
+            # however, this compiler is too new! An ABI change has occured
+            # so we'll use the cadence compiler
+            os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
             conf.env.INCLUDES_SYSTEMC = ['/cad/products/modeltech/10.0/modeltech/include/systemc/',
                     ]
         # load compiler options for cxx compiler (necessary for systemc testbench)
@@ -109,6 +113,7 @@ def configure(conf):
             includeXmlConfig = minidom.parse('components/'+include+'/brick_config.xml')
             groups.update(brick_waf.parseSourceGroups(conf,brick_waf.getSourceGroups(includeXmlConfig),include))
             searchpaths.extend(brick_waf.parseSearchPaths(includeXmlConfig,include))
+
 
         # load search paths of the main project
         searchpaths.extend(brick_waf.parseSearchPaths(xmlconfig,''))
@@ -138,7 +143,7 @@ def configure(conf):
         # * SystemC sources that will be compiled into libncsc_model.so
         # * DPI sources that will be compiled into libdpi.so
         # * Control software sources that will be compiled into ctrlSW executable
-        conf.env.VERILOG_SOURCES = []
+        conf.env.VERILOG_SOURCES = {}
         conf.env.SYSTEMC_SOURCES = []
         conf.env.DPI_SOURCES = []
         conf.env.SOFTWARE_SOURCES = []
@@ -154,17 +159,22 @@ def configure(conf):
                         groupnames = groupnames.replace(" ","")
                         groupnames = groupnames.replace("\n","")
                         groupnames = groupnames.split(",")
-                        if (sourceName == 'rtl'):
-                            for group in groupnames:
-                                conf.env.VERILOG_SOURCES.extend(groups[group])
-                        elif (sourceName == 'systemC'):
-                            for group in groupnames:
+                        for group in groupnames:
+                            if (sourceName == 'rtl'):
+                                m = re.match(r'(.+)\..+',group)
+                                if m:
+                                    if not conf.env.VERILOG_SOURCES.has_key(m.group(1)):
+                                        conf.env.VERILOG_SOURCES[m.group(1)] = []
+                                    conf.env.VERILOG_SOURCES[m.group(1)].extend(groups[group])
+                                else:
+                                    if not conf.env.VERILOG_SOURCES.has_key('__root'):
+                                        conf.env.VERILOG_SOURCES['__root'] = []
+                                    conf.env.VERILOG_SOURCES['__root'].extend(groups[group])
+                            elif (sourceName == 'systemC'):
                                 conf.env.SYSTEMC_SOURCES.extend(groups[group])
-                        elif (sourceName == 'DPI'):
-                            for group in groupnames:
+                            elif (sourceName == 'DPI'):
                                 conf.env.DPI_SOURCES.extend(groups[group])
-                        elif (sourceName == 'ctrlSW'):
-                            for group in groupnames:
+                            elif (sourceName == 'ctrlSW'):
                                 conf.env.SOFTWARE_SOURCES.extend(groups[group])
                 # assemble simulation tool options and save to waf environment
                 testoptions = testcase.getElementsByTagName('option')
@@ -186,7 +196,6 @@ def configure(conf):
                         optionContent = optionContent.replace(" ","")
                         optionContent = optionContent.replace("\n","")
                         conf.env[optionName+'_OPTIONS'] = optionContent.split(",")
-
 
             #
             # process search paths
@@ -226,6 +235,32 @@ def configure(conf):
     conf.start_msg("Successfully read XML config file for")
     conf.end_msg(conf.env.PROJECTNAME)
 
+    #
+    # create worklib and component libraries
+    #
+    # these targets are necessary for the compilers to
+    # work properly
+
+    # basic cadence setup 
+    old_pwd = os.getcwd()
+    os.chdir(conf.env.CURRENT_RUNDIR+'/../')
+    cdslib_rule = 'echo "" > cds.lib'
+    for libName,libPath in conf.env.libraries.iteritems():
+        cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
+    cdslib_rule += ' && echo "DEFINE worklib '+conf.env.CURRENT_RUNDIR+'/../worklib" >> cds.lib'
+    os.system(cdslib_rule)
+    os.system('echo "DEFINE WORK worklib" > hdl.var')
+    # basic modeltech setup
+    os.system('vlib work')
+    # now, create a library for each included component (in brick_config)
+    for library in conf.env.includes:
+        if conf.env.simulator == "cadence":
+            conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../work_'+library).mkdir()
+            os.system('echo "DEFINE work_'+library+' ./work_'+library)
+        elif conf.env.simulator == "modeltech":
+            if not os.path.isfile('work_'+library):
+                os.system('vlib work_'+library)
+    os.chdir(old_pwd)
 
 def build(bld):
     # translate CURRENT_RUNDIR to path node
@@ -236,27 +271,10 @@ def build(bld):
     # load configuration
     xmlconfig = minidom.parse(bld.env.CONFIGFILE) # parse an XML file by name
 
-    #
-    # meta build targets
-    #
-    # these targets are necessary for the compilers to
-    # work properly
-    bld.add_group('cdslib')
-    bld.set_group('cdslib')
-    cdslib_rule = 'echo "" > cds.lib'
-    for libName,libPath in bld.env.libraries.iteritems():
-        cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
-    cdslib_rule += ' && echo "DEFINE worklib '+bld.env.CURRENT_RUNDIR+'/../worklib" >> cds.lib'
-    bld (
-        rule = cdslib_rule,
-        target=CURRENT_RUNDIR.make_node('../cds.lib'),
-        source = bld.path.make_node(bld.env.CONFIGFILE)
-    )
-
-    bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var' )
+    # copy si.env file to build dir
+    # the file is necessary for netlist generation with cadence tools
+    # skill options file
     bld ( rule = 'cp ${SRC} ${TGT}', source=bld.root.make_node(bld.env.BRICK_DIR+'/source/cds/si.env'), target=CURRENT_RUNDIR.make_node('../si.env') )
-
-    bld ( rule = 'vlib work', target='./work')
 
     # start with build jobs or verification jobs
     if (bld.env.MODE == 'build'):
@@ -810,31 +828,34 @@ def build(bld):
         CURRENT_RUNDIR.make_node('rundir').mkdir()
 
         # compilation tasks for verilog/VHDL
-        VERILOG_SOURCES = []
-        for x in bld.env.VERILOG_SOURCES:
-            if (len(x)>0):
-                pattern1 = re.compile("^\/")
-                pattern2 = re.compile("\*")
-                # is this path an absolute path?
-                if pattern1.match(x):
-                    if pattern2.search(x):
-                        VERILOG_SOURCES.extend(bld.root.ant_glob(x))
-                    else:
-                        VERILOG_SOURCES.append(bld.root.make_node(x))
-                else:
-                    if pattern2.search(x):
-                        VERILOG_SOURCES.extend(bld.path.ant_glob(x))
-                    else:
-                        VERILOG_SOURCES.append(bld.path.make_node(x))
+        for (projectname,project) in bld.env.VERILOG_SOURCES.iteritems():
+            VERILOG_SOURCES = []
 
-        bld (
-           source = VERILOG_SOURCES,
-        )
+            bld.env.WORKLIB = './work_'+projectname
+            for file in project:
+                if (len(file)>0):
+                    pattern1 = re.compile("^\/")
+                    pattern2 = re.compile("\*")
+                    # is this path an absolute path?
+                    if pattern1.match(file):
+                        if pattern2.search(file):
+                            VERILOG_SOURCES.extend(bld.root.ant_glob(file))
+                        else:
+                            VERILOG_SOURCES.append(bld.root.make_node(file))
+                    else:
+                        if pattern2.search(file):
+                            VERILOG_SOURCES.extend(bld.path.ant_glob(file))
+                        else:
+                            VERILOG_SOURCES.append(bld.path.make_node(file))
+
+            bld (
+               source = VERILOG_SOURCES,
+            )
 
         # compilation tasks for systemC
         SYSTEMC_SOURCES = []
-        for x in bld.env.SYSTEMC_SOURCES:
-            SYSTEMC_SOURCES.append(bld.path.make_node(x))
+        for file in bld.env.SYSTEMC_SOURCES:
+            SYSTEMC_SOURCES.append(bld.path.make_node(file))
 
         use_libs_systemc = copy.copy(bld.env.USELIBS)
         use_libs_systemc.append('SYSTEMC')
@@ -848,8 +869,8 @@ def build(bld):
 
         # compilation tasks for DPI
         DPI_SOURCES = []
-        for x in bld.env.DPI_SOURCES:
-            DPI_SOURCES.append(bld.path.make_node(x))
+        for file in bld.env.DPI_SOURCES:
+            DPI_SOURCES.append(bld.path.make_node(file))
 
         bld.shlib (
             name = 'libDPI.so',
@@ -860,8 +881,8 @@ def build(bld):
 
         # compilation tasks for independent software
         SOFTWARE_SOURCES = []
-        for x in bld.env.SOFTWARE_SOURCES:
-            SOFTWARE_SOURCES.append(bld.path.make_node(x))
+        for file in bld.env.SOFTWARE_SOURCES:
+            SOFTWARE_SOURCES.append(bld.path.make_node(file))
 
         bld.program (
             target = 'ctrlSW',

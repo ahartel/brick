@@ -56,7 +56,7 @@ TaskGen.declare_chain(
         rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
         ext_out      = ['.vhd.out'],
-        scan         = vhdl_scanner,
+        scan         = brick_waf.vhdl_scanner,
         reentrant    = False,
 )
 

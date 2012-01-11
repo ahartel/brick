@@ -150,16 +150,15 @@ def parseSourceGroups(conf,groups,prefix):
         # if this is a relative path and belongs to an included project,
         # give it a prefix
         for name in filenames:
-            if prefix:
-                pattern = re.compile("^\/")
-                if not pattern.match(name):
-                    name = 'components/'+prefix+'/'+name
-            # append filenames to group's file list
-            result[groupName].append(name)
-        # if there was a trailing comma in the string, the last entry will
-        # be empty, remove it
-        if (len(result[groupName][len(result[groupName])-1]) == 0):
-            result[groupName].pop()
+            # if there was a trailing comma in the string, the last entry will
+            # be empty, skip it
+            if not len(name) == 0:
+                if prefix:
+                    pattern = re.compile("^\/")
+                    if not pattern.match(name):
+                        name = 'components/'+prefix+'/'+name
+                # append filenames to group's file list
+                result[groupName].append(name)
 
     return result
 
