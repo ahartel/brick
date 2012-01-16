@@ -43,4 +43,14 @@ TaskGen.declare_chain(
         reentrant    = False,
 )
 
+@TaskGen.feature('*')
+def testroot(self):
+    self.env.WORKLIB = getattr(self,'worklib','work')
+    vsp = getattr(self,'verilog_search_paths',[])
+    vid = getattr(self,'verilog_inc_dirs',[])
+    if len(vsp) > 0:
+        self.env.VERILOG_SEARCH_PATHS = vsp
+    if len(vid) > 0:
+        self.env.VERILOG_INC_DIRS = vid
+
 
