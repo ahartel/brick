@@ -108,15 +108,15 @@ def configure(conf):
         # * load source file groups
         # * load searchpaths
         groups = {}
-        searchpaths = []
+        searchpaths = {}
         for include in conf.env.includes:
             includeXmlConfig = minidom.parse('components/'+include+'/brick_config.xml')
             groups.update(brick_waf.parseSourceGroups(conf,brick_waf.getSourceGroups(includeXmlConfig),include))
-            searchpaths.extend(brick_waf.parseSearchPaths(includeXmlConfig,include))
+            searchpaths[include] = brick_waf.parseSearchPaths(includeXmlConfig,include)
 
 
         # load search paths of the main project
-        searchpaths.extend(brick_waf.parseSearchPaths(xmlconfig,''))
+        searchpaths['__root'] = brick_waf.parseSearchPaths(xmlconfig,'')
 
         #
         # Read source file groups
@@ -200,37 +200,44 @@ def configure(conf):
             #
             # process search paths
             #
-            conf.env['VERILOG_SEARCH_PATHS'] = []
-            conf.env['VERILOG_INC_DIRS'] = []
+            # Verilog search paths are basically saved twice.
+            # This is because some tools want an '-INCDIR' or '+incdir+' in front
+            # of every search path and some tools just want the path itself
+            conf.env['VERILOG_SEARCH_PATHS'] = {}
+            conf.env['VERILOG_INC_DIRS'] = {}
             pattern = re.compile("^\/")
-            for path in searchpaths:
-                # is this path an absolute path?
-                if pattern.match(path):
-                    conf.env.INCLUDES_SEARCHPATHS.append(path)
-                    # put an '-INCDIR' in front of every entry (cadence syntax)
-                    if conf.env.simulator == 'cadence':
-                        conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
-                        conf.env['VERILOG_INC_DIRS'].append(path)
-                    elif conf.env.simulator == 'modeltech':
-                        conf.env['VERILOG_INC_DIRS'].append('+incdir+'+path)
-                    # add the brick dir-relative path to SEARCH_PATHS
-                    conf.env['VERILOG_SEARCH_PATHS'].append(conf.root.make_node(path).path_from(conf.root.make_node(os.getcwd())))
-                # or a BRICK_DIR-relative?
-                else:
-                    conf.env.INCLUDES_SEARCHPATHS.append(conf.path.abspath()+'/'+path)
-                    # the prefix accounts for the tool's being started inside the build folder
-                    prefix = ''
-                    if conf.options.out:
-                        prefix = conf.path.path_from(conf.path.find_node(conf.options.out))
+            for include in conf.env.includes+['__root']:
+                conf.env['VERILOG_SEARCH_PATHS'][include] = []
+                conf.env['VERILOG_INC_DIRS'][include] = []
+                for path in searchpaths[include]:
+                    # is this path an absolute path?
+                    if pattern.match(path):
+                        conf.env.INCLUDES_SEARCHPATHS.append(path)
+                        # put an '-INCDIR' in front of every entry (cadence syntax)
+                        if conf.env.simulator == 'cadence':
+                            conf.env['VERILOG_INC_DIRS'][include].append('-INCDIR')
+                            conf.env['VERILOG_INC_DIRS'][include].append(path)
+                        elif conf.env.simulator == 'modeltech':
+                            conf.env['VERILOG_INC_DIRS'][include].append('+incdir+'+path)
+                        # add the brick dir-relative path to SEARCH_PATHS
+                        conf.env['VERILOG_SEARCH_PATHS'][include].append(conf.root.make_node(path).path_from(conf.root.make_node(os.getcwd())))
+                    # or a BRICK_DIR-relative?
                     else:
-                        prefix = conf.path.path_from(conf.path.find_node(out))
-                    # put an '-INCDIR' in front of every entry (cadence syntax)
-                    if conf.env.simulator == 'cadence':
-                        conf.env['VERILOG_INC_DIRS'].append('-INCDIR')
-                        conf.env['VERILOG_INC_DIRS'].append(prefix+'/'+path)
-                    elif conf.env.simulator == 'modeltech':
-                        conf.env['VERILOG_INC_DIRS'].append('+incdir+'+prefix+'/'+path)
-                    conf.env['VERILOG_SEARCH_PATHS'].append(path)
+                        conf.env.INCLUDES_SEARCHPATHS.append(conf.path.abspath()+'/'+path)
+                        # the prefix accounts for the tool's being started inside the build folder
+                        prefix = ''
+                        if conf.options.out:
+                            prefix = conf.path.path_from(conf.path.find_node(conf.options.out))
+                        else:
+                            prefix = conf.path.path_from(conf.path.find_node(out))
+                        # put an '-INCDIR' in front of every entry (cadence syntax)
+                        if conf.env.simulator == 'cadence':
+                            conf.env['VERILOG_INC_DIRS'][include].append('-INCDIR')
+                            conf.env['VERILOG_INC_DIRS'][include].append(prefix+'/'+path)
+                        elif conf.env.simulator == 'modeltech':
+                            conf.env['VERILOG_INC_DIRS'][include].append('+incdir+'+prefix+'/'+path)
+                        conf.env['VERILOG_SEARCH_PATHS'][include].append(path)
+
 
     conf.start_msg("Successfully read XML config file for")
     conf.end_msg(conf.env.PROJECTNAME)
@@ -250,16 +257,11 @@ def configure(conf):
     cdslib_rule += ' && echo "DEFINE worklib '+conf.env.CURRENT_RUNDIR+'/../worklib" >> cds.lib'
     os.system(cdslib_rule)
     os.system('echo "DEFINE WORK worklib" > hdl.var')
-    # basic modeltech setup
-    os.system('vlib work')
     # now, create a library for each included component (in brick_config)
     for library in conf.env.includes:
         if conf.env.simulator == "cadence":
             conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../work_'+library).mkdir()
             os.system('echo "DEFINE work_'+library+' ./work_'+library)
-        elif conf.env.simulator == "modeltech":
-            if not os.path.isfile('work_'+library):
-                os.system('vlib work_'+library)
     os.chdir(old_pwd)
 
 def build(bld):
@@ -267,6 +269,12 @@ def build(bld):
     CURRENT_RUNDIR = bld.root.find_node(bld.env.CURRENT_RUNDIR)
     # export results directory
     os.environ['RESULTS_DIR'] = CURRENT_RUNDIR.make_node('results/').abspath()
+
+    # basic modeltech setup
+    bld( rule = 'vlib ${TGT}', target = 'work')
+    if bld.env.simulator == "modeltech":
+        for library in bld.env.includes:
+            bld(rule = 'vlib ${TGT}', target = 'work_'+library)
 
     # load configuration
     xmlconfig = minidom.parse(bld.env.CONFIGFILE) # parse an XML file by name
@@ -821,6 +829,9 @@ def build(bld):
                             )
                             i=i+1
 
+    #
+    # functional verification
+    #
     # verification tasks are generated from here on
     # if mode was set to 'functional'
     elif bld.env.MODE == 'functional':
@@ -830,8 +841,9 @@ def build(bld):
         # compilation tasks for verilog/VHDL
         for (projectname,project) in bld.env.VERILOG_SOURCES.iteritems():
             VERILOG_SOURCES = []
-
-            bld.env.WORKLIB = './work_'+projectname
+            worklib = 'work'
+            if not projectname == '__root':
+                worklib = 'work_'+projectname
             for file in project:
                 if (len(file)>0):
                     pattern1 = re.compile("^\/")
@@ -850,6 +862,9 @@ def build(bld):
 
             bld (
                source = VERILOG_SOURCES,
+               worklib = worklib,
+               verilog_search_paths = bld.env['VERILOG_SEARCH_PATHS'][projectname],
+               verilog_inc_dirs = bld.env['VERILOG_INC_DIRS'][projectname],
             )
 
         # compilation tasks for systemC
