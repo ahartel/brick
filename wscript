@@ -263,8 +263,9 @@ def build(bld):
     #
     # modeltech setup
     if bld.env.simulator == "modeltech":
-        bld( rule = 'vlib ${TGT}', target = 'work')
+        bld( rule = 'vlib ${TGT}', target = 'worklib')
         for library in bld.env.includes:
+            library = library.replace('-','_')
             bld(rule = 'vlib ${TGT}', target = 'work_'+library)
     # cadence setup
     elif bld.env.simulator == "cadence":
