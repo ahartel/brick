@@ -63,7 +63,6 @@ def configure(conf):
         conf.load(conf.env.simulator)
         if conf.env.simulator == 'cadence':
             import cadence
-            conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../worklib/').mkdir()
             # ugly hacking to make cadence C++ compiler visible to waf compiler_c(xx)
             os.environ['CDSROOT'] = '/cad/products/cds/ius82'
             os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
@@ -245,24 +244,13 @@ def configure(conf):
     #
     # create worklib and component libraries
     #
-    # these targets are necessary for the compilers to
-    # work properly
-
     # basic cadence setup 
-    old_pwd = os.getcwd()
-    os.chdir(conf.env.CURRENT_RUNDIR+'/../')
-    cdslib_rule = 'echo "" > cds.lib'
-    for libName,libPath in conf.env.libraries.iteritems():
-        cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
-    cdslib_rule += ' && echo "DEFINE worklib '+conf.env.CURRENT_RUNDIR+'/../worklib" >> cds.lib'
-    os.system(cdslib_rule)
-    os.system('echo "DEFINE WORK worklib" > hdl.var')
-    # now, create a library for each included component (in brick_config)
-    for library in conf.env.includes:
-        if conf.env.simulator == "cadence":
-            conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../work_'+library).mkdir()
-            os.system('echo "DEFINE work_'+library+' ./work_'+library)
-    os.chdir(old_pwd)
+    # create a library for each included component (in brick_config)
+    conf.root.find_node(conf.env.CURRENT_RUNDIR).make_node('../worklib/').mkdir()
+    if conf.env.simulator == "cadence":
+        for library in conf.env.includes:
+            library = library.replace('-','_')
+            conf.root.find_node(conf.env.CURRENT_RUNDIR+'/../').make_node('work_'+library).mkdir()
 
 def build(bld):
     # translate CURRENT_RUNDIR to path node
@@ -270,11 +258,29 @@ def build(bld):
     # export results directory
     os.environ['RESULTS_DIR'] = CURRENT_RUNDIR.make_node('results/').abspath()
 
-    # basic modeltech setup
-    bld( rule = 'vlib ${TGT}', target = 'work')
+    #
+    # create worklib and component libraries
+    #
+    # modeltech setup
     if bld.env.simulator == "modeltech":
+        bld( rule = 'vlib ${TGT}', target = 'work')
         for library in bld.env.includes:
             bld(rule = 'vlib ${TGT}', target = 'work_'+library)
+    # cadence setup
+    elif bld.env.simulator == "cadence":
+        cdslib_rule = 'cp '+bld.env.BRICK_DIR+'/source/cds/cds.lib ./cds.lib'
+        for libName,libPath in bld.env.libraries.iteritems():
+            cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
+        cdslib_rule += ' && echo "DEFINE worklib ./worklib" >> cds.lib'
+        for library in bld.env.includes:
+            library = library.replace('-','_')
+            cdslib_rule += ' && echo "DEFINE work_'+library+' ./work_'+library+'" >> cds.lib'
+        bld (
+            rule = cdslib_rule,
+            source = bld.root.find_node(bld.env.BRICK_DIR+'/source/cds/cds.lib'),
+            target = 'cds.lib',
+        )
+        bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var', target = 'hdl.var' )
 
     # load configuration
     xmlconfig = minidom.parse(bld.env.CONFIGFILE) # parse an XML file by name
@@ -841,9 +847,9 @@ def build(bld):
         # compilation tasks for verilog/VHDL
         for (projectname,project) in bld.env.VERILOG_SOURCES.iteritems():
             VERILOG_SOURCES = []
-            worklib = 'work'
+            worklib = 'worklib'
             if not projectname == '__root':
-                worklib = 'work_'+projectname
+                worklib = 'work_'+projectname.replace('-','_')
             for file in project:
                 if (len(file)>0):
                     pattern1 = re.compile("^\/")
