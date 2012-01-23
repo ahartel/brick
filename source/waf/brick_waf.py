@@ -88,7 +88,10 @@ def getText(nodelist):
             return ''.join(rc)
 
 def getTextNodeValue(tree,nodeName):
-    return getText(tree.getElementsByTagName(nodeName)[0].childNodes).encode('ascii')
+    if tree.getElementsByTagName(nodeName)[0].childNodes:
+        return getText(tree.getElementsByTagName(nodeName)[0].childNodes).encode('ascii')
+    else:
+        return ""
 
 def getTextNodeAsList(context,tree,nodeName):
     textnode = getTextNodeValue(tree,nodeName)

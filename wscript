@@ -100,8 +100,11 @@ def configure(conf):
         conf.env.USELIBS = ['SEARCHPATHS']
         # look for components whose source groups should be included 
         conf.env.includes = brick_waf.getTextNodeValue(xmlconfig,'includeComponents')
-        conf.env.includes = conf.env.includes.replace("\n","")
-        conf.env.includes = conf.env.includes.split(",")
+        if not conf.env.includes == "":
+            conf.env.includes = conf.env.includes.replace("\n","")
+            conf.env.includes = conf.env.includes.split(",")
+        else:
+            conf.env.includes = []
 
         # iterate through includes and do the following for each include
         # * load source file groups
