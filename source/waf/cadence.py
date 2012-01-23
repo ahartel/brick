@@ -61,6 +61,15 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
+        name         = 'ncvhdl',
+        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.vhdl'],
+        ext_out      = ['.vhdl.out'],
+        scan         = brick_waf.vhdl_scanner,
+        reentrant    = False,
+)
+
+TaskGen.declare_chain(
         name         = 'ncvlog vams',
         rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE} ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_SEARCH_PATHS} ${SRC}',
         ext_in       = ['.vams'],
@@ -79,9 +88,7 @@ def testroot(self):
     self.env.WORKLIB = getattr(self,'worklib','work')
     vsp = getattr(self,'verilog_search_paths',[])
     vid = getattr(self,'verilog_inc_dirs',[])
-    if len(vsp) > 0:
-        self.env.VERILOG_SEARCH_PATHS = vsp
-    if len(vid) > 0:
-        self.env.VERILOG_INC_DIRS = vid
+    self.env.VERILOG_SEARCH_PATHS = vsp
+    self.env.VERILOG_INC_DIRS = vid
 
 
