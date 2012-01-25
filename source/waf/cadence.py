@@ -45,7 +45,7 @@ TaskGen.declare_chain(
 
 TaskGen.declare_chain(
         name         = 'ncvlog verilog2001',
-        rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
         ext_in       = ['.v', '.lib.src', '.vp', ],
         reentrant    = False,
         scan         = brick_waf.verilog_scanner
