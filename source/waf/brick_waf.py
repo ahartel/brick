@@ -96,7 +96,7 @@ def getTextNodeValue(tree,nodeName):
 def getTextNodeAsList(context,tree,nodeName):
     textnode = getTextNodeValue(tree,nodeName)
     # remove spaces and line breaks
-    textnode = textnode.replace(" ","")
+    textnode = re.sub(r'\s','',textnode)
     textnode = textnode.replace("\n","")
     textnode = replace_env_vars(textnode,context)
     # split the string to make it a list
@@ -145,7 +145,7 @@ def parseSourceGroups(conf,groups,prefix):
         result[groupName] = []
         # get filenames, split them, and remove spaces and line breaks
         filenames = getText(group.childNodes).encode('ascii')
-        filenames = filenames.replace(" ","")
+        filenames = re.sub(r'\s','',filenames)
         filenames = filenames.replace("\n","")
         # replace env variables
         filenames = replace_env_vars(filenames,conf)
