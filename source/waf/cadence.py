@@ -7,10 +7,11 @@ def configure(conf):
     # this is a hack, because, when using ${CURRENT_RUNDIR} directly inside
     # the rule definition of the TaskChains, the concatenation with the
     # logfile name introduces a space between them
+    conf.env.NCVLOG_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncvlog.log'
     conf.env.NCVLOG_SV_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncvlog_sv.log'
     conf.env.NCVHDL_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncvhdl.log'
     conf.env.NCVLOG_VAMS_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncvlog_vams.log'
-    conf.env.NSDFC_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncsdfc.log'
+    conf.env.NCSDFC_LOGFILE = conf.env.CURRENT_RUNDIR+'/logfiles/ncsdfc.log'
 
 def load_modules(conf):
     p = subprocess.Popen('module purge && module load umc/u18_13 cds/613 ius/82 mmsim/72 syn/2010.03-SP4 && export -p', shell=True, stdout=subprocess.PIPE)
