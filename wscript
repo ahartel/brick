@@ -910,6 +910,7 @@ def build(bld):
             SOFTWARE_SOURCES.append(bld.path.make_node(file))
 
         bld.program (
+            features = 'cxx program static',
             target = 'ctrlSW',
             source = SOFTWARE_SOURCES,
             name = 'ctrlSW',
@@ -929,4 +930,11 @@ class one(BuildContext):
 def distclean(ctx):
     print(' Not cleaning anything!')
 
+
+@TaskGen.feature('static')
+@TaskGen.before_method('apply_link')
+def make_fully_static(self):
+   self.env.SHLIB_MARKER = ''
+   self.env.STLIB_MARKER = ''
+   self.env.append_unique('LINKFLAGS', '-static')
 
