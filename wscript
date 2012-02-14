@@ -1,4 +1,5 @@
 import os,sys,re
+import TaskGen
 import copy
 import tempfile
 from xml.dom import minidom
@@ -41,7 +42,7 @@ def configure(conf):
     # save BRICK_DIR path to config environment
     conf.env.BRICK_DIR = conf.path.find_node('brick').abspath()
     # save SYNOPSYS path to config environment (kind of hacky :)
-    conf.env.SYNOPSYS = os.environ['SYNOPSYS']
+    #conf.env.SYNOPSYS = os.environ['SYNOPSYS']
 
     # store configuration file
     conf.env.CONFIGFILE = conf.options.configfile
@@ -111,10 +112,18 @@ def configure(conf):
         # * load searchpaths
         groups = {}
         searchpaths = {}
+        remove_includes = []
         for include in conf.env.includes:
-            includeXmlConfig = minidom.parse('components/'+include+'/brick_config.xml')
-            groups.update(brick_waf.parseSourceGroups(conf,brick_waf.getSourceGroups(includeXmlConfig),include))
-            searchpaths[include] = brick_waf.parseSearchPaths(includeXmlConfig,include)
+            try:
+                includeXmlConfig = minidom.parse('components/'+include+'/brick_config.xml')
+                groups.update(brick_waf.parseSourceGroups(conf,brick_waf.getSourceGroups(includeXmlConfig),include))
+                searchpaths[include] = brick_waf.parseSearchPaths(includeXmlConfig,include)
+            except (IOError):
+                print "Include directory "+include+" not found in components. Omitting."
+                remove_includes.append(include)
+
+        for include in remove_includes:
+            conf.env.includes.remove(include)
 
 
         # load search paths of the main project
@@ -212,6 +221,9 @@ def configure(conf):
                 conf.env['VERILOG_SEARCH_PATHS'][include] = []
                 conf.env['VERILOG_INC_DIRS'][include] = []
                 for path in searchpaths[include]:
+                    if not os.path.isdir(path):
+                        print "Searchpath "+path+" not found, no adding it to include dirs."
+                        continue
                     # is this path an absolute path?
                     if pattern.match(path):
                         conf.env.INCLUDES_SEARCHPATHS.append(path)
