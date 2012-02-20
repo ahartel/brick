@@ -117,7 +117,6 @@ def replace_env_vars(replacestring,context):
             replacestring = re.sub("\$"+group,context.env[group],replacestring)
         elif (os.environ.has_key(group)):
             replacestring = re.sub("\$"+group,os.environ[group],replacestring)
-        print replacestring
 
     return replacestring
 
