@@ -59,18 +59,18 @@ def configure(conf):
             os.environ['CDSROOT'] = '/cad/products/cds/ius82'
             os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
             # define systemc-relevant paths
-            conf.env.INCLUDES_SYSTEMC = [os.getenv('CDSROOT')+'/tools/systemc/include_pch',
+            conf.env.INCLUDES_VENDOR = [os.getenv('CDSROOT')+'/tools/systemc/include_pch',
                     os.getenv('CDSROOT')+'/tools/tbsc/include',
                     os.getenv('CDSROOT')+'/tools/vic/include',
                     os.getenv('CDSROOT')+'/tools/ovm/sc/src',
                     os.getenv('CDSROOT')+'/tools/systemc/include/tlm']
-            conf.env.LIBPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/install/lib64',
+            conf.env.LIBPATH_VENDOR = ['/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/install/lib64',
                     '/cad/products/cds/ius82/tools/lib',
                     '/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1',
                     '/cad/products/cds/ius82/tools/lib/64bit/SuSE',
                     '/cad/products/cds/ius82/tools/systemc/lib/64bit/gnu/4.1']
-            conf.env.LIB_SYSTEMC = ['stdc++', 'gcc_s', 'tbsc', 'scv', 'systemc_sh', 'ncscCoSim_sh', 'ncscCoroutines_sh', 'ncsctlm_sh'] # 'ovm', 
-            conf.env.RPATH_SYSTEMC = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
+            conf.env.LIB_VENDOR = ['stdc++', 'gcc_s', 'tbsc', 'scv', 'systemc_sh', 'ncscCoSim_sh', 'ncscCoroutines_sh', 'ncsctlm_sh'] # 'ovm', 
+            conf.env.RPATH_VENDOR = ['/cad/products/cds/ius82/tools/lib/64bit','/cad/products/cds/ius82/tools/tbsc/lib/64bit/gnu/4.1','/cad/products/cds/ius82/tools/systemc/lib/64bit']
         elif conf.env.simulator =='modeltech':
             import modeltech
             # This is the path to the modeltech compiler
@@ -78,7 +78,7 @@ def configure(conf):
             # however, this compiler is too new! An ABI change has occured
             # so we'll use the cadence compiler
             os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
-            conf.env.INCLUDES_SYSTEMC = ['/cad/products/modeltech/10.0/modeltech/include/systemc/',
+            conf.env.INCLUDES_VENDOR = ['/cad/products/modeltech/10.0/modeltech/include/',
                     ]
 
 
@@ -93,10 +93,10 @@ def build(bld):
     #
     # modeltech setup
     if bld.env.simulator == "modeltech":
-        bld( rule = 'vlib ${TGT}', target = '../worklib')
+        bld( rule = 'vlib ./worklib', target = '../worklib/')
         for library in bld.env.includes:
             library = library.replace('-','_')
-            bld(rule = 'vlib ${TGT}', target = '../work_'+library)
+            bld(rule = 'vlib ./work_'+library, target = '../work_'+library+'/')
     # cadence setup
     elif bld.env.simulator == "cadence":
         cdslib_rule = 'cp '+bld.env.BRICK_DIR+'/source/cds/cds.lib ./cds.lib'
@@ -180,15 +180,4 @@ def build(bld):
             use = bld.env.USELIBS,
         )
 
-        # compilation tasks for independent software
-        SOFTWARE_SOURCES = []
-        for file in bld.env.SOFTWARE_SOURCES:
-            SOFTWARE_SOURCES.append(bld.path.make_node(file))
-
-        bld.program (
-            target = 'ctrlSW',
-            source = SOFTWARE_SOURCES,
-            name = 'ctrlSW',
-            use = bld.env.USELIBS,
-        )
 

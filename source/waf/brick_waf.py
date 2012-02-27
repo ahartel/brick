@@ -263,6 +263,12 @@ def getSubprojectInfo(conf,path):
 
     return subglobals['project_sources'],subglobals['search_paths']
 
+def getProjectSources(source_hash,filter_list):
+    new_hash = {}
+    for item in filter_list:
+        new_hash[item] = source_hash[item]
+    return new_hash
+
 # -------
 # Tasks
 # -------
