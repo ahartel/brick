@@ -137,7 +137,8 @@ def build(bld):
                     # is this path an absolute path?
                     if pattern1.match(file):
                         if pattern2.search(file):
-                            HDL_SOURCES.extend(bld.root.ant_glob(file))
+                            # file[1:] to remove leading slash
+                            HDL_SOURCES.extend(bld.root.ant_glob(file[1:]))
                         else:
                             HDL_SOURCES.append(bld.root.make_node(file))
                     else:

@@ -109,16 +109,29 @@ def getTextNodeAsList(context,tree,nodeName):
     return list
 
 def replace_env_vars(replacestring,context):
-    # replace env variables
-    m = re.findall('\$(\w+)', replacestring)
-    for group in m:
-        #for group in m.groups():
-        if (context.env[group]):
-            replacestring = re.sub("\$"+group,context.env[group],replacestring)
-        elif (os.environ.has_key(group)):
-            replacestring = re.sub("\$"+group,os.environ[group],replacestring)
+    if type(replacestring) == type([]):
+        for idx,string in enumerate(replacestring):
+            # replace env variables
+            m = re.findall('\$(\w+)', string)
+            for group in m:
+                #for group in m.groups():
+                if (context.env[group]):
+                    replacestring[idx] = re.sub("\$"+group,context.env[group],string)
+                elif (os.environ.has_key(group)):
+                    replacestring[idx] = re.sub("\$"+group,os.environ[group],string)
 
-    return replacestring
+        return replacestring
+    else:
+        # replace env variables
+        m = re.findall('\$(\w+)', replacestring)
+        for group in m:
+            #for group in m.groups():
+            if (context.env[group]):
+                replacestring = re.sub("\$"+group,context.env[group],replacestring)
+            elif (os.environ.has_key(group)):
+                replacestring = re.sub("\$"+group,os.environ[group],replacestring)
+
+        return replacestring
 
 def runStep(subStepName,steps_to_run):
     if steps_to_run[0] == 'all':
@@ -205,6 +218,7 @@ def addSearchPaths(conf,searchpaths):
     for project,list in searchpaths.iteritems():
         VERILOG_SEARCH_PATHS[project] = []
         for path in list:
+            path = replace_env_vars(path,conf)
             # is this path an absolute path?
             if pattern.match(path):
                 # add the brick dir-relative path to SEARCH_PATHS
@@ -221,6 +235,7 @@ def addIncDirs(conf,searchpaths):
     for project,list in searchpaths.iteritems():
         VERILOG_INC_DIRS[project] = []
         for path in list:
+            path = replace_env_vars(path,conf)
             # is this path an absolute path?
             if pattern.match(path):
                 # put an '-INCDIR' in front of every entry (cadence syntax)
@@ -263,10 +278,10 @@ def getSubprojectInfo(conf,path):
 
     return subglobals['project_sources'],subglobals['search_paths']
 
-def getProjectSources(source_hash,filter_list):
+def getProjectSources(conf,source_hash,filter_list):
     new_hash = {}
     for item in filter_list:
-        new_hash[item] = source_hash[item]
+        new_hash[item] = replace_env_vars(source_hash[item],conf)
     return new_hash
 
 # -------
