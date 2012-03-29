@@ -17,6 +17,14 @@ def configure(conf):
     # save CWD to env
     conf.env.CWD = os.getcwd()
 
+    if not conf.env.BRICK_DIR:
+        if os.path.isdir(os.getcwd()+'/brick'):
+            conf.env.BRICK_DIR = os.getcwd()+'/brick'
+        else:
+            raise NameError('BRICK_DIR not found')
+    else:
+        raise NameError('BRICK_DIR not found')
+
     if not conf.env.BRICK_OPT_RECURSE:
         conf.env.BRICK_OPT_RECURSE = True
 
@@ -99,19 +107,20 @@ def build(bld):
             bld(rule = 'vlib ./work_'+library, target = '../work_'+library+'/')
     # cadence setup
     elif bld.env.simulator == "cadence":
-        cdslib_rule = 'cp '+bld.env.BRICK_DIR+'/source/cds/cds.lib ./cds.lib'
+        cdslib_rule = 'cp '+bld.env.BRICK_DIR+'/source/cds/cds.lib ./'
         for libName,libPath in bld.env.libraries.iteritems():
             cdslib_rule += ' && echo "DEFINE '+libName+' '+libPath+'" >> cds.lib'
-        cdslib_rule += ' && echo "DEFINE worklib ./worklib" >> cds.lib'
+        #cdslib_rule += ' && echo "DEFINE worklib ./worklib" >> cds.lib'
         for library in bld.env.includes:
             library = library.replace('-','_')
             cdslib_rule += ' && echo "DEFINE work_'+library+' ./work_'+library+'" >> cds.lib'
+            bld (rule = 'mkdir -p ./work_'+library)
         bld (
             rule = cdslib_rule,
             source = bld.root.find_node(bld.env.BRICK_DIR+'/source/cds/cds.lib'),
-            target = 'cds.lib',
+            #target = 'cds.lib',
         )
-        bld ( rule = 'echo "DEFINE WORK worklib" > hdl.var', target = 'hdl.var' )
+        bld ( rule = 'echo "DEFINE WORK worklib" > ./hdl.var', )#target = 'hdl.var' )
 
 
     #
@@ -154,31 +163,5 @@ def build(bld):
                verilog_inc_dirs = bld.env['HDL_INC_DIRS'][projectname],
             )
 
-        # compilation tasks for systemC
-        SYSTEMC_SOURCES = []
-        for file in bld.env.SYSTEMC_SOURCES:
-            SYSTEMC_SOURCES.append(bld.path.make_node(file))
-
-        use_libs_systemc = copy.copy(bld.env.USELIBS)
-        use_libs_systemc.append('SYSTEMC')
-
-        bld.shlib (
-            name = 'libncsc_model.so',
-            source = SYSTEMC_SOURCES,
-            target = 'ncsc_model',
-            use = use_libs_systemc,
-        )
-
-        # compilation tasks for DPI
-        DPI_SOURCES = []
-        for file in bld.env.DPI_SOURCES:
-            DPI_SOURCES.append(bld.path.make_node(file))
-
-        bld.shlib (
-            name = 'libDPI.so',
-            source = DPI_SOURCES,
-            target = 'dpi',
-            use = bld.env.USELIBS,
-        )
 
 

@@ -32,7 +32,7 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'vcom -l ${VLOG_LOGFILE} ${VLOG_VHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'vcom -l ${VLOG_LOGFILE} ${VCOM_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
         ext_out      = ['.vhd.out'],
         scan         = brick_waf.vhdl_scanner,
