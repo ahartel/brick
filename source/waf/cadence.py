@@ -43,12 +43,27 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
-        ext_in       = ['.v', '.lib.src', '.vp', ],
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.v', ],
+        ext_out      = ['.v.out',],
         reentrant    = False,
         scan         = brick_waf.verilog_scanner
 )
 
+TaskGen.declare_chain(
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = [ '.lib.src',],
+        ext_out      = [ '.lib.src.out',],
+        reentrant    = False,
+        scan         = brick_waf.verilog_scanner
+)
+TaskGen.declare_chain(
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = [ '.vp', ],
+        ext_out      = [ '.vp.out', ],
+        reentrant    = False,
+        scan         = brick_waf.verilog_scanner
+)
 TaskGen.declare_chain(
         rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
