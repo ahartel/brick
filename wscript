@@ -86,8 +86,9 @@ def configure(conf):
             # however, this compiler is too new! An ABI change has occured
             # so we'll use the cadence compiler
             os.environ['PATH'] += ':/cad/products/cds/ius82/tools/systemc/gcc/4.1-x86_64/bin/'
-            conf.env.INCLUDES_VENDOR = ['/cad/products/modeltech/10.0/modeltech/include/',
-                    ]
+            conf.env.INCLUDES_VENDOR = [
+                os.environ['MODEL_SIM_ROOT']+'/include/',
+            ]
 
 
 def build(bld):
