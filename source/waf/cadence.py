@@ -27,7 +27,6 @@ def load_modules(conf):
 
 from waflib import TaskGen
 TaskGen.declare_chain(
-        name         = 'ncvlog sv',
         rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.svh',],
         ext_out      = ['.svh.out',],
@@ -36,7 +35,6 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        name         = 'ncvlog sv',
         rule         = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.sv',],
         ext_out      = ['.sv.out',],
@@ -45,15 +43,28 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        name         = 'ncvlog verilog2001',
-        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
-        ext_in       = ['.v', '.lib.src', '.vp', ],
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.v', ],
+        ext_out      = ['.v.out',],
         reentrant    = False,
         scan         = brick_waf.verilog_scanner
 )
 
 TaskGen.declare_chain(
-        name         = 'ncvhdl',
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = [ '.lib.src',],
+        ext_out      = [ '.lib.src.out',],
+        reentrant    = False,
+        scan         = brick_waf.verilog_scanner
+)
+TaskGen.declare_chain(
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = [ '.vp', ],
+        ext_out      = [ '.vp.out', ],
+        reentrant    = False,
+        scan         = brick_waf.verilog_scanner
+)
+TaskGen.declare_chain(
         rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
         ext_out      = ['.vhd.out'],
@@ -62,7 +73,6 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        name         = 'ncvhdl',
         rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhdl'],
         ext_out      = ['.vhdl.out'],
@@ -71,14 +81,12 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        name         = 'ncvlog vams',
         rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE} ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_SEARCH_PATHS} ${SRC}',
         ext_in       = ['.vams'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        name         = 'ncsdfc',
         rule         = 'ncsdfc -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC}',
         ext_in       = ['.sdf','.sdf.gz'],
         reentrant    = False,

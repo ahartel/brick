@@ -109,16 +109,29 @@ def getTextNodeAsList(context,tree,nodeName):
     return list
 
 def replace_env_vars(replacestring,context):
-    # replace env variables
-    m = re.findall('\$(\w+)', replacestring)
-    for group in m:
-        #for group in m.groups():
-        if (context.env[group]):
-            replacestring = re.sub("\$"+group,context.env[group],replacestring)
-        elif (os.environ.has_key(group)):
-            replacestring = re.sub("\$"+group,os.environ[group],replacestring)
+    if type(replacestring) == type([]):
+        for idx,string in enumerate(replacestring):
+            # replace env variables
+            m = re.findall('\$(\w+)', string)
+            for group in m:
+                #for group in m.groups():
+                if (context.env[group]):
+                    replacestring[idx] = re.sub("\$"+group,context.env[group],string)
+                elif (os.environ.has_key(group)):
+                    replacestring[idx] = re.sub("\$"+group,os.environ[group],string)
 
-    return replacestring
+        return replacestring
+    else:
+        # replace env variables
+        m = re.findall('\$(\w+)', replacestring)
+        for group in m:
+            #for group in m.groups():
+            if (context.env[group]):
+                replacestring = re.sub("\$"+group,context.env[group],replacestring)
+            elif (os.environ.has_key(group)):
+                replacestring = re.sub("\$"+group,os.environ[group],replacestring)
+
+        return replacestring
 
 def runStep(subStepName,steps_to_run):
     if steps_to_run[0] == 'all':
@@ -187,6 +200,89 @@ def parseSearchPaths(xmlconfig,prefix):
             searchpaths.pop()
 
     return searchpaths
+
+def registerSubProject(conf,projectName):
+    if not conf.env.includes:
+        conf.env.includes = []
+    conf.env.includes.append(projectName) 
+
+def addSearchPaths(conf,searchpaths):
+    #
+    # process search paths
+    #
+    # Verilog search paths are basically saved twice.
+    # This is because some tools want an '-INCDIR' or '+incdir+' in front
+    # of every search path and some tools just want the path itself
+    VERILOG_SEARCH_PATHS = {}
+    pattern = re.compile("^\/")
+    for project,list in searchpaths.iteritems():
+        VERILOG_SEARCH_PATHS[project] = []
+        for path in list:
+            path = replace_env_vars(path,conf)
+            # is this path an absolute path?
+            if pattern.match(path):
+                # add the brick dir-relative path to SEARCH_PATHS
+                VERILOG_SEARCH_PATHS[project].append(conf.root.make_node(path).path_from(conf.root.make_node(os.getcwd())))
+            # or a BRICK_DIR-relative?
+            else:
+                VERILOG_SEARCH_PATHS[project].append(path)
+
+    return VERILOG_SEARCH_PATHS
+
+def addIncDirs(conf,searchpaths):
+    VERILOG_INC_DIRS = {}
+    pattern = re.compile("^\/")
+    for project,list in searchpaths.iteritems():
+        VERILOG_INC_DIRS[project] = []
+        for path in list:
+            path = replace_env_vars(path,conf)
+            # is this path an absolute path?
+            if pattern.match(path):
+                # put an '-INCDIR' in front of every entry (cadence syntax)
+                if conf.env.simulator == 'cadence':
+                    VERILOG_INC_DIRS[project].append('-INCDIR')
+                    VERILOG_INC_DIRS[project].append(path)
+                elif conf.env.simulator == 'modeltech':
+                    VERILOG_INC_DIRS[project].append('+incdir+'+path)
+            # or a BRICK_DIR-relative?
+            else:
+                # the prefix accounts for the tool's being started inside the build folder
+                prefix = ''
+                if conf.options.out:
+                    prefix = conf.path.path_from(conf.path.find_node(conf.options.out))
+                else:
+                    prefix = conf.path.path_from(conf.path.find_node('rundirs/default'))
+                # put an '-INCDIR' in front of every entry (cadence syntax)
+                if conf.env.simulator == 'cadence':
+                    VERILOG_INC_DIRS[project].append('-INCDIR')
+                    VERILOG_INC_DIRS[project].append(prefix+'/'+path)
+                elif conf.env.simulator == 'modeltech':
+                    VERILOG_INC_DIRS[project].append('+incdir+'+prefix+'/'+path)
+
+    return VERILOG_INC_DIRS
+
+def getSubprojectInfo(conf,path):
+    ''' load project_sources from subproject and prepend path'''
+    subglobals = {}
+    execfile(path+'/wscript',subglobals)
+
+    for name,list in subglobals['project_sources'].iteritems():
+        registerSubProject(conf,name)
+        new_list = [replace_env_vars(file,conf) if replace_env_vars(file,conf).startswith('/') else replace_env_vars(path+'/'+file,conf) for file in list]
+        subglobals['project_sources'][name] = new_list
+
+    for name,list in subglobals['search_paths'].iteritems():
+        new_list = [replace_env_vars(file,conf) if replace_env_vars(file,conf).startswith('/') else replace_env_vars(path+'/'+file,conf) for file in list]
+        subglobals['search_paths'][name] = new_list
+
+
+    return subglobals['project_sources'],subglobals['search_paths']
+
+def getProjectSources(conf,source_hash,filter_list):
+    new_hash = {}
+    for item in filter_list:
+        new_hash[item] = replace_env_vars(source_hash[item],conf)
+    return new_hash
 
 # -------
 # Tasks
