@@ -166,7 +166,7 @@ def build(bld):
             )
 
 
-
+from waflib import TaskGen
 @TaskGen.feature('static')
 @TaskGen.before_method('apply_link')
 def make_fully_static(self):
