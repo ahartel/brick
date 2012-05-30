@@ -67,9 +67,9 @@ if __name__ == "__main__":
     __builtin__.logger = logger
 
     # register pre-run hooks
-    import pre_general
-    import pre_modules
-    import pre_cadence
+    import pre_run.pre_general
+    import pre_run.pre_modules
+    import pre_run.pre_cadence
     #brick.print_pre_run_hooks()
 
     # call pre-run hooks
@@ -77,10 +77,20 @@ if __name__ == "__main__":
         print "Stopped because of error in pre_hooks"
         sys.exit(2)
 
+    # import preparation tools
+    from tools.prepare import *
     # prepare tasks
-    brick.prepare_tasks()
+    if not brick.prepare_tasks():
+        print "Stopped because of error in preparation."
+        sys.exit(2)
+
+    # import preparation tools
+    #from tools.run import *
     # run tasks
     brick.run_tasks()
+
+    # import preparation tools
+    #from tools.postprocess import *
     # postprocess tasks
     brick.postprocess_tasks()
 

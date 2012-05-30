@@ -4,6 +4,8 @@ import ConfigParser
 
 @preRunHook
 def cadence_prerun_hook(brick):
+    # It is necessary to run this module only if cadence tools are used
+    # This is usually indicated by the cds_libs section
     try:
         brick.config.items('cds_libs',True)
     except ConfigParser.NoSectionError:
