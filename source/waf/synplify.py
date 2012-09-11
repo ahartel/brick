@@ -2,20 +2,26 @@ import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure,Node
 
 def configure(conf):
+	conf.load('brick_general')
+
 	"""This function gets called by waf upon loading of this module in a configure method"""
 	if not conf.env.LOGFILES:
 		conf.env.LOGFILES = './'
 	conf.env['SYNPLIFY'] = 'synplify_premier_dp'
 
 @TaskGen.feature('synplify')
-@TaskGen.after_method('add_synplify_target')
 def scan_synplify_project_file(self):
 	"""This function extracts the output file and inputs files for synthesis from a synplify project (i.e. tcl) file."""
 
-	project_file = self.synplify_task.inputs[0]
-	input = open(project_file.abspath(),'r')
+	self.project_file_node = self.path.find_node(getattr(self,'project_file',None))
+	if not self.project_file_node:
+		raise Errors.ConfigurationError('Project file for synplify not found: '+getattr(self,'project_file',''))
+
+	input = open(self.project_file_node.abspath(),'r')
 	logfile = ''
 	variables = {}
+	inputs = [self.project_file_node]
+	outputs = []
 	for line in input:
 		# skip comments
 		if re.match('\s*#',line):
@@ -39,19 +45,19 @@ def scan_synplify_project_file(self):
 				try:
 					result_file = re.sub('\$(\w+)',variables[m0_1.group(1)],m0.group(1))
 				except KeyError:
-					print "Variable "+m0_1.group(1)+" not found in "+project_file.abspath()
+					print "Variable "+m0_1.group(1)+" not found in "+self.project_file_node.abspath()
 
-				self.synplify_task.set_outputs(self.path.make_node(result_file))
+				outputs.append(self.path.make_node(result_file))
 			else:
 				# if the result path is given as a relative path,
 				# synplify save the results relative to the project_file path,
 				# not relative to the path where the program is executed in
-				self.synplify_task.set_outputs(self.path.make_node(m0.group(1)))
+				outputs.append(self.path.make_node(m0.group(1)))
 
 		# look for the verilog/vhdl input files
 		m1 = re.search('add_file.+"(.+)"',line)
 		if m1:
-			self.synplify_task.set_inputs(project_file.parent.find_node(m1.group(1)))
+			inputs.append(self.project_file_node.parent.find_node(m1.group(1)))
 
 		# look for variables
 		m3 = re.search('set\s+(.+?)\s+(.+)',line)
@@ -64,65 +70,40 @@ def scan_synplify_project_file(self):
 
 	input.close()
 
-	project_file_name = Node.split_path(project_file.bld_base())
-	project_file_name.reverse()
-	logfile = self.synplify_task.outputs[0].parent.make_node(project_file_name[0]+'.srr')
-	#self.synplify_task.set_outputs(logfile)
+	outputs.append(outputs[0].change_ext('.srr'))
 
-	## check logfile if not disabled by user
-	#try:
-	#	self.check_logfile
-	#	if self.check_logfile == True:
-	#		t2 = self.create_task('synplifyCheckTask', logfile)
-	#except AttributeError:
-	#	t2 = self.create_task('synplifyCheckTask', logfile)
+	# generate synthesis task
+	self.synplify_task = self.create_task('synplifyTask', inputs, outputs)
 
 class synplifyTask(Task.Task):
 	"""This task runs synplify with a project file and redirects it's STDOUT to a logfile"""
-	run_str = '${SYNPLIFY} -batch ${SRC[0].abspath()}'
-
-class synplifyCheckTask(Task.Task):
-	"""This task checks a synplify logfile for critical warnings"""
-	color = 'ORANGE'
+	vars = ['SYNPLIFY']
 
 	def run(self):
 		"""Checking logfile for critical warnings line by line"""
-		found_error = 0
-		logfile = open(self.inputs[0].abspath(),'r')
-		for line in logfile:
-			# always_ff does not infer sequential logic
-			m0 = re.match('@W: CL216',line)
-			if m0:
-				print line
-				found_error = 1
-			# always_comb does not infer combinatorial logic
-			m0 = re.match('@W: CL217',line)
-			if m0:
-				print line
-				found_error = 1
-			# always_latch does not infer latch logic
-			m0 = re.match('@W: CL218',line)
-			if m0:
-				print line
-				found_error = 1
 
-		logfile.close()
+		run_str = '${SYNPLIFY} -batch ${SRC[0].abspath()}'
 
-		if found_error:
-			return 1
-		#else:
-		#	return 0
+		(f, dvars) = Task.compile_fun(run_str, False)
+		return_value = f(self)
 
+		found_error = return_value
+		with open(self.outputs[1].abspath(),'r') as logfile:
+			for line in logfile:
+				# always_ff does not infer sequential logic
+				if re.match('@W: CL216',line):
+					print line
+					found_error = 1
+				# always_comb does not infer combinatorial logic
+				elif re.match('@W: CL217',line):
+					print line
+					found_error = 1
+				# always_latch does not infer latch logic
+				elif re.match('@W: CL218',line):
+					print line
+					found_error = 1
 
-@TaskGen.feature('synplify')
-def add_synplify_target(self):
-	"""Register feature for the TaskGenerators"""
-	project_file = self.path.find_node(getattr(self,'project_file',None))
-	if not project_file:
-		raise Errors.ConfigurationError('Project file for synplify not found: '+project_file.abspath())
-
-	# generate synthesis task
-	self.synplify_task = self.create_task('synplifyTask', project_file)
+		return found_error
 
 
 # for convenience
