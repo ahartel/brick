@@ -6,12 +6,14 @@ def configure(conf):
 	if not conf.path.find_dir(conf.env.LOGFILES):
 		conf.path.make_node(conf.env.LOGFILES).mkdir()
 	os.environ['BRICK_LOGFILES'] = conf.path.make_node(conf.env.LOGFILES).abspath()
-	#os.environ['BRICK_LOGFILES'] = conf.env.LOGFILES
 
 	if not conf.env.BRICK_RESULTS:
 		conf.env.BRICK_RESULTS = './results'
 	if not conf.path.find_dir(conf.env.BRICK_RESULTS):
 		conf.path.make_node(conf.env.BRICK_RESULTS).mkdir()
 	os.environ['BRICK_RESULTS'] = conf.path.make_node(conf.env.BRICK_RESULTS).abspath()
-	#os.environ['BRICK_RESULTS'] = conf.env.RESULTS_DIR
+
+def build(bld):
+	os.environ['BRICK_RESULTS'] = bld.path.make_node(bld.env.BRICK_RESULTS).abspath()
+	os.environ['BRICK_LOGFILES'] = bld.path.make_node(bld.env.LOGFILES).abspath()
 

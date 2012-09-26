@@ -3,10 +3,10 @@ from waflib.Configure import conf
 
 def configure(conf):
 	conf.start_msg('Checking for program module')
-	# this does not work, since module is a exported as a function on valgol:
+	# this does not work, since module is exported as a function on valgol:
 	# conf.find_program('module')
 	# Therfore:
-	if os.system('module purge') == 0:
+	if os.system('source /usr/local/Modules/current/init/bash && module purge') == 0:
 		conf.end_msg('module')
 	else:
 		conf.end_msg('module not found')
@@ -23,7 +23,7 @@ def load_modules(self,*k,**kw):
 
 	#self.start_msg('Loading modules')
 
-	p = subprocess.Popen('bash /usr/local/Modules/current/init/bash && module load '+module_string+' && export -p', shell=True, stdout=subprocess.PIPE)
+	p = subprocess.Popen('source /usr/local/Modules/current/init/bash && module load '+module_string+' && export -p', shell=True, stdout=subprocess.PIPE)
 	p.wait()
 
 	if p.returncode == 0:
