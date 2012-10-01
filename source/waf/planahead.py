@@ -55,12 +55,12 @@ def scan_planAhead_script(self):
 					files = m1.group(1).split(' ')
 					for file in files:
 						if self.env['BRICK_RESULTS'] in file:
-							output_node = self.path.find_node(file)
-							inputs.append(output_node)
+							input_node = self.path.get_bld().find_node(os.path.join(self.path.bld_dir(),file))
+							inputs.append(input_node)
 						else:
-							output_node = self.path.find_node(file)
-							if output_node:
-								inputs.append(output_node)
+							input_node = self.path.find_node(file)
+							if input_node:
+								inputs.append(input_node)
 							else:
 								raise Errors.ConfigurationError('File '+file+' not found in project file for planAhead project.')
 				else:
@@ -68,12 +68,12 @@ def scan_planAhead_script(self):
 					if m2:
 						file = m2.group(1)
 						if self.env['BRICK_RESULTS'] in file:
-							output_node = self.path.find_node(file)
-							inputs.append(output_node)
+							input_node = self.path.get_bld().find_node(os.path.join(self.path.bld_dir(),file))
+							inputs.append(input_node)
 						else:
-							output_node = self.path.find_node(file)
-							if output_node:
-								inputs.append(output_node)
+							input_node = self.path.find_node(file)
+							if input_node:
+								inputs.append(input_node)
 							else:
 								raise Errors.ConfigurationError('File '+file+' not found in project file for planAhead project.')
 
@@ -102,8 +102,9 @@ def scan_planAhead_script(self):
 			m6 = re.search('launch_run\s+(\w+)',line)
 			if m6:
 				filename = os.path.join(self.project_dir,self.project_name+'.runs',m6.group(1),self.toplevel+'_routed.ncd')
-				outputs.append(self.path.make_node(filename))
+				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),filename)))
 
+	outputs.append(outputs[0].parent.make_node(self.toplevel+'.pcf'))
 	# save output file path to environment
 	self.env['PLANAHEAD_OUTPUT'] = outputs[0].path_from(self.path)
 	# create actual task
@@ -122,22 +123,25 @@ class planAheadTask(Task.Task):
 
 		found_error = 0
 		with open(self.inputs[0].abspath(),'r') as logfile:
-			for line in logfile:
-				# always_ff does not infer sequential logic
-				m0 = re.match('@W: CL216',line)
-				if m0:
-					print line
-					found_error = 1
-				# always_comb does not infer combinatorial logic
-				m0 = re.match('@W: CL217',line)
-				if m0:
-					print line
-					found_error = 1
-				# always_latch does not infer latch logic
-				m0 = re.match('@W: CL218',line)
-				if m0:
-					print line
-					found_error = 1
+			pass
+			# put critical warnings here
+
+			#for line in logfile:
+			#	# always_ff does not infer sequential logic
+			#	m0 = re.match('@W: CL216',line)
+			#	if m0:
+			#		print line
+			#		found_error = 1
+			#	# always_comb does not infer combinatorial logic
+			#	m0 = re.match('@W: CL217',line)
+			#	if m0:
+			#		print line
+			#		found_error = 1
+			#	# always_latch does not infer latch logic
+			#	m0 = re.match('@W: CL218',line)
+			#	if m0:
+			#		print line
+			#		found_error = 1
 
 		return found_error
 

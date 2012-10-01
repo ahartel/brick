@@ -47,12 +47,12 @@ def scan_synplify_project_file(self):
 				except KeyError:
 					print "Variable "+m0_1.group(1)+" not found in "+self.project_file_node.abspath()
 
-				outputs.append(self.path.make_node(result_file))
+				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),result_file)))
 			else:
 				# if the result path is given as a relative path,
 				# synplify save the results relative to the project_file path,
 				# not relative to the path where the program is executed in
-				outputs.append(self.path.make_node(m0.group(1)))
+				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),m0.group(1))))
 
 		# look for the verilog/vhdl input files
 		m1 = re.search('add_file.+"(.+)"',line)
@@ -71,6 +71,7 @@ def scan_synplify_project_file(self):
 	input.close()
 
 	outputs.append(outputs[0].change_ext('.srr'))
+	outputs.append(outputs[0].parent.make_node('synplicity.ucf'))
 
 	# generate synthesis task
 	self.synplify_task = self.create_task('synplifyTask', inputs, outputs)
