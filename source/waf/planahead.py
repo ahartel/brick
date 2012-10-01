@@ -55,10 +55,10 @@ def scan_planAhead_script(self):
 					files = m1.group(1).split(' ')
 					for file in files:
 						if self.env['BRICK_RESULTS'] in file:
-							input_node = self.path.get_bld().find_node(os.path.join(self.path.bld_dir(),file))
+							input_node = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),file))
 							inputs.append(input_node)
 						else:
-							input_node = self.path.find_node(file)
+							input_node = self.path.make_node(file)
 							if input_node:
 								inputs.append(input_node)
 							else:
@@ -68,10 +68,10 @@ def scan_planAhead_script(self):
 					if m2:
 						file = m2.group(1)
 						if self.env['BRICK_RESULTS'] in file:
-							input_node = self.path.get_bld().find_node(os.path.join(self.path.bld_dir(),file))
+							input_node = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),file))
 							inputs.append(input_node)
 						else:
-							input_node = self.path.find_node(file)
+							input_node = self.path.make_node(file)
 							if input_node:
 								inputs.append(input_node)
 							else:

@@ -57,7 +57,23 @@ def scan_synplify_project_file(self):
 		# look for the verilog/vhdl input files
 		m1 = re.search('add_file.+"(.+)"',line)
 		if m1:
-			inputs.append(self.project_file_node.parent.find_node(m1.group(1)))
+			# check if the line contains a reference to a variable
+			m1_1 = re.search('\$(\w+)',m1.group(1))
+			if m1_1:
+				try:
+					result_file = re.sub('\$(\w+)',variables[m1_1.group(1)],m1.group(1))
+				except KeyError:
+					print "Variable "+m1_1.group(1)+" not found in "+self.project_file_node.abspath()
+
+				input_node = self.project_file_node.parent.find_node(result_file)
+				if not input_node:
+					raise Errors.ConfigurationError('File '+m1.group(1)+' not found in synplify project file '+self.project_file_node.abspath())
+				inputs.append(input_node)
+			else:
+				input_node = self.project_file_node.parent.find_node(m1.group(1))
+				if not input_node:
+					raise Errors.ConfigurationError('File '+m1.group(1)+' not found in synplify project file '+self.project_file_node.abspath())
+				inputs.append(input_node)
 
 		# look for variables
 		m3 = re.search('set\s+(.+?)\s+(.+)',line)
@@ -71,6 +87,7 @@ def scan_synplify_project_file(self):
 	input.close()
 
 	outputs.append(outputs[0].change_ext('.srr'))
+	outputs.append(outputs[0].change_ext('.ncf'))
 	outputs.append(outputs[0].parent.make_node('synplicity.ucf'))
 
 	# generate synthesis task
