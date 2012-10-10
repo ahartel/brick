@@ -32,22 +32,26 @@ def configure(conf):
 	except AttributeError:
 		conf.fatal('XILINXLIB not set. Please define a path by setting an environment variable XILINXLIB or by using the option --xilinxlib')
 
-from waflib import TaskGen
-TaskGen.declare_chain(
-        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-        ext_in       = ['.svh',],
-        ext_out      = ['.svh.out',],
-        reentrant    = False,
-        scan         = verilog_scanner,
-)
+	conf.env.INCLUDES_VENDOR = [
+		   os.environ['MODEL_SIM_ROOT']+'/include/',
+	   ]
 
-TaskGen.declare_chain(
-        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-        ext_in       = ['.sv',],
-        ext_out      = ['.sv.out',],
-        reentrant    = False,
-        scan         = verilog_scanner
-)
+from waflib import TaskGen
+#TaskGen.declare_chain(
+#        rule         = 'vlog -l ${VLOG_LOGFILE} -sv ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+#        ext_in       = ['.svh',],
+#        ext_out      = ['.svh.out',],
+#        reentrant    = False,
+#        scan         = verilog_scanner,
+#)
+#
+#TaskGen.declare_chain(
+#        rule         = 'vlog -l ${VLOG_LOGFILE} -sv ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+#        ext_in       = ['.sv',],
+#        ext_out      = ['.sv.out',],
+#        reentrant    = False,
+#        scan         = verilog_scanner
+#)
 
 TaskGen.declare_chain(
         rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
@@ -65,6 +69,19 @@ TaskGen.declare_chain(
 )
 
 from waflib import Task
+class svlogTask(Task.Task):
+	run_str = 'vlog -l ${VLOG_LOGFILE} -sv ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
+
+@TaskGen.extension(".sv",".svh")
+def gen_svlog_task(self,node):
+	input = [node]
+	output = [node.change_ext(node.suffix()+'.out')]
+	sv_task = self.create_task("svlogTask",input,output)
+	additional_inputs = verilog_scanner(sv_task)[0]
+	sv_task.set_inputs(additional_inputs)
+
+
+from waflib import Task
 class vlibTask(Task.Task):
 	def run(self):
 		run_str = 'vlib ${TGT[0].parent.abspath()}'
@@ -77,7 +94,8 @@ def modelsim_prepare(self):
 	self.env.WORKLIB = getattr(self,'worklib','work')
 	# create task to generate worklib (if necessary)
 	worklib = self.path.make_node(self.env.PROJECT_ROOT+'/'+self.env.WORKLIB+'/_info')
-	self.worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
+	if not getattr(self,'worklib_task',None):
+		self.worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
 
 	vsp = getattr(self,'verilog_search_paths',[])
 	self.env.VERILOG_SEARCH_PATHS = []
