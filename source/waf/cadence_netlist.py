@@ -3,13 +3,20 @@ from waflib import Task,Errors,Node,TaskGen,Configure
 
 def configure(conf):
 	conf.env.AMSDESIGNER = 'amsdesigner'
+	if not conf.env.AMSDESIGNER_OPTIONS:
+		conf.env.AMSDESIGNER_OPTIONS = [
+				'-netlist', 'all',
+				'-compile', 'all',
+				'-rundir', '.',
+				'-ncvlogopt', '-use5x', '-64bit',
+			]
 
 class cdsNetlistTask(Task.Task):
 
 	def run(self):
 		"""Checking logfile for critical warnings line by line"""
 
-		run_str = '${AMSDESIGNER} -lib '+self.generator.libname+' -cell '+self.generator.cellname+' -view '+self.generator.viewname+' -netlist all -compile all -rundir . -ncvlogopt -use5x -64bit'
+		run_str = '${AMSDESIGNER} -lib '+self.generator.libname+' -cell '+self.generator.cellname+' -view '+self.generator.viewname+' ${AMSDESIGNER_OPTIONS} '
 
 		(f, dvars) = Task.compile_fun(run_str, False)
 		return f(self)
