@@ -69,14 +69,14 @@ TaskGen.declare_chain(
 )
 
 from waflib import Task
-class svlogTask(Task.Task):
+class ModelsimSvlogTask(Task.Task):
 	run_str = 'vlog -l ${VLOG_LOGFILE} -sv ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
 
 @TaskGen.extension(".sv",".svh")
 def gen_svlog_task(self,node):
 	input = [node]
 	output = [node.change_ext(node.suffix()+'.out')]
-	sv_task = self.create_task("svlogTask",input,output)
+	sv_task = self.create_task("ModelsimSvlogTask",input,output)
 	additional_inputs = verilog_scanner(sv_task)[0]
 	sv_task.set_inputs(additional_inputs)
 
