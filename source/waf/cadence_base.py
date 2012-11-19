@@ -9,8 +9,12 @@ def configure(conf):
 	try:
 		for key,value in conf.env['CDS_LIBS'].iteritems():
 			conf.env['CDS_LIBS_FLAT'][key] = value
-			if not conf.path.find_dir(value):
-				conf.fatal('Cadence library '+key+' not found in '+value+'.')
+			if os.path.isabs(value):
+				if not conf.root.find_dir(value):
+					conf.fatal('Cadence library '+key+' not found in '+value+'.')
+			else:
+				if not conf.path.find_dir(value):
+					conf.fatal('Cadence library '+key+' not found in '+value+'.')
 	except AttributeError, e:
 		conf.fatal('Please specify the environment variable CDS_LIBS before loading module \'cadence_base\'.')
 
@@ -53,9 +57,13 @@ class cdsWriteCdsLibs(Task.Task):
 		cdslib = open(self.outputs[0].abspath(),'w')
 		libdefs = open(self.outputs[1].abspath(),'w')
 		for key,value in self.env['CDS_LIBS'].iteritems():
-			value = self.generator.path.find_dir(value)
-			cdslib.write('DEFINE '+key+' '+value.abspath()+"\n")
-			libdefs.write('DEFINE '+key+' '+value.abspath()+"\n")
+			if os.path.isabs(value):
+				cdslib.write('DEFINE '+key+' '+value+"\n")
+				libdefs.write('DEFINE '+key+' '+value+"\n")
+			else:
+				value = self.generator.path.find_dir(value)
+				cdslib.write('DEFINE '+key+' '+value.abspath()+"\n")
+				libdefs.write('DEFINE '+key+' '+value.abspath()+"\n")
 
 		for value in self.env['CDS_LIB_INCLUDES']:
 			cdslib.write('INCLUDE '+value+"\n")

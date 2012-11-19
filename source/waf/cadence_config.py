@@ -10,10 +10,10 @@ class CDSconfigTask(Task.Task):
 		with open(self.outputs[0].abspath(),'w') as expand_cfg:
 			expand_cfg.write('//Revision 5\n')
 			expand_cfg.write('config ' + self.generator.cellname + ';\n')
-			expand_cfg.write('design ' + self.generator.libname + '.' + self.generator.cellname + ':schematic;\n')
+			expand_cfg.write('design ' + self.generator.design + ';\n')
 			expand_cfg.write('liblist ' + self.generator.liblist + ';\n')
 			expand_cfg.write('\n')
-			expand_cfg.write('viewlist schematic, symbol;\n')
+			expand_cfg.write('viewlist '+self.generator.viewlist+';\n')
 			expand_cfg.write('stoplist symbol;\n')
 			expand_cfg.write('\n')
 			expand_cfg.write('endconfig\n')
@@ -40,13 +40,21 @@ def gen_cds_config_task(self):
 		self.liblist += lib+', '
 	# remove last comma
 	self.liblist = self.liblist.rstrip(',')
-
+	# extract lib, cell and view
 	cellview = getattr(self,'view','')
 	if cellview.find('.') == -1 or cellview.find(':') == -1:
 		Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_config\'.')
 		return
 	(self.libname,rest) = cellview.split(".")
 	(self.cellname,self.viewname) = rest.split(":")
+	# save viewlist
+	try:
+		self.viewlist = ",".join(getattr(self,'viewlist',['schematic','symbol']))
+	except TypeError:
+		Logs.error('Please specify the viewlist as a list with the feature \'cds_config\'.')
+		return
+	# save top-level design
+	self.design = getattr(self,'design',self.libname+'.'+self.cellname+':schematic')
 
 	config_node = None
 	try:

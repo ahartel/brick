@@ -55,7 +55,7 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_SEARCH_PATHS} ${SRC}',
+        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
         ext_in       = ['.vams','.va'],
         reentrant    = False,
 )
