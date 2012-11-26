@@ -52,6 +52,29 @@ def configure(conf):
 			conf.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(conf.path)
 
 
+@TaskGen.taskgen_method
+def get_cellview_path(self,libcellview):
+	# get an instance of the root node
+	# ugly but hackalicious
+	up = "../"
+	for i in range(self.path.height()-1):
+		up += "../"
+	rootnode = self.path.find_dir(up)
+
+	m0 = re.search('(\w+).(\w+):(\w+)', libcellview)
+	if m0:
+		lib = m0.group(1)
+		cell = m0.group(2)
+		view = m0.group(3)
+		if not self.env.CDS_LIBS_FLAT:
+			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
+			return
+		try:
+			return rootnode.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+		except TypeError:
+			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
+
+
 class cdsWriteCdsLibs(Task.Task):
 	def run(self):
 		cdslib = open(self.outputs[0].abspath(),'w')
