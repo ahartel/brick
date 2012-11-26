@@ -1,4 +1,5 @@
 import re,os
+from waflib import TaskGen
 
 # --------------------------------
 # Verilog and VHDL scanner methods
@@ -10,9 +11,13 @@ def get_sv_files_from_include_dir(rootnode,dir):
     content.extend(dir.ant_glob("*.v"))
     return content
 
-def verilog_scanner(task):
+def verilog_scanner_task(task):
+    task.generator.verilog_scanner(task.inputs[0])
+
+@TaskGen.taskgen_method
+def verilog_scanner(self,node):
+    input = open(node.abspath(),'r')
     # look for used packages and packages that are defined in the input file
-    input = open(task.inputs[0].abspath(),'r')
     packages_used = set()
     packages_defined = set()
     includes_used = set()
@@ -41,11 +46,11 @@ def verilog_scanner(task):
     dependencies = []
     # get an instance of the root node
     up = "../"
-    for i in range(task.inputs[0].height()-1):
+    for i in range(node.height()-1):
         up += "../"
-    rootnode = task.inputs[0].find_dir(up)
+    rootnode = node.find_dir(up)
     # loop through search paths to find the file that defines the package
-    for dir in task.env['VERILOG_SEARCH_PATHS']:
+    for dir in self.env['VERILOG_SEARCH_PATHS']:
         if (dir == '-INCDIR'):
             continue
         # convert dir to waf node

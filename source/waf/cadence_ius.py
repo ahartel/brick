@@ -1,8 +1,8 @@
-from verilog_scanner import verilog_scanner
+from verilog_scanner import verilog_scanner_task
 from vhdl_scanner import vhdl_scanner
 import os
 
-from waflib import Task, TaskGen
+from waflib import Task, TaskGen, Logs
 
 def configure(conf):
 	conf.load('brick_general')
@@ -21,7 +21,7 @@ TaskGen.declare_chain(
         ext_in       = ['.v', ],
         ext_out      = ['.v.out',],
         reentrant    = False,
-        scan         = verilog_scanner
+        scan         = verilog_scanner_task
 )
 
 TaskGen.declare_chain(
@@ -29,14 +29,14 @@ TaskGen.declare_chain(
         ext_in       = [ '.lib.src',],
         ext_out      = [ '.lib.src.out',],
         reentrant    = False,
-        scan         = verilog_scanner
+        scan         = verilog_scanner_task
 )
 TaskGen.declare_chain(
         rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.vp', ],
         ext_out      = [ '.vp.out', ],
         reentrant    = False,
-        scan         = verilog_scanner
+        scan         = verilog_scanner_task
 )
 TaskGen.declare_chain(
         rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
@@ -74,7 +74,7 @@ def gen_svlog_task(self,node):
 	input = [node]
 	output = [node.change_ext(node.suffix()+'.out')]
 	sv_task = self.create_task("CadenceSvlogTask",input,output)
-	additional_inputs = verilog_scanner(sv_task)[0]
+	additional_inputs = self.verilog_scanner(input[0])[0]
 	sv_task.set_inputs(additional_inputs)
 
 
@@ -92,7 +92,9 @@ def cds_ius_prepare(self):
 	worklib = self.path.make_node(self.env.PROJECT_ROOT+'/'+self.env.WORKLIB+'/.oalib')
 	if not getattr(self,'worklib_task',None):
 		self.worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
-
+	#
+	# transform search paths to the format used for ncvlog
+	#
 	vsp = getattr(self,'verilog_search_paths',[])
 	self.env.VERILOG_SEARCH_PATHS = []
 	vid = []
@@ -104,6 +106,17 @@ def cds_ius_prepare(self):
 
 	if len(vid) > 0:
 		self.env.VERILOG_INC_DIRS = vid
+
+	#
+	# scan source files for missing packages or include files
+	#
+	for node in self.source:
+		for input in self.verilog_scanner(node)[0]:
+			try:
+				self.source.index(input.change_ext(""))
+			except ValueError:
+				Logs.warn('The included file '+input.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Adding it.')
+				self.source.append(input.change_ext(""))
 
 @Task.always_run
 class ncelabTask(Task.Task):
