@@ -2,8 +2,8 @@ import os
 
 def configure(conf):
 	# This is interpreted relative to the build path
-	if not conf.env.LOGFILES:
-		conf.env.LOGFILES = './logfiles'
+	if not conf.env.BRICK_LOGFILES:
+		conf.env.BRICK_LOGFILES = './logfiles'
 
 	# This is interpreted relative to the build path
 	if not conf.env.BRICK_RESULTS:
@@ -20,8 +20,8 @@ def build(bld):
 		bld.bldnode.make_node(bld.env.BRICK_RESULTS).mkdir()
 	os.environ['BRICK_RESULTS'] = bld.bldnode.make_node(bld.env.BRICK_RESULTS).abspath()
 
-	if not bld.bldnode.find_dir(bld.env.LOGFILES):
-		bld.bldnode.make_node(bld.env.LOGFILES).mkdir()
+	if not bld.bldnode.find_dir(bld.env.BRICK_LOGFILES):
+		bld.bldnode.make_node(bld.env.BRICK_LOGFILES).mkdir()
 	os.environ['BRICK_LOGFILES'] = bld.bldnode.make_node(bld.env.LOGFILES).abspath()
 	os.environ['PROJECT_ROOT'] = bld.path.make_node(bld.env.PROJECT_ROOT).abspath()
 

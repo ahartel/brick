@@ -5,8 +5,8 @@ def configure(conf):
 	conf.load('brick_general')
 
 	"""This function gets called by waf upon loading of this module in a configure method"""
-	if not conf.env.LOGFILES:
-		conf.env.LOGFILES = './'
+	if not conf.env.BRICK_LOGFILES:
+		conf.env.BRICK_LOGFILES = './logfiles'
 	conf.env['CDS_STRMOUT'] = 'strmout'
 	conf.env['CDS_STRMOUT_OPTIONS'] = [
 			'-snapToGrid',

@@ -5,10 +5,9 @@ def configure(conf):
 	conf.load('brick_general')
 
 	"""This function gets called by waf upon loading of this module in a configure method"""
-	if not conf.env.LOGFILES:
-		conf.env.LOGFILES = './'
+	if not conf.env.BRICK_LOGFILES:
+		conf.env.BRICK_LOGFILES = './logfiles'
 	conf.env['CALIBRE_LVS'] = 'calibre'
-	conf.env['V2LVS'] = 'v2lvs'
 	conf.env['CALIBRE_LVS_OPTIONS'] = [
 			'-64',
 		]

@@ -9,9 +9,9 @@ def configure(conf):
 	# this is a hack, because, when using ${CURRENT_RUNDIR} directly inside
 	# the rule definition of the TaskChains, the concatenation with the
 	# logfile name introduces a space between them
-	conf.env.VLOG_LOGFILE = conf.env.LOGFILES+'/vlog_sv.log'
-	conf.env.VCOM_LOGFILE = conf.env.LOGFILES+'/vcom.log'
-	conf.env.VSIM_LOGFILE = conf.env.LOGFILES+'/vsim.log'
+	conf.env.VLOG_LOGFILE = conf.env.BRICK_LOGFILES+'/vlog_sv.log'
+	conf.env.VCOM_LOGFILE = conf.env.BRICK_LOGFILES+'/vcom.log'
+	conf.env.VSIM_LOGFILE = conf.env.BRICK_LOGFILES+'/vsim.log'
 
 	# check xilinxlib
 	XILINXLIB = None

@@ -7,13 +7,13 @@ from waflib import Task, TaskGen, Logs
 def configure(conf):
 	conf.load('brick_general')
 
-	conf.env.NCVLOG_LOGFILE = conf.env.LOGFILES+'/ncvlog.log'
-	conf.env.NCVLOG_SV_LOGFILE = conf.env.LOGFILES+'/ncvlog_sv.log'
-	conf.env.NCVHDL_LOGFILE = conf.env.LOGFILES+'/ncvhdl.log'
-	conf.env.NCVLOG_VAMS_LOGFILE = conf.env.LOGFILES+'/ncvlog_vams.log'
-	conf.env.NCSDFC_LOGFILE = conf.env.LOGFILES+'/ncsdfc.log'
-	conf.env.NCELAB_LOGFILE = conf.env.LOGFILES+'/ncelab.log'
-	conf.env.NCSIM_LOGFILE = conf.env.LOGFILES+'/ncsim.log'
+	conf.env.NCVLOG_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog.log'
+	conf.env.NCVLOG_SV_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog_sv.log'
+	conf.env.NCVHDL_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvhdl.log'
+	conf.env.NCVLOG_VAMS_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog_vams.log'
+	conf.env.NCSDFC_LOGFILE = conf.env.BRICK_LOGFILES+'/ncsdfc.log'
+	conf.env.NCELAB_LOGFILE = conf.env.BRICK_LOGFILES+'/ncelab.log'
+	conf.env.NCSIM_LOGFILE = conf.env.BRICK_LOGFILES+'/ncsim.log'
 
 
 TaskGen.declare_chain(
