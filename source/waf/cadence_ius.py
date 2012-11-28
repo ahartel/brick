@@ -2,7 +2,7 @@ from verilog_scanner import verilog_scanner_task
 from vhdl_scanner import vhdl_scanner
 import os
 
-from waflib import Task, TaskGen, Logs
+from waflib import Task, TaskGen, Logs, Node
 
 def configure(conf):
 	conf.load('brick_general')
@@ -17,7 +17,7 @@ def configure(conf):
 
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.v', ],
         ext_out      = ['.v.out',],
         reentrant    = False,
@@ -25,21 +25,21 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.lib.src',],
         ext_out      = [ '.lib.src.out',],
         reentrant    = False,
         scan         = verilog_scanner_task
 )
 TaskGen.declare_chain(
-        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.vp', ],
         ext_out      = [ '.vp.out', ],
         reentrant    = False,
         scan         = verilog_scanner_task
 )
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
         ext_out      = ['.vhd.out'],
         scan         = vhdl_scanner,
@@ -47,7 +47,7 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvhdl -64bit -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhdl'],
         ext_out      = ['.vhdl.out'],
         scan         = vhdl_scanner,
@@ -55,19 +55,19 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
+        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
         ext_in       = ['.vams','.va'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC}',
+        rule         = 'ncsdfc -logfile ${NCSDFC_LOGFILE}_${TGT[0]} ${NCSDFC_OPTIONS} ${SRC}',
         ext_in       = ['.sdf','.sdf.gz'],
         reentrant    = False,
 )
 
 class CadenceSvlogTask(Task.Task):
-	run_str = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
+	run_str = 'ncvlog -logfile ${NCVLOG_SV_LOGFILE}_${TGT[0]} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
 
 @TaskGen.extension(".sv",".svh")
 def gen_svlog_task(self,node):
@@ -109,6 +109,7 @@ def cds_ius_prepare(self):
 
 	#
 	# scan source files for missing packages or include files
+	# and add source files for missing packages or includes
 	#
 	for node in self.source:
 		for input in self.verilog_scanner(node)[0]:
