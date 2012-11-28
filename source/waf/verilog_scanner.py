@@ -35,11 +35,9 @@ def verilog_scanner(self,node):
         if (m3 is not None):
             includes_used.add(m3.group(1))
 
+	#print includes_used
+
     input.close()
-    #if packages_used or packages_defined:
-    #    print "Scanner output for ",task.inputs[0].abspath()
-    #    print packages_used
-    #    print packages_defined
     # now make use of a very cool python feature: set difference
     packages = packages_used-packages_defined
     # all dependencies will be put into this list
@@ -77,13 +75,11 @@ def verilog_scanner(self,node):
                 # ... and the generated pseudo-source file
                 dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out'))
             # add the current file to the depencies if it's an included file
-            #if os.path.basename(file.abspath()) in includes_used:
-			#	print file
-            #    dependencies.append(file)
+            if os.path.basename(file.abspath()) in includes_used:
+                dependencies.append(file.change_ext(file.suffix()+'.out'))
 
+	#print dependencies
     # return dependencies
-    #print task.inputs[0].abspath()
-    #print dependencies
     return (dependencies,[])
 
 
