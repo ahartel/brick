@@ -1,15 +1,17 @@
 import os,re,copy
-from waflib import Configure, TaskGen, Task
+from waflib import Configure, TaskGen, Task, Logs
 
 def configure(conf):
 	# Here, we check if all the libraries given in CDS_LIBS
 	# and all the include paths defined in CDS_LIB_INCLUDES
 	# exist and merge them into CDS_LIBS_FLAT.
 	conf.env['CDS_LIBS_FLAT'] = {}
+	found_absolute_path = False
 	try:
 		for key,value in conf.env['CDS_LIBS'].iteritems():
 			conf.env['CDS_LIBS_FLAT'][key] = value
 			if os.path.isabs(value):
+				found_absolute_path = True
 				if not conf.root.find_dir(value):
 					conf.fatal('Cadence library '+key+' not found in '+value+'.')
 			else:
@@ -17,6 +19,9 @@ def configure(conf):
 					conf.fatal('Cadence library '+key+' not found in '+value+'.')
 	except AttributeError, e:
 		conf.fatal('Please specify the environment variable CDS_LIBS before loading module \'cadence_base\'.')
+
+	if found_absolute_path:
+		Logs.warn('Defining absolute paths in conf.env.CDS_LIBS can lead to undefined behavior, expecially when doing so for your worklib!')
 
 	try:
 		my_includes = copy.copy(conf.env['CDS_LIB_INCLUDES'])

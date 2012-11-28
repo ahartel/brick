@@ -30,6 +30,9 @@ from waflib.Configure import conf
 @conf
 def convert_string_paths(self,list_of_paths):
 	SOURCES = []
+	if not type(list_of_paths) == type([]):
+		self.fatal('You must give a list of strings as parameter to convert_string_paths')
+
 	for src in list_of_paths:
 		if os.path.isabs(src):
 			SOURCES.append(self.root.find_node(src))
