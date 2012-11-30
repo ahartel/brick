@@ -11,30 +11,21 @@ def configure(conf):
 	conf.env['CALIBRE_LVS_OPTIONS'] = [
 			'-64',
 		]
-	conf.env.CALIBRE_LVS_RULES = conf.path.get_bld().make_node(os.path.join(conf.path.bld_dir(),'lvs_rules')).abspath()
 
 
 @TaskGen.feature('calibre_lvs')
 def create_calibre_lvs_task(self):
-	# check whether the source_netlist is a lib.cell:view
-	# if so, interpose a v2lvs task
-	source_netlist = getattr(self,'source_netlist',"")
-	if type(source_netlist) == type(""):
-		m0 = re.search('(\w+).(\w+):(\w+)', source_netlist)
-		if m0:
-			source_netlist = self.get_cellview_path(source_netlist).find_node('verilog.vams')
 
-	lvs_netlist = source_netlist.change_ext('.src.net')
-	v2lvs_task = self.create_task('v2lvsTask',source_netlist,lvs_netlist)
+	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_lvs_rules_'+self.cellname))
 
-	f = open(self.env.CALIBRE_LVS_RULES,"w")
+	f = open(self.rule_file.abspath(),"w")
 	f.write("""
 LAYOUT PATH "{0}"
 LAYOUT PRIMARY {1}
 LAYOUT SYSTEM GDSII
-LAYOUT CASE NO
+LAYOUT CASE YES
 
-SOURCE PATH "{2}.src.net"
+SOURCE PATH "{2}"
 SOURCE PRIMARY "{3}"
 SOURCE SYSTEM SPICE
 SOURCE CASE YES
@@ -52,24 +43,33 @@ DRC ICSTATION YES
 
 LVS POWER  NAME VDD
 LVS GROUND NAME GND
-	""".format(self.layout_gds.abspath(),self.cellname,lvs_netlist.abspath(),self.cellname,self.cellname))
+	""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.cellname))
 
 	for inc in self.includes:
 		f.write('\nINCLUDE '+inc.abspath())
 
 	f.close()
 
-	t = self.create_task('calibreLvsTask', [self.layout_gds,lvs_netlist], self.path.make_node(self.cellname+".lvs.report"))
+	t = self.create_task('calibreLvsTask', [self.layout_gds,self.source_netlist], self.path.make_node(self.cellname+".lvs.report"))
 
-class v2lvsTask(Task.Task):
-	run_str = '${V2LVS} -v ${SRC[0].abspath()} -o {TGT[0].abspath()}'
-	#v2lvs ${INCLUDE_VNETLISTS} -n -v ${NETLISTSRC} -o ${CELLNAME}.src.net ${INCLUDE_NETLISTS} >& ${LOGFILE2}
 
-@Task.always_run
+
 class calibreLvsTask(Task.Task):
-	vars = ['CALIBRE_LVS']
-	run_str = '${CALIBRE_LVS} -lvs ${CALIBRE_LVS_OPTIONS} ${CALIBRE_LVS_RULES}'
+	vars = ['CALIBRE_LVS','CALIBRE_LVS_OPTIONS','CALIBRE_LVS_RULES']
+	def run(self):
+		run_str = '%s -lvs %s %s' % (self.env.CALIBRE_LVS, " ".join(self.env.CALIBRE_LVS_OPTIONS), self.generator.rule_file.abspath())
+		out = ""
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout
 
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_lvs_'+self.generator.cellname+'.log'))
+		f = open(logfile.abspath(),'w')
+		f.write(out)
+		f.close()
+
+		return 0
 
 
 # for convenience
