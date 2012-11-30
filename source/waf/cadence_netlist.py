@@ -1,4 +1,4 @@
-import os
+import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure
 
 def configure(conf):
@@ -11,6 +11,8 @@ def configure(conf):
 				'-ncvlogopt', '-use5x', '-64bit',
 			]
 
+	conf.env['CADENCE_SI'] = 'si'
+
 class cdsNetlistTask(Task.Task):
 
 	def run(self):
@@ -20,6 +22,9 @@ class cdsNetlistTask(Task.Task):
 
 		(f, dvars) = Task.compile_fun(run_str, False)
 		return f(self)
+
+class auCdlTask(Task.Task):
+	run_str = 'rm -f .running && ${CADENCE_SI} -batch -command netlist'
 
 
 #	def run(self):
@@ -35,7 +40,7 @@ class cdsNetlistTask(Task.Task):
 #	#def runnable_status(self):
 #	#    pass
 
-@TaskGen.feature('cds_netlist')
+@TaskGen.feature('cds_netlist_sim')
 def add_cds_netlist_target(self):
 	try:
 		cellview = getattr(self,'view','')
@@ -56,10 +61,58 @@ def add_cds_netlist_target(self):
 	except ValueError:
 		raise Errors.ConfigurationError('For feature "cds_netlist", you need to specify a parameter "toplevel" in the form of lib.cell:view')
 
-# for convenience
-@Configure.conf
-def cds_netlist(bld,*k,**kw):
-	set_features(kw,'cds_netlist')
-	return bld(*k,**kw)
+@TaskGen.feature('cds_netlist_lvs')
+def add_cds_netlist_lvs_target(self):
+	m0 = re.search('(\w+).(\w+):(\w+)', self.cellview)
+	if m0:
+		# the input file of the netlist task
+		source_netlist = self.get_cellview_path(self.cellview).find_node('sch.oa')
+		# the configuration file for the netlister
+		si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env'))
+		si_env_copy = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'si.env'))
+		# the output netlist
+		lvs_netlist_filename = m0.group(1)+'_'+m0.group(2)+'.src.net'
+		lvs_netlist = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,lvs_netlist_filename))
+		f1 = open(si_env.abspath(),"w")
+		f2 = open(si_env_copy.abspath(),"w")
+		si_env_content = """
+simLibName = "{0}"
+simCellName = "{1}"
+simViewName = "{2}"
+simSimulator = "auCdl"
+simNotIncremental = nil
+simReNetlistAll = nil
+simViewList = '("symbol" "schematic")
+simStopList = '("symbol")
+simNetlistHier = t
+hnlNetlistFileName = "{3}"
+simRunDir = "{4}"
+resistorModel = " "
+shortRES = 2000.0
+preserveRES = 'nil
+checkRESVAL = 'nil
+checkRESSIZE = 'nil
+preserveCAP = 'nil
+checkCAPVAL = 'nil
+checkCAPAREA = 'nil
+preserveDIO = 'nil
+checkDIOAREA = 'nil
+checkDIOPERI = 'nil
+displayPININFO = 'nil
+preserveALL = 'nil
+incFILE = "{5}"
+setEQUIV = ""
+		""".format(m0.group(1),m0.group(2),m0.group(3),lvs_netlist_filename,self.env.BRICK_RESULTS,getattr(self,'include',''))#'/afs/kip.uni-heidelberg.de/cad/libs/tsmc/cdb/models/hspice/hspice.mdl')#/superfast/home/ahartel/chip-route65/env/include_all_models.scs')
+		f1.write(si_env_content)
+		f2.write(si_env_content)
+		f1.close()
+		f2.close()
+
+		aucdl_task = self.create_task('auCdlTask',source_netlist,lvs_netlist)
+	else:
+		Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_netlist_lvs\'.')
+
+
+
 
 

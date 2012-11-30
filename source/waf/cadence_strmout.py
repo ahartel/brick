@@ -16,19 +16,19 @@ def configure(conf):
 @TaskGen.feature('cds_strmout')
 def create_cds_strmout_task(self):
 	try:
-		cellview = getattr(self,'view','')
+		cellview = getattr(self,'cellview','')
 		if cellview.find('.') == -1 or cellview.find(':') == -1:
 			Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_strmout\'.')
 			return
 		(self.libname,rest) = cellview.split(".")
 		(self.cellname,self.viewname) = rest.split(":")
+		layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
 
-		t = self.create_task('cdsStrmoutTask', None,getattr(self,'strmfile',None))
+		t = self.create_task('cdsStrmoutTask', layout_node,getattr(self,'strmfile',None))
 	except ValueError:
 		raise Errors.ConfigurationError('For feature "cds_strmout", you need to specify a parameter "view" in the form of lib.cell:view')
 
 
-@Task.always_run
 class cdsStrmoutTask(Task.Task):
 	vars = ['CDS_STRMOUT']
 
