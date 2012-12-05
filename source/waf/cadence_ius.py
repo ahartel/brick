@@ -15,6 +15,12 @@ def configure(conf):
 	conf.env.NCELAB_LOGFILE = conf.env.BRICK_LOGFILES+'/ncelab.log'
 	conf.env.NCSIM_LOGFILE = conf.env.BRICK_LOGFILES+'/ncsim.log'
 
+	if not conf.env.NCVLOG_OPTIONS:
+		conf.env.NCVLOG_OPTIONS = ['-64bit','-use5x']
+	if not conf.env.NCVLOG_SV_OPTIONS:
+		conf.env.NCVLOG_SV_OPTIONS = ['-64bit','-use5x']
+	if not conf.env.NCVLOG_VAMS_OPTIONS:
+		conf.env.NCVLOG_VAMS_OPTIONS = ['-64bit','-use5x']
 
 TaskGen.declare_chain(
         rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
@@ -71,10 +77,20 @@ class CadenceSvlogTask(Task.Task):
 
 @TaskGen.extension(".sv",".svh")
 def gen_svlog_task(self,node):
+	import types
+	# create task
 	input = [node]
 	output = [node.change_ext(node.suffix()+'.out')]
 	sv_task = self.create_task("CadenceSvlogTask",input,output)
-	additional_inputs = self.verilog_scanner(input[0])[0]
+	sv_task.scan = types.MethodType(verilog_scanner_task,sv_task)
+	# <--- up to here the actual task has been created
+	# now we need to make some depencies explicit because
+	# the compiler needs those for packages --->
+	dep_files,dep_types = self.verilog_scanner(input[0])
+	additional_inputs = []
+	for dep_file, dep_type in zip(dep_files,dep_types):
+		if dep_type == 'package':
+			additional_inputs.append(dep_file)
 	sv_task.set_inputs(additional_inputs)
 
 
@@ -112,12 +128,14 @@ def cds_ius_prepare(self):
 	# and add source files for missing packages or includes
 	#
 	for node in self.source:
-		for input in self.verilog_scanner(node)[0]:
-			try:
-				self.source.index(input.change_ext(""))
-			except ValueError:
-				Logs.warn('The included file '+input.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Adding it.')
-				self.source.append(input.change_ext(""))
+		dep_files,dep_types = self.verilog_scanner(node)
+		for dep_file,dep_type in zip(dep_files,dep_types):
+			if dep_type == 'package':
+				try:
+					self.source.index(dep_file.change_ext(""))
+				except ValueError:
+					Logs.warn('The included file '+dep_file.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Adding it.')
+					self.source.append(dep_file.change_ext(""))
 
 @Task.always_run
 class ncelabTask(Task.Task):

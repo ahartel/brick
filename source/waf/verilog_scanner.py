@@ -12,7 +12,7 @@ def get_sv_files_from_include_dir(rootnode,dir):
     return content
 
 def verilog_scanner_task(task):
-    task.generator.verilog_scanner(task.inputs[0])
+    return task.generator.verilog_scanner(task.inputs[0])
 
 @TaskGen.taskgen_method
 def verilog_scanner(self,node):
@@ -35,13 +35,14 @@ def verilog_scanner(self,node):
         if (m3 is not None):
             includes_used.add(m3.group(1))
 
-	#print includes_used
+    #print includes_used
 
     input.close()
     # now make use of a very cool python feature: set difference
     packages = packages_used-packages_defined
     # all dependencies will be put into this list
     dependencies = []
+    dependency_types = []
     # get an instance of the root node
     up = "../"
     for i in range(node.height()-1):
@@ -74,12 +75,14 @@ def verilog_scanner(self,node):
                 # dependencies.append(file)
                 # ... and the generated pseudo-source file
                 dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out'))
+                dependency_types.append('package')
             # add the current file to the depencies if it's an included file
             if os.path.basename(file.abspath()) in includes_used:
-                dependencies.append(file.change_ext(file.suffix()+'.out'))
+                dependencies.append(file)
+                dependency_types.append('include')
 
-	#print dependencies
+    #print dependencies
     # return dependencies
-    return (dependencies,[])
+    return (dependencies,dependency_types)
 
 
