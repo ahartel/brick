@@ -56,7 +56,6 @@ def configure(conf):
 			conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
 			conf.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(conf.path)
 
-
 @TaskGen.taskgen_method
 def get_cellview_path(self,libcellview):
 	# get an instance of the root node
@@ -75,7 +74,10 @@ def get_cellview_path(self,libcellview):
 			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
 			return
 		try:
-			return rootnode.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+			if os.path.isabs(self.env.CDS_LIBS_FLAT[lib]):
+				return rootnode.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+			else:
+				return self.path.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
 		except TypeError:
 			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
 

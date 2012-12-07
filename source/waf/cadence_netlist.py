@@ -1,5 +1,5 @@
 import os,re
-from waflib import Task,Errors,Node,TaskGen,Configure
+from waflib import Task,Errors,Node,TaskGen,Configure,Logs
 
 def configure(conf):
 	conf.env.AMSDESIGNER = 'amsdesigner'
@@ -66,7 +66,11 @@ def add_cds_netlist_lvs_target(self):
 	m0 = re.search('(\w+).(\w+):(\w+)', self.cellview)
 	if m0:
 		# the input file of the netlist task
-		source_netlist = self.get_cellview_path(self.cellview).find_node('sch.oa')
+		try:
+			source_netlist = self.get_cellview_path(self.cellview).find_node('sch.oa')
+		except AttributeError:
+			Logs.error('Could not find cellview "'+self.cellview+'" in cds_netlist_lvs.')
+			return
 		# the configuration file for the netlister
 		si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env'))
 		si_env_copy = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'si.env'))
