@@ -28,13 +28,20 @@ def configure(conf):
 def create_calibre_pex_task(self):
 
 	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_pex_rules_'+self.cellname))
+	self.xcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_xcells_'+self.cellname))
 
 	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
 	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
 
+	selected_nets = ""
+	if hasattr(self,'only_extract_nets'):
+		selected_nets = 'PEX EXTRACT INCLUDE SOURCENAMES TOPLEVEL "'+'" "'.join(getattr(self,'only_extract_nets',[]))
+
 	f = open(self.rule_file.abspath(),"w")
 	try:
-		f.write("""
+		f.write("""#!tvf
+tvf::VERBATIM {{
+
 LAYOUT PATH "{0}"
 LAYOUT PRIMARY "{1}"
 LAYOUT SYSTEM GDSII
@@ -47,11 +54,10 @@ SOURCE CASE YES
 
 MASK SVDB DIRECTORY "{5}" QUERY XRC CCI NOPINLOC IXF NXF SLPH
 
-LVS REPORT "{4}.lvs.report"
 
 PEX NETLIST "{4}.pex.netlist" HSPICE 1 SOURCENAMES GROUND "gnd" LOCATION RCNAMED RLOCATION RWIDTH RLENGTH RLAYER RTHICKNESS 
+{6}
 PEX REPORT "{4}.pex.report" SOURCENAMES
-PEX EXTRACT INCLUDE SOURCENAMES TOPLEVEL "{6}"
 PEX REDUCE ANALOG NO
 PEX REDUCE MINCAP COMBINE 0.001
 PEX REDUCE MINCAP REMOVE 0
@@ -62,28 +68,8 @@ PEX NETLIST VIRTUAL CONNECT NO
 PEX NETLIST NOXREF NET NAMES NO
 PEX NETLIST MUTUAL RESISTANCE YES
 
-
-LVS REPORT OPTION NONE
-LVS FILTER UNUSED OPTION AG RC RE RG SOURCE
-LVS FILTER UNUSED OPTION AG RC RE RG LAYOUT
-
-LVS RECOGNIZE GATES NONE
-
 DRC ICSTATION YES
-
-LVS POWER NAME
-"vdd"
-"vdd12a"
-"vdd12d"
-"vdd25a"
-"vdd25d"
-"vdd"
-LVS GROUND NAME
-"gnd"
-"gnda"
-"gndd"
-"gnd"
-		""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath(),'" "'.join(getattr(self,'only_extract_nets',[]))))
+	""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath(),selected_nets))
 
 	except AttributeError as e:
 		error_string = str(e)
@@ -94,22 +80,31 @@ LVS GROUND NAME
 	for inc in self.includes:
 		f.write('\nINCLUDE "'+inc.abspath()+'"')
 
-	#for line in getattr(self,'mixins',[]):
-	#	f.write('\n'+line)
+	for line in getattr(self,'mixins',[]):
+		f.write('\n'+line)
 
+	f.write('\n}')
 	f.close()
 
-	t = self.create_task('calibrePexTask', [self.layout_gds,self.source_netlist], self.output_file_base.change_ext(".pex.netlist"))
+	if hasattr(self,'xcells'):
+		f = open(self.xcells_file.abspath(),"w")
+		f.write("\n".join(getattr(self,'xcells',[])))
+		f.close()
 
+	t = self.create_task('calibrePexTask', [self.svdb.make_node(self.cellname+'.sp'),self.layout_gds,self.source_netlist], self.output_file_base.change_ext(".pex.netlist"))
 
+@Task.always_run
 class calibrePexTask(Task.Task):
 	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT']
 
-	def run_pex(self,stepname):
+	def run_pdb(self):
 		conditional_options = ""
-		if hasattr(self.generator,'only_extract_nets') and stepname == 'pdb':
+		if hasattr(self.generator,'only_extract_nets'): 
 			conditional_options += ' -select'
-		run_str = '%s -xrc -%s %s %s %s' % (self.env.CALIBRE_PEX, stepname, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_'+stepname.upper()]), self.generator.rule_file.abspath())
+		if hasattr(self.generator,'xcells'):
+			conditional_options += ' -xcell '+self.generator.xcells_file.abspath()
+
+		run_str = '%s -xrc -pdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PDB']), self.generator.rule_file.abspath())
 
 		out = ""
 
@@ -118,13 +113,35 @@ class calibrePexTask(Task.Task):
 		except Exception as e:
 			out = e.stdout + e.stderr
 
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_pex_'+stepname+'_'+self.generator.cellname+'.log'))
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_pex_pdb_'+self.generator.cellname+'.log'))
+		f = open(logfile.abspath(),'w')
+		f.write(out)
+		f.close()
+
+
+	def run_fmt(self):
+		conditional_options = ""
+		if hasattr(self.generator,'xcells'):
+			conditional_options = ' -full'
+		run_str = '%s -xrc -fmt %s %s %s' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_FMT']), self.generator.rule_file.abspath())
+
+		out = ""
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_pex_fmt_'+self.generator.cellname+'.log'))
 		f = open(logfile.abspath(),'w')
 		f.write(out)
 		f.close()
 
 	def run_lvs(self):
-		run_str = '%s -lvs -hier -spice %s %s %s' % (self.env.CALIBRE_PEX, self.generator.svdb.make_node(self.generator.cellname+'.sp').abspath(), " ".join(self.env['CALIBRE_PEX_OPT_LVS']), self.generator.rule_file.abspath())
+		conditional_options = ""
+		if hasattr(self.generator,'hcells'):
+			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
+		run_str = '%s -lvs -hier %s -spice %s %s %s' % (self.env.CALIBRE_PEX, conditional_options ,self.generator.svdb.make_node(self.generator.cellname+'.sp').abspath(), " ".join(self.env['CALIBRE_PEX_OPT_LVS']), self.generator.rule_file.abspath())
 		out = ""
 		try:
 			out = self.generator.bld.cmd_and_log(run_str)
@@ -139,11 +156,11 @@ class calibrePexTask(Task.Task):
 	def run(self):
 		# phdb
 		#self.run_pex('phdb')
-		self.run_lvs()
+		#self.run_lvs()
 		# pdb
-		self.run_pex('pdb')
+		self.run_pdb()
 		# fmt
-		self.run_pex('fmt')
+		self.run_fmt()
 
 		return 0
 
