@@ -47,6 +47,8 @@ LAYOUT PRIMARY "{1}"
 LAYOUT SYSTEM GDSII
 LAYOUT CASE YES
 
+//LAYOUT RENAME TEXT "/</\\[/g" "/>/\\]/g"
+
 SOURCE PATH "{2}"
 SOURCE PRIMARY "{3}"
 SOURCE SYSTEM SPICE
@@ -55,7 +57,7 @@ SOURCE CASE YES
 MASK SVDB DIRECTORY "{5}" QUERY XRC CCI NOPINLOC IXF NXF SLPH
 
 
-PEX NETLIST "{4}.pex.netlist" HSPICE 1 SOURCENAMES GROUND "gnd" LOCATION RCNAMED RLOCATION RWIDTH RLENGTH RLAYER RTHICKNESS 
+PEX NETLIST "{4}.pex.netlist" HSPICE 1 SOURCENAMES GROUND "gnd" LOCATION RCNAMED RLOCATION RWIDTH RLENGTH RLAYER RTHICKNESS SEPARATOR "_"
 {6}
 PEX REPORT "{4}.pex.report" SOURCENAMES
 PEX REDUCE ANALOG NO
@@ -67,6 +69,8 @@ PEX NETLIST UPPERCASE KEYWORDS NO
 PEX NETLIST VIRTUAL CONNECT NO
 PEX NETLIST NOXREF NET NAMES NO
 PEX NETLIST MUTUAL RESISTANCE YES
+//PEX NETLIST ESCAPE CHARACTERS "<>"
+PEX NETLIST CHARACTER MAP "<[ >] %_"
 
 DRC ICSTATION YES
 	""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath(),selected_nets))
@@ -93,7 +97,6 @@ DRC ICSTATION YES
 
 	t = self.create_task('calibrePexTask', [self.svdb.make_node(self.cellname+'.sp'),self.layout_gds,self.source_netlist], self.output_file_base.change_ext(".pex.netlist"))
 
-@Task.always_run
 class calibrePexTask(Task.Task):
 	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT']
 
