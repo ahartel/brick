@@ -44,7 +44,7 @@ def create_synopsys_dcshell_task(self):
 	if not self.results_dir.find_dir('reports'):
 		self.results_dir.make_node('reports').mkdir()
 
-	output_netlist = self.results_dir.find_node('results').find_node(self.toplevel+'.v')
+	output_netlist = self.results_dir.find_node('results').make_node(self.toplevel+'.v')
 
 	# load extra package with tcl templates
 	from synopsys_dcshell_tcl import dc_shell_setup_tcl, dc_shell_main_tcl
