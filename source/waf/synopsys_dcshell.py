@@ -31,6 +31,8 @@ def create_synopsys_dcshell_task(self):
 
 
 	# check for existance of results dir
+	# the actual results dir is a subdirectory of BRICK_RESULTS
+	# called dc_shell_$DESIGN_NAME
 	self.results_dir = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS))
 	if not self.results_dir.find_dir('dc_shell_'+self.toplevel):
 		self.results_dir = self.results_dir.make_node('dc_shell_'+self.toplevel)
@@ -42,7 +44,7 @@ def create_synopsys_dcshell_task(self):
 	if not self.results_dir.find_dir('reports'):
 		self.results_dir.make_node('reports').mkdir()
 
-	#output_library = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.toplevel+'.lib'))
+	output_netlist = self.results_dir.find_node('results').find_node(self.toplevel+'.v')
 
 	# load extra package with tcl templates
 	from synopsys_dcshell_tcl import dc_shell_setup_tcl, dc_shell_main_tcl
@@ -56,6 +58,7 @@ def create_synopsys_dcshell_task(self):
 	f.close()
 
 	# write setup tcl script (containing mostly process specific data)
+	# the only variable input here is the DESIGN_NAME a.k.a. self.toplevel
 	f = open(self.setup_tcl_script.abspath(),"w")
 	f.write(dc_shell_setup_tcl[getattr(self,'process','default')] % (self.toplevel))
 	f.close()
@@ -72,7 +75,7 @@ def create_synopsys_dcshell_task(self):
 	f.write(sourcelist_string)
 	f.close()
 
-	t = self.create_task('synopsysDcshellTask', self.systemverilog_sources+self.verilog_sources, None)
+	t = self.create_task('synopsysDcshellTask', self.systemverilog_sources+self.verilog_sources, output_netlist)
 
 
 class synopsysDcshellTask(Task.Task):
