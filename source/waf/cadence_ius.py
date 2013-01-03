@@ -61,8 +61,16 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
-        ext_in       = ['.vams','.va'],
+        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.vams'],
+        ext_out      = ['.vams.out'],
+        reentrant    = False,
+)
+
+TaskGen.declare_chain(
+        rule         = 'ncvlog -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.va'],
+        ext_out      = ['.va.out'],
         reentrant    = False,
 )
 
