@@ -21,7 +21,7 @@ def configure(conf):
 		conf.fatal('Please specify the environment variable CDS_LIBS before loading module \'cadence_base\'.')
 
 	if found_absolute_path:
-		Logs.warn('Defining absolute paths in conf.env.CDS_LIBS can lead to undefined behavior, expecially when doing so for your worklib!')
+		Logs.warn('Defining absolute paths in conf.env.CDS_LIBS can lead to undefined behavior, especially when doing so for your worklib!')
 
 	try:
 		my_includes = copy.copy(conf.env['CDS_LIB_INCLUDES'])
