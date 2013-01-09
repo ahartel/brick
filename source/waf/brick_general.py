@@ -27,6 +27,7 @@ def build(bld):
 
 
 from waflib.Configure import conf
+from waflib.Errors import WafError
 @conf
 def convert_string_paths(self,list_of_paths):
 	SOURCES = []
@@ -34,6 +35,8 @@ def convert_string_paths(self,list_of_paths):
 		self.fatal('You must give a list of strings as parameter to convert_string_paths')
 
 	for src in list_of_paths:
+		if not os.path.exists(src):
+			raise WafError('File '+src+' not found in function \'convert_string_paths\'.')
 		if os.path.isabs(src):
 			SOURCES.append(self.root.find_node(src))
 		else:

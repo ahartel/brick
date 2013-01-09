@@ -16,6 +16,8 @@ class CDSconfigTask(Task.Task):
 			expand_cfg.write('viewlist '+self.generator.viewlist+';\n')
 			expand_cfg.write('stoplist symbol;\n')
 			expand_cfg.write('\n')
+			expand_cfg.write(self.generator.mixins)
+			expand_cfg.write('\n')
 			expand_cfg.write('endconfig\n')
 
 		with open(self.outputs[1].abspath(),'w') as master_tag:
@@ -55,6 +57,8 @@ def gen_cds_config_task(self):
 		return
 	# save top-level design
 	self.design = getattr(self,'design',self.libname+'.'+self.cellname+':schematic')
+	# mixins
+	self.mixins = "\n".join(getattr(self,'mixins',[]))
 
 	config_node = None
 	try:
