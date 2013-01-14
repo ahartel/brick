@@ -24,7 +24,14 @@ class cdsNetlistTask(Task.Task):
 		return f(self)
 
 class auCdlTask(Task.Task):
-	run_str = 'rm -f .running && ${CADENCE_SI} -batch -command netlist'
+	#run_str = 'rm -f .running && cp ${SRC[1].abspath()} si.env && cp si.env ${BRICK_RESULTS} && ${CADENCE_SI} -batch -command netlist'
+	def run(self):
+
+		run_str = 'rm -f .running && cp '+self.generator.si_env.abspath()+' si.env && cp si.env ${BRICK_RESULTS} && ${CADENCE_SI} -batch -command netlist'
+
+		(f, dvars) = Task.compile_fun(run_str, False)
+		return f(self)
+
 
 
 #	def run(self):
@@ -72,13 +79,11 @@ def add_cds_netlist_lvs_target(self):
 			Logs.error('Could not find cellview "'+self.cellview+'" in cds_netlist_lvs.')
 			return
 		# the configuration file for the netlister
-		si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env'))
-		si_env_copy = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'si.env'))
+		self.si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env_'+m0.group(1)+'_'+m0.group(2)+'_'+m0.group(3)))
 		# the output netlist
 		lvs_netlist_filename = m0.group(1)+'_'+m0.group(2)+'.src.net'
 		lvs_netlist = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,lvs_netlist_filename))
-		f1 = open(si_env.abspath(),"w")
-		f2 = open(si_env_copy.abspath(),"w")
+		f1 = open(self.si_env.abspath(),"w")
 		si_env_content = """
 simLibName = "{0}"
 simCellName = "{1}"
@@ -108,11 +113,9 @@ incFILE = "{5}"
 setEQUIV = ""
 		""".format(m0.group(1),m0.group(2),m0.group(3),lvs_netlist_filename,self.env.BRICK_RESULTS,getattr(self,'include',''))#'/afs/kip.uni-heidelberg.de/cad/libs/tsmc/cdb/models/hspice/hspice.mdl')#/superfast/home/ahartel/chip-route65/env/include_all_models.scs')
 		f1.write(si_env_content)
-		f2.write(si_env_content)
 		f1.close()
-		f2.close()
 
-		aucdl_task = self.create_task('auCdlTask',source_netlist,lvs_netlist)
+		aucdl_task = self.create_task('auCdlTask',[source_netlist],lvs_netlist)
 	else:
 		Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_netlist_lvs\'.')
 

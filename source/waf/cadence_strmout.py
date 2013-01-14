@@ -24,7 +24,8 @@ def create_cds_strmout_task(self):
 		(self.cellname,self.viewname) = rest.split(":")
 		layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
 
-		t = self.create_task('cdsStrmoutTask', layout_node,getattr(self,'strmfile',None))
+		strmfile = getattr(self,'strmfile', self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.libname+'_'+self.cellname+'.gds')))
+		t = self.create_task('cdsStrmoutTask', layout_node, strmfile)
 	except ValueError:
 		raise Errors.ConfigurationError('For feature "cds_strmout", you need to specify a parameter "view" in the form of lib.cell:view')
 
