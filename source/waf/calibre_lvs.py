@@ -9,7 +9,7 @@ def configure(conf):
 		conf.env.BRICK_LOGFILES = './logfiles'
 	conf.env['CALIBRE_LVS'] = 'calibre'
 	conf.env['CALIBRE_LVS_OPTIONS'] = [
-			'-64',
+			'-64', '-hier',
 		]
 
 
@@ -21,6 +21,12 @@ def create_calibre_lvs_task(self):
 
 	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
 	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
+	if not os.path.exists(self.svdb.abspath()):
+		self.svdb.mkdir()
+
+	recognize_gates = getattr(self,'recognize_gates','NONE')
+	if recognize_gates == True:
+		recognize_gates = 'ALL'
 
 	f = open(self.rule_file.abspath(),"w")
 	f.write("""
@@ -43,15 +49,13 @@ LVS REPORT "{4}.lvs.report"
 LVS REPORT OPTION A AV B BV C CV D E E1 F FX G H I N O P R RA S V W X
 LVS REPORT MAXIMUM ALL
 
-LVS RECOGNIZE GATES NONE
-
 DRC ICSTATION YES
 
 LVS REPORT OPTION NONE
 LVS FILTER UNUSED OPTION NONE SOURCE
 LVS FILTER UNUSED OPTION NONE LAYOUT
 
-LVS RECOGNIZE GATES ALL
+LVS RECOGNIZE GATES {6}
 LVS ABORT ON SUPPLY ERROR YES
 LVS ISOLATE SHORTS NO
 LVS IGNORE PORTS NO
@@ -78,7 +82,7 @@ LVS GROUND NAME
 "gndd"
 "gnd"
 
-	""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath()))
+	""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath(),recognize_gates))
 
 	for inc in self.includes:
 		f.write('\nINCLUDE '+inc.abspath())
@@ -90,17 +94,17 @@ LVS GROUND NAME
 		f.write("\n".join(getattr(self,'hcells',[])))
 		f.close()
 
+	output = self.svdb.make_node(self.cellname+'.sp')
+	open(output.abspath(),'w').close() 
 
-	t = self.create_task('calibreLvsTask', [self.layout_gds,self.source_netlist], [self.output_file_base.change_ext(".lvs.report"), self.svdb.make_node(self.cellname+'.sp')])
-
-
+	t = self.create_task('calibreLvsTask', [self.layout_gds,self.source_netlist], [self.output_file_base.change_ext(".lvs.report"), output])
 
 class calibreLvsTask(Task.Task):
 	vars = ['CALIBRE_LVS','CALIBRE_LVS_OPTIONS','CALIBRE_LVS_RULES']
 	def run(self):
 		conditional_options = ""
 		if hasattr(self.generator,'hcells'):
-			conditional_options += ' -hier -hcell '+self.generator.hcells_file.abspath()
+			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
 		run_str = '%s -lvs %s -spice %s %s %s' % (self.env.CALIBRE_LVS, conditional_options, self.generator.svdb.make_node(self.generator.cellname+'.sp').abspath()," ".join(self.env.CALIBRE_LVS_OPTIONS), self.generator.rule_file.abspath())
 		out = ""
 		try:
@@ -112,6 +116,21 @@ class calibreLvsTask(Task.Task):
 		f = open(logfile.abspath(),'w')
 		f.write(out)
 		f.close()
+
+		found_error = 0
+		with open(logfile.abspath(),'r') as lgf:
+			for line in lgf:
+				if re.match('LVS completed. INCORRECT',line):
+					print line
+					found_error = 1
+				elif re.match('ERROR:',line):
+					print line
+					found_error = 1
+				#elif re.match('@W: CL218',line):
+				#	print line
+				#	found_error = 1
+
+		return found_error
 
 		return 0
 
