@@ -38,7 +38,7 @@ def create_calibre_pex_task(self):
 		which_names = 'SOURCENAMES'
 
 	selected_nets = ""
-	if hasattr(self,'only_extract_nets'):
+	if hasattr(self,'only_extract_nets') and len(self.only_extract_nets) > 0:
 		selected_nets = 'PEX EXTRACT INCLUDE '+which_names+' TOPLEVEL "'+'" "'.join(getattr(self,'only_extract_nets',[]))+'"'
 
 	f = open(self.rule_file.abspath(),"w")
@@ -85,6 +85,20 @@ PEX NETLIST NOXREF NET NAMES NO
 PEX NETLIST MUTUAL RESISTANCE YES
 //PEX NETLIST ESCAPE CHARACTERS "<>"
 PEX NETLIST CHARACTER MAP "<[ >] %_"
+
+LVS ISOLATE SHORTS YES
+
+LVS POWER NAME
+"vdd"
+"vdd12a"
+"vdd12d"
+"vdd25a"
+"vdd25d"
+
+LVS GROUND NAME
+"gnd"
+"gnda"
+"gndd"
 
 DRC ICSTATION YES
 	""".format(selected_nets))
@@ -148,7 +162,7 @@ class calibrePexTask(Task.Task):
 
 	def run_pdb(self):
 		conditional_options = ""
-		if hasattr(self.generator,'only_extract_nets'): 
+		if hasattr(self.generator,'only_extract_nets') and len(self.generator.only_extract_nets) > 0:
 			conditional_options += ' -select'
 		if hasattr(self.generator,'xcells'):
 			conditional_options += ' -xcell '+self.generator.xcells_file.abspath()
