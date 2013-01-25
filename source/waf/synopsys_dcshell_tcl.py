@@ -1,5 +1,9 @@
 
-dc_shell_setup_tcl = { 'default': """
+dc_shell_setup_tcl = {
+############
+# default
+############
+'default': """
 set BRICK_RESULTS				[getenv "BRICK_RESULTS"]; 
 set TSMC_DIR                    [getenv "TSMC_DIR"]; 
 
@@ -23,21 +27,23 @@ set DESIGN_NAME                 "%s";      # The name of the top-level design.
 # * SRAM macro library
 # * full custom macro libraries
 set ADDITIONAL_SEARCH_PATHS	[list \\
-		]
+    %s
+]
 
 # Target technology logical libraries                    							
 set TARGET_LIBRARY_FILES	[list \\
-		]
+]
 
 # List of max min library pairs "max1 min1  max2 min2"
 set MIN_LIBRARY_FILES	[list \\
-		]
+]
 
 # END Auto Setup Section        
 ##############################################################
 
 # Extra link logical libraries
-set ADDITIONAL_LINK_LIB_FILES [list \
+set ADDITIONAL_LINK_LIB_FILES [list \\
+    %s
 ]
 
 
@@ -55,7 +61,11 @@ set MW_POWER_NET                  "";     		#
 set MW_POWER_PORT                 "";      	    #
 set MW_GROUND_NET                 "";      	    #
 set MW_GROUND_PORT                "";      	    #
-""", 'tsmc65': """
+""",
+#############
+# TSMC65
+#############
+'tsmc65': """
 set BRICK_RESULTS				[getenv "BRICK_RESULTS"]; 
 set TSMC_DIR                    [getenv "TSMC_DIR"]; 
 
@@ -79,33 +89,35 @@ set DESIGN_NAME                 "%s";      # The name of the top-level design.
 # * SRAM macro library
 # * full custom macro libraries
 set ADDITIONAL_SEARCH_PATHS	[list \\
-		"$TSMC_DIR/digital/Front_End/timing_power_noise/NLDM/tcbn65lp_200a" \\
-		"$TSMC_DIR/digital/Front_End/timing_power_noise/NLDM/tpan65lpnv2_140b" \\
-		"$TSMC_DIR/digital/Front_End/timing_power_noise/NLDM/tpdn65lpnv2_140b" \\
-		"$TSMC_DIR/sram/tsdn65lpa4096x32m8f_200b/SYNOPSYS" \\
-		]
+    "$TSMC_DIR/digital/Front_End/timing_power_noise/NLDM/tcbn65lp_200a" \\
+    "$TSMC_DIR/digital/Front_End/timing_power_noise/NLDM/tpan65lpnv2_140b" \\
+    "$TSMC_DIR/digital/Front_End/timing_power_noise/NLDM/tpdn65lpnv2_140b" \\
+    "$TSMC_DIR/sram/tsdn65lpa4096x32m8f_200b/SYNOPSYS" \\
+    %s
+]
 
 # Target technology logical libraries                    							
 set TARGET_LIBRARY_FILES	[list \\
-		"tcbn65lpwc.db" \\
-        "tcbn65lpwc0d90d9.db" \\
-		"tpan65lpnv2wc.db" \\
-		"tpdn65lpnv2wc.db" \\
-        "tsdn65lpa4096x32m8f_200b_tt1p2v40c.db" \\
-		]
+    "tcbn65lpwc.db" \\
+    "tcbn65lpwc0d90d9.db" \\
+    "tpan65lpnv2wc.db" \\
+    "tpdn65lpnv2wc.db" \\
+    "tsdn65lpa4096x32m8f_200b_tt1p2v40c.db" \\
+]
 
 # List of max min library pairs "max1 min1  max2 min2"
 set MIN_LIBRARY_FILES	[list \\
-		"tcbn65lpwc.db"    "tcbn65lpbc.db" \\
-		"tpan65lpnv2wc.db" "tpan65lpnv2bc.db" \\
-		"tpdn65lpnv2wc.db" "tpdn65lpnv2bc.db" \\
-		]
+    "tcbn65lpwc.db"    "tcbn65lpbc.db" \\
+    "tpan65lpnv2wc.db" "tpan65lpnv2bc.db" \\
+    "tpdn65lpnv2wc.db" "tpdn65lpnv2bc.db" \\
+]
 
 # END Auto Setup Section        
 ##############################################################
 
 # Extra link logical libraries
-set ADDITIONAL_LINK_LIB_FILES [list \
+set ADDITIONAL_LINK_LIB_FILES [list \\
+    %s
 ]
 
 

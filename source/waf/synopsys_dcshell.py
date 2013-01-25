@@ -57,10 +57,19 @@ def create_synopsys_dcshell_task(self):
 				getattr(self,'constraints_file','0')))
 	f.close()
 
+	# Additional libraries
+	self.lib_search_paths = ''
+	if hasattr(self,'library_search_paths'):
+		self.lib_search_paths = '"' + '" \\\n'.join([x.abspath() for x in getattr(self,'library_search_paths',[])]) + '" \\'
+
+	self.additional_libs = ''
+	if hasattr(self,'additional_library_files'):
+		self.additional_libs = '"' + '" \\\n'.join(getattr(self,'additional_library_files',[])) + '" \\'
+
 	# write setup tcl script (containing mostly process specific data)
 	# the only variable input here is the DESIGN_NAME a.k.a. self.toplevel
 	f = open(self.setup_tcl_script.abspath(),"w")
-	f.write(dc_shell_setup_tcl[getattr(self,'process','default')] % (self.toplevel))
+	f.write(dc_shell_setup_tcl[getattr(self,'process','default')] % (self.toplevel,self.lib_search_paths,self.additional_libs))
 	f.close()
 
 	# write out the source list
@@ -96,4 +105,4 @@ class synopsysDcshellTask(Task.Task):
 
 		return 0
 
-
+# vim: noexpandtab:
