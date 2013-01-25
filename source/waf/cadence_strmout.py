@@ -10,7 +10,7 @@ def configure(conf):
 	conf.env['CDS_STRMOUT'] = 'strmout'
 	conf.env['CDS_STRMOUT_OPTIONS'] = [
 			'-snapToGrid',
-			'-case', 'lower'
+			#'-case', 'lower'
 		]
 
 @TaskGen.feature('cds_strmout')
