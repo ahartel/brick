@@ -2,7 +2,7 @@ from verilog_scanner import verilog_scanner_task
 from vhdl_scanner import vhdl_scanner
 import os
 
-from waflib import Task, TaskGen, Logs, Node
+from waflib import Task, TaskGen, Logs, Node, Errors
 
 def configure(conf):
 	conf.load('brick_general')
@@ -97,12 +97,9 @@ def gen_svlog_task(self,node):
 	dep_files,dep_types = self.verilog_scanner(input[0])
 	additional_inputs = []
 
-    # deactivated for the moment
-    # can make larger projects unmanageable
-
-	#for dep_file, dep_type in zip(dep_files,dep_types):
-	#	if dep_type == 'package':
-	#		additional_inputs.append(dep_file)
+	for dep_file, dep_type in zip(dep_files,dep_types):
+		if dep_type == 'package':
+			additional_inputs.append(dep_file)
 
 	sv_task.set_inputs(additional_inputs)
 
@@ -147,8 +144,10 @@ def cds_ius_prepare(self):
 				try:
 					self.source.index(dep_file.change_ext(""))
 				except ValueError:
-					Logs.warn('The included file '+dep_file.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Adding it.')
-					self.source.append(dep_file.change_ext(""))
+					raise Errors.ConfigurationError('The package file '+dep_file.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Add it!')
+	# --- Automatic adding disabled for the moment ---
+	#				Logs.warn('The included file '+dep_file.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Adding it.')
+	#				self.source.append(dep_file.change_ext(""))
 
 @Task.always_run
 class ncelabTask(Task.Task):
@@ -177,4 +176,4 @@ def modelsim_run(self):
 	self.env.SIMULATION_TOPLEVEL = self.toplevel
 	self.create_task('ncsimTask',None,None)
 
-
+# vim: noexpandtab:
