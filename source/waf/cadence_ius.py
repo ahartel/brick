@@ -96,9 +96,14 @@ def gen_svlog_task(self,node):
 	# the compiler needs those for packages --->
 	dep_files,dep_types = self.verilog_scanner(input[0])
 	additional_inputs = []
-	for dep_file, dep_type in zip(dep_files,dep_types):
-		if dep_type == 'package':
-			additional_inputs.append(dep_file)
+
+    # deactivated for the moment
+    # can make larger projects unmanageable
+
+	#for dep_file, dep_type in zip(dep_files,dep_types):
+	#	if dep_type == 'package':
+	#		additional_inputs.append(dep_file)
+
 	sv_task.set_inputs(additional_inputs)
 
 
