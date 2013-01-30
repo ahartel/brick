@@ -133,21 +133,6 @@ def cds_ius_prepare(self):
 	if len(vid) > 0:
 		self.env.VERILOG_INC_DIRS = vid
 
-	#
-	# scan source files for missing packages or include files
-	# and add source files for missing packages or includes
-	#
-	for node in self.source:
-		dep_files,dep_types = self.verilog_scanner(node)
-		for dep_file,dep_type in zip(dep_files,dep_types):
-			if dep_type == 'package':
-				try:
-					self.source.index(dep_file.change_ext(""))
-				except ValueError:
-					raise Errors.ConfigurationError('The package file '+dep_file.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Add it!')
-	# --- Automatic adding disabled for the moment ---
-	#				Logs.warn('The included file '+dep_file.change_ext("").abspath()+' is not in your source list for task generator '+self.name+'. Adding it.')
-	#				self.source.append(dep_file.change_ext(""))
 
 @Task.always_run
 class ncelabTask(Task.Task):

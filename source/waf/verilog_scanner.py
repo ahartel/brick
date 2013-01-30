@@ -1,5 +1,5 @@
 import re,os
-from waflib import TaskGen
+from waflib import TaskGen, Logs
 
 # --------------------------------
 # Verilog and VHDL scanner methods
@@ -17,7 +17,7 @@ def check_files(files,packages,includes_used):
     dependency_types = []
 
     for file in files:
-        if len(packages) > 0:
+        if packages and len(packages) > 0:
             packages_loadable = set()
             input = open(file.abspath(),'r')
             for line in input:
@@ -85,6 +85,8 @@ def verilog_scanner(self,node):
 
     # first look into existing source list
     packages,dependencies,dependency_types = check_files(getattr(self,'source',[]),packages,includes_used)
+    if len(packages) > 0:
+		Logs.warn('Package(s) '+' '.join(packages)+' could not be found in any of the given source files. You should fix that!')
 
     if debug:
         print "Package list after checking files:"+" ".join(packages)
@@ -101,7 +103,8 @@ def verilog_scanner(self,node):
     for dir in getattr(self,'verilog_search_paths',[]):
         # get all system verilog files
         files = get_sv_files_from_include_dir(rootnode,dir)
-        packages,dir_dependencies,dir_dependency_types = check_files(files,packages,includes_used)
+        # don't look for packages in search paths!
+        packages,dir_dependencies,dir_dependency_types = check_files(files,None,includes_used)
         dependencies.extend(dir_dependencies)
         dependency_types.extend(dir_dependency_types)
 
