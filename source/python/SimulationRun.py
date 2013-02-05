@@ -22,11 +22,14 @@ class SimulationRun:
         self.state_cnt = 0
         self.delay_steps = [0.2]
         self.delays = { }
-        self.setup_steps = [0.2*x for x in range(-2,5,1)]
+        self.setup_steps = [0.01*x for x in range(-16,4,2)]
         self.setups = { }
-        self.hold_steps = [0.2*x for x in range(-2,5,1)]
+        self.hold_steps = [0.01*x for x in range(-4,16,2)]
         self.holds = { }
         self.infinity = 1000.
+
+        self.clock_rise_time = 0.1 #ns
+        self.signal_rise_time = 0.1 #ns
 
         # logger bleiben
         import logging
@@ -82,8 +85,6 @@ class SimulationRun:
             else:
                 edge_type = 'R'
 
-
-
         if edge_type == 'R':
             self.append_out('+ 0.0000000e+00 0.0000000e+00')
             self.append_out('+ '+str(start_time)+'e-9 0.0000000e+00')
@@ -137,11 +138,15 @@ class SimulationRun:
     def get_current_input_delay(self):
         if self.state == 'delay':
             return self.delay_steps[self.state_cnt]
+        elif self.state == 'setup':
+            return self.setup_steps[self.state_cnt]
+        elif self.state == 'hold':
+            return self.hold_steps[self.state_cnt]
 
     def generate_timing_signals(self):
         import re
 
-        self.generate_clock_edge(0.1)
+        self.generate_clock_edge(self.clock_rise_time)
         self.add_probe(self.clock[0])
 
         for (signal,value) in self.timing_signals.iteritems():
@@ -159,11 +164,11 @@ class SimulationRun:
                     larger = int(m.group(3))
 
                 for i in range(smaller,larger+1):
-                    self.generate_single_edge(m.group(1)+'['+str(i)+']',0.1,self.get_current_input_delay(),value)
+                    self.generate_single_edge(m.group(1)+'['+str(i)+']',self.signal_rise_time,self.get_current_input_delay(),value)
                     self.add_probe(m.group(1)+'['+str(i)+']')
             else:
                 #single net
-                self.generate_single_edge(signal,0.1,self.get_current_input_delay(),value)
+                self.generate_single_edge(signal,self.signal_rise_time,self.get_current_input_delay(),value)
                 self.add_probe(signal)
 
         for signal in self.probe_signals.iterkeys():
@@ -172,7 +177,7 @@ class SimulationRun:
     def get_current_filename(self):
         import os
         name,ext = os.path.splitext(self.output_filename)
-        return name+'_'+self.state+'_'+str(self.state_cnt)+ext
+        return name+'_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)+'_'+self.state+'_'+str(self.state_cnt)+ext
 
     def write_spice_file(self):
 
@@ -188,6 +193,8 @@ class SimulationRun:
         for line in self.spice_output:
             f.write(line+'\n')
         f.close()
+
+        self.spice_output = []
 
     def add_include_netlist(self,netlist):
         import os
@@ -212,27 +219,69 @@ class SimulationRun:
             self.append_out('.include '+netlist+'')
         self.append_out('')
 
+    def has_steps(self):
+        if self.state is 'done':
+            return 0
+        else:
+            return 1
+
     def next_step(self):
         if self.state == 'init':
             self.state = 'delay'
             self.state_cnt = 0
             self.write_spice_file()
-            #self.run()
+            self.run()
             self.check_timing()
             self.state_cnt += 1
+
             return 1
         elif self.state == 'delay' and self.state_cnt < len(self.delay_steps):
-            self.logger.debug("Haha")
+            self.write_spice_file()
+            self.run()
+            self.check_timing()
+            self.state_cnt += 1
+
             return 1
-        elif self.state == 'setup' or (self.state == 'delay' and self.state_cnt == len(self.delay_steps)):
-            self.logger.debug("Huhu")
+        elif self.state == 'delay' and self.state_cnt == len(self.delay_steps):
+            self.state = 'setup'
+            self.state_cnt = 0
+            self.write_spice_file()
+            self.run()
+            self.check_timing()
+            self.state_cnt += 1
+
+            return 1
+        elif self.state == 'setup' and self.state_cnt < len(self.setup_steps):
+            self.write_spice_file()
+            self.run()
+            self.check_timing()
+            self.state_cnt += 1
+
+            return 1
+        elif self.state == 'setup' and self.state_cnt == len(self.setup_steps):
+            self.state = 'hold'
+            self.state_cnt = 0
+            self.write_spice_file()
+            self.run()
+            self.check_timing()
+            self.state_cnt += 1
+
+            return 1
+        elif self.state == 'hold' and self.state_cnt < len(self.hold_steps):
+            self.write_spice_file()
+            self.run()
+            self.check_timing()
+            self.state_cnt += 1
+
             return 1
         else:
+            self.state = 'done'
             return 0
 
     def run(self):
         import subprocess
         call = ['ultrasim', '-f', self.get_current_filename(), '-raw', self.output_dir, '-format', 'sst2', '-top', self.toplevel]
+        self.logger.info(" ".join(call))
         self.process = subprocess.Popen(call,stdout=subprocess.PIPE)
         self.process.wait()
 
@@ -256,8 +305,10 @@ class SimulationRun:
 
 
     def check_timing(self):
+        # parse result file
+        # after this step, all edges are identified
         self.parse_print_file()
-
+        # find clock edge
         clock_edge = None
         if (self.clock[1] == 'R'):
             clock_edge = self.rising_edges[self.clock[0]]
@@ -290,10 +341,15 @@ class SimulationRun:
 
         if self.state == 'delay':
             self.delays[self.delay_steps[self.state_cnt]] = delta_t
+        elif self.state == 'setup':
+            self.setups[self.setup_steps[self.state_cnt]] = delta_t
+        elif self.state == 'hold':
+            self.holds[self.hold_steps[self.state_cnt]] = delta_t
 
 
     def parse_print_file(self):
         import os,re
+        print "parsing file: "+self.output_dir+'/'+os.path.splitext(self.get_current_filename())[0]+'.print0'
         f = open(self.output_dir+'/'+os.path.splitext(self.get_current_filename())[0]+'.print0')
         comment = re.compile(r"^\*")
         start_value = re.compile(r"^x")
@@ -305,6 +361,8 @@ class SimulationRun:
         current_signal_name = ''
         signal_value = 0
         read_numbers = False
+        self.rising_edges = {}
+        self.falling_edges = {}
 
         for line in f:
             if found_start > 0:
