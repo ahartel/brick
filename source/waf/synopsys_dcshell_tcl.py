@@ -263,7 +263,7 @@ report_reference -hier > $REPORTS_DIR/$DESIGN_NAME.elab.report_reference
 
 
 echo "Information: Linking design ... "
-link
+link > $REPORTS_DIR/$DESIGN_NAME.link
 
 
 ############################################################################
