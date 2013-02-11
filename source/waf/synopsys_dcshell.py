@@ -29,6 +29,8 @@ def create_synopsys_dcshell_task(self):
 	if not getattr(self,'vhdl_sources',None):
 		self.vhdl_sources = []
 
+	# declare input list
+	inputs = []
 
 	# check for existance of results dir
 	# the actual results dir is a subdirectory of BRICK_RESULTS
@@ -46,6 +48,15 @@ def create_synopsys_dcshell_task(self):
 
 	output_netlist = self.results_dir.find_node('results').make_node(self.toplevel+'.v')
 
+	constraints_file = '0'
+	if hasattr(self,'constraints_file'):
+		try:
+			constraints_file = '"'+getattr(self,'constraints_file','').abspath()+'"'
+			inputs.append(self.constraints_file)
+		except AttributeError:
+			Logs.error('You have given an undefined node object as constraints_file for feature "synopsys_dcshell".')
+
+
 	# load extra package with tcl templates
 	from synopsys_dcshell_tcl import dc_shell_setup_tcl, dc_shell_main_tcl
 	# write main tcl script
@@ -54,17 +65,21 @@ def create_synopsys_dcshell_task(self):
 				self.sourcelist_tcl_script.abspath(),
 				self.setup_tcl_script.abspath(),
 				'{'+' '.join([x.abspath() for x in getattr(self,'search_paths',[])])+'}',
-				getattr(self,'constraints_file','0')))
+				constraints_file))
 	f.close()
 
 	# Additional libraries
 	self.lib_search_paths = ''
-	if hasattr(self,'library_search_paths'):
-		self.lib_search_paths = '"' + '" \\\n'.join([x.abspath() for x in getattr(self,'library_search_paths',[])]) + '" \\'
+	#if hasattr(self,'library_search_paths'):
+	#	self.lib_search_paths = '"' + '" \\\n'.join([x.abspath() for x in getattr(self,'library_search_paths',[])]) + '" \\'
 
 	self.additional_libs = ''
 	if hasattr(self,'additional_library_files'):
-		self.additional_libs = '"' + '" \\\n'.join(getattr(self,'additional_library_files',[])) + '" \\'
+		for lib_file in self.additional_library_files:
+			(trunk,filename) = os.path.split(lib_file.abspath())
+
+			self.additional_libs += '"'+filename+'" \\\n'
+			self.lib_search_paths += '"'+trunk+'" \\\n'
 
 	# write setup tcl script (containing mostly process specific data)
 	# the only variable input here is the DESIGN_NAME a.k.a. self.toplevel
@@ -84,7 +99,11 @@ def create_synopsys_dcshell_task(self):
 	f.write(sourcelist_string)
 	f.close()
 
-	t = self.create_task('synopsysDcshellTask', self.systemverilog_sources+self.verilog_sources, output_netlist)
+	inputs.extend(self.systemverilog_sources)
+	inputs.extend(self.verilog_sources)
+	inputs.extend(self.additional_library_files)
+
+	t = self.create_task('synopsysDcshellTask', inputs, output_netlist)
 
 
 class synopsysDcshellTask(Task.Task):

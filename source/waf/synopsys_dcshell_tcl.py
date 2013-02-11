@@ -271,8 +271,8 @@ link
 ############################################################################
 echo "Information: Reading design constraints ... "
 set constraints_file %s
-if ($constraints_file) {
-	source -echo -verbose $constraints_file
+if {$constraints_file != 0} {
+    source -echo -verbose ${constraints_file}
 }
 
 # Enable area optimization in all flows
