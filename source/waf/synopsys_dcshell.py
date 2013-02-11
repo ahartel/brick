@@ -56,6 +56,10 @@ def create_synopsys_dcshell_task(self):
 		except AttributeError:
 			Logs.error('You have given an undefined node object as constraints_file for feature "synopsys_dcshell".')
 
+	# compile_ultra options
+	compile_ultra_options = ['-gate_clock']
+	if hasattr(self,'compile_high_effort') and self.compile_high_effort == True:
+		compile_ultra_options.append('-timing_high_effort_script')
 
 	# load extra package with tcl templates
 	from synopsys_dcshell_tcl import dc_shell_setup_tcl, dc_shell_main_tcl
@@ -65,7 +69,9 @@ def create_synopsys_dcshell_task(self):
 				self.sourcelist_tcl_script.abspath(),
 				self.setup_tcl_script.abspath(),
 				'{'+' '.join([x.abspath() for x in getattr(self,'search_paths',[])])+'}',
-				constraints_file))
+				constraints_file,
+				'0', # compile_ultra -scan
+				' '.join(compile_ultra_options)))
 	f.close()
 
 	# Additional libraries

@@ -370,7 +370,7 @@ remove_unconnected_ports [find cell -hierarchy *]
 # set to true to enable
 # enable scan insertion during compilation
 #
-if { 0 } {
+if { %s } {
     # compile design using scan ffs
     compile_ultra -scan
 
@@ -388,7 +388,7 @@ if { 0 } {
     # compilation without scan insertion
 	# added option to keep hierarchy
 
-	compile_ultra -timing_high_effort_script -gate_clock
+    compile_ultra %s
 }
 
 echo "Information: Finished top down compilation. "
