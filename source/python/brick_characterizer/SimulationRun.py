@@ -5,40 +5,84 @@ class SimulationRun:
         self.output_filename = output_filename
         self.spice_output = []
         self.include_netlists = []
+        # hold static signals and their constant values
         self.static_signals = {}
+        # store timing results
         self.timing_signals = {}
+        # store probe signals and their related inputs
         self.probe_signals = {}
+        # store unateness of probe signals
+        self.probe_signal_directions = {}
+        # store clock signals and their edge type
+        self.clocks = {}
+        # store which clock belongs to which input signal
+        self.signal_to_clock = {}
         self.powers = {'vdd': 1.2, 'gnd': 0.0}
-        self.high_value = 1.2
-        self.low_value = 0.0
         self.output_dir = 'output'
-        self.timing_offset = 5.0 #ns
-        self.simulation_length = 10.0 #ns
         self.rising_edges = {}
         self.falling_edges = {}
-        self.rise_threshold = 0.5
-        self.fall_threshold = 0.5
+
         self.state = 'init'
         self.state_cnt = 0
-        self.delay_steps = [0.2]
         self.delays = { }
-        self.setup_steps = [0.01*x for x in range(-16,4,2)]
         self.setups = { }
-        self.hold_steps = [0.01*x for x in range(-4,16,2)]
         self.holds = { }
-        self.infinity = 1000.
 
+        self.initial_delay = 0.4 #ns
+        self.initial_stepsize = 0.2 #ns
+        self.current_delay = {}
+        self.current_stepsize = {}
+        self.lower_th = {}
+        self.upper_th = {}
+        self.direction = {}
+
+        self.infinity = 1000.
         self.clock_rise_time = 0.1 #ns
         self.signal_rise_time = 0.1 #ns
+        self.point_of_failure = 1.1 # 10 percent of delay
+        self.rise_threshold = 0.51
+        self.fall_threshold = 0.49
+        self.high_value = 1.2
+        self.low_value = 0.0
+        self.timing_offset = 4.0 #ns
+        self.simulation_length = 10.0 #ns
+        self.max_setup_steps = 9
+        self.max_hold_steps = 9
+        self.epsilon = 1.e-6
+
+        self.added_static_signals = False
+        self.added_timing_signals = False
 
         # logger bleiben
         import logging
-        self.logger = logging.getLogger('SimulationRun')
+        self.logger = logging.getLogger('SetupAndHold.'+self.whats_my_name())
         self.logger.setLevel(logging.DEBUG)
         ch = logging.StreamHandler()
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
+
+
+    def whats_my_name(self):
+        return 'SimulationRun_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)
+
+    def get_holds(self):
+        return self.holds
+
+    def get_setups(self):
+        return self.setups
+
+    def get_clock_rise_time(self):
+        return self.clock_rise_time
+
+    def set_clock_rise_time(self,value):
+        self.clock_rise_time = value
+
+    def get_signal_rise_time(self):
+        return self.signal_rise_time
+
+    def set_signal_rise_time(self,value):
+        self.signal_rise_time = value
 
     def set_rise_threshold(self,value):
         if value > 1:
@@ -58,7 +102,13 @@ class SimulationRun:
         self.spice_output.append(line)
 
     def add_static_signals(self,signals):
+        if self.added_timing_signals:
+            for name in signals.iterkeys():
+                if self.timing_signals.has_key(name) or self.clocks.has_key(name):
+                    raise Exception('Static signal '+name+' has already been defined as a timing or clock signal.')
+
         self.static_signals = signals
+        self.added_static_signals = True
 
     def generate_single_signal(self,signal,value):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
@@ -94,16 +144,49 @@ class SimulationRun:
             self.append_out('+ '+str(start_time)+'e-9 '+str(self.high_value)+'000000e+00')
             self.append_out('+ '+str(start_time+rise_time)+'000000e-09 '+str(self.low_value)+'000000e+00)')
 
-    def generate_clock_edge(self,rise_time):
-        self.append_out('V'+self.clock[0]+' '+self.clock[0]+' 0 pwl(')
-        if self.clock[1] == 'R':
+    def generate_two_edges(self,signal,transition_time,rising_delay,falling_delay):
+        self.append_out('V'+signal+' '+signal+' 0 pwl(')
+
+        if self.state == 'delay':
+            start_time = self.timing_offset - rising_delay
+            start_time_2 = self.timing_offset*2 - falling_delay
+            first_value = self.low_value
+            second_value = self.high_value
+        elif self.state == 'setup':
+            start_time = self.timing_offset - rising_delay
+            start_time_2 = self.timing_offset*2 - falling_delay
+            first_value = self.low_value
+            second_value = self.high_value
+        elif self.state == 'hold':
+            start_time = self.timing_offset + rising_delay
+            start_time_2 = self.timing_offset*2 + falling_delay
+            first_value = self.high_value
+            second_value = self.low_value
+
+        self.append_out('+ 0.0000000e+00 '+str(first_value)+'e+00')
+        self.append_out('+ '+str(start_time)+'e-9 '+str(first_value)+'e+0')
+        self.append_out('+ '+str(start_time+transition_time)+'e-09 '+str(second_value)+'e+00)')
+        self.append_out('+ '+str(start_time_2)+'e-9 '+str(second_value)+'e+00')
+        self.append_out('+ '+str(start_time_2+transition_time)+'e-09 '+str(first_value)+'e+00)')
+
+    def generate_clock_edge(self,name,direction):
+        self.append_out('V'+name+' '+name+' 0 pwl(')
+        if direction == 'R':
             self.append_out('+ 0.0000000e+00 0.0000000e+00')
-            self.append_out('+ '+str(self.timing_offset)+'e-9 0.0000000e+00')
-            self.append_out('+ '+str(self.timing_offset + rise_time)+'000000e-09 '+str(self.high_value)+'000000e+00)')
+            self.append_out('+ '+str(self.timing_offset)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time)+'e-09 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*2)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time)+'e-09 '+str(self.high_value))
         else:
             self.append_out('+ 0.0000000e+00 '+str(self.high_value)+'000000e+00')
-            self.append_out('+ '+str(self.timing_offset)+'e-9 '+str(self.high_value)+'000000e+00')
-            self.append_out('+ '+str(self.timing_offset + rise_time)+'000000e-09 '+str(self.low_value)+'000000e+00)')
+            self.append_out('+ '+str(self.timing_offset)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time)+'e-09 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*2)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time)+'e-09 '+str(self.low_value))
 
     def generate_static_signals(self):
         import re
@@ -111,65 +194,34 @@ class SimulationRun:
             self.append_out('V'+power_name+' '+power_name+' 0 '+str(power_value))
 
         for (signal,value) in self.static_signals.iteritems():
-            # check for buses
-            m = re.match(r"(.+?)\[(\d+):(\d+)\]",signal)
-            if m:
-                #bus
-                smaller = 0
-                larger = 0
-                if m.group(2) >= m.group(3):
-                    smaller = int(m.group(3))
-                    larger = int(m.group(2))
-                else:
-                    smaller = int(m.group(2))
-                    larger = int(m.group(3))
-
-                for i in range(smaller,larger+1):
-                    self.generate_single_signal(m.group(1)+'['+str(i)+']',value)
-
-            else:
-                #single net
-                self.generate_single_signal(signal,value)
+            #single net
+            self.generate_single_signal(signal,value)
 
     def add_probe(self,signal):
         self.append_out('.print v('+signal+')')
         self.append_out('.probe v('+signal+')')
 
-    def get_current_input_delay(self):
-        if self.state == 'delay':
-            return self.delay_steps[self.state_cnt]
-        elif self.state == 'setup':
-            return self.setup_steps[self.state_cnt]
-        elif self.state == 'hold':
-            return self.hold_steps[self.state_cnt]
+    #def get_current_input_delay(self):
+    #    if self.state == 'delay':
+    #        return self.delay_steps[self.state_cnt]
+    #    elif self.state == 'setup':
+    #        return self.setup_steps[self.state_cnt]
+    #    elif self.state == 'hold':
+    #        return self.hold_steps[self.state_cnt]
 
     def generate_timing_signals(self):
         import re
 
-        self.generate_clock_edge(self.clock_rise_time)
-        self.add_probe(self.clock[0])
+        for name,direction in self.clocks.iteritems():
+            self.generate_clock_edge(name,direction)
+            self.add_probe(name)
 
-        for (signal,value) in self.timing_signals.iteritems():
-            # check for buses
-            m = re.match(r"(.+?)\[(\d+):(\d+)\]",signal)
-            if m:
-                #bus
-                smaller = 0
-                larger = 0
-                if m.group(2) >= m.group(3):
-                    smaller = int(m.group(3))
-                    larger = int(m.group(2))
-                else:
-                    smaller = int(m.group(2))
-                    larger = int(m.group(3))
-
-                for i in range(smaller,larger+1):
-                    self.generate_single_edge(m.group(1)+'['+str(i)+']',self.signal_rise_time,self.get_current_input_delay(),value)
-                    self.add_probe(m.group(1)+'['+str(i)+']')
-            else:
-                #single net
-                self.generate_single_edge(signal,self.signal_rise_time,self.get_current_input_delay(),value)
-                self.add_probe(signal)
+        for signal in self.timing_signals.iterkeys():
+            print signal
+            print self.current_delay[signal]
+            self.generate_two_edges(signal,self.signal_rise_time,self.current_delay[signal][0],self.current_delay[signal][1])
+            self.logger.debug("Generating edge for "+signal+" with rising delay "+str(self.current_delay[signal][0])+ " and falling delay "+str(self.current_delay[signal][1]))
+            self.add_probe(signal)
 
         for signal in self.probe_signals.iterkeys():
             self.add_probe(signal)
@@ -178,6 +230,11 @@ class SimulationRun:
         import os
         name,ext = os.path.splitext(self.output_filename)
         return name+'_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)+'_'+self.state+'_'+str(self.state_cnt)+ext
+
+    def get_current_logfile(self):
+        import os
+        name,ext = os.path.splitext(self.get_current_filename())
+        return name+'.log'
 
     def write_spice_file(self):
 
@@ -203,11 +260,68 @@ class SimulationRun:
 
         self.include_netlists.append(netlist)
 
-    def add_timing_signals(self,clock,tim_sig,probe_sig,probe_sig_dir):
-        self.clock = clock
-        self.timing_signals = tim_sig
-        self.probe_signals = probe_sig
-        self.probe_signal_directions = probe_sig_dir
+    def add_timing_signals(self,clocks,tim_sig):
+        import re
+        #import pprint
+        #pp = pprint.PrettyPrinter(indent=4)
+
+        self.clocks = clocks
+
+        if self.added_static_signals:
+            for name in clocks.iterkeys():
+                if self.static_signals.has_key(name):
+                    raise Exception('Clock signal '+name+' has already been defined as a static signal.')
+
+        for sig,related in tim_sig.iteritems():
+            bus = re.compile(r"\[(\d+):(\d+)\]")
+            m = bus.search(sig)
+            if m:
+                smaller = int(m.group(1))
+                larger = int(m.group(2))
+                if smaller >= larger:
+                    larger,smaller = smaller,larger
+
+                for index in range(smaller,larger+1):
+                    cur_sig = re.sub(r"\[\d+:\d+\]","["+str(index)+"]",sig)
+                    cur_probe = related[1]
+                    tests = []
+                    tests.append(re.compile(r"=(index)="))
+                    tests.append(re.compile(r"=(index[\*\d\%\+\/\-]+)="))
+
+                    match = None
+                    for test in tests:
+                        match = test.search(related[1])
+                        while match:
+                            cur_probe = test.sub(str(int(eval(match.group(1)))),cur_probe,count=1)
+                            match = test.search(cur_probe)
+
+                    self.timing_signals[cur_sig] = {}
+                    self.current_delay[cur_sig] = [self.initial_delay,self.initial_delay]
+                    self.current_stepsize[cur_sig] = [self.initial_stepsize,self.initial_stepsize]
+                    self.direction[cur_sig] = [-1.,-1.]
+                    self.upper_th[cur_sig] = [self.infinity,self.infinity]
+                    self.signal_to_clock[cur_sig] = related[0]
+                    self.probe_signals[cur_probe] = cur_sig
+                    self.probe_signal_directions[cur_probe] = related[2]
+
+                    print cur_sig+","+" ".join([str(x) for x in self.current_delay[cur_sig]])
+            else:
+                if self.added_static_signals:
+                    if self.static_signals.has_key(name):
+                        raise Exception('Timing signal '+name+' has already been defined as a static signal.')
+
+                self.timing_signals[sig] = {}
+                self.current_delay[sig] = [self.initial_delay,self.initial_delay]
+                self.current_stepsize[sig] = [self.initial_stepsize,self.initial_stepsize]
+                self.direction[sig] = [-1.,-1.]
+                self.upper_th[sig] = [self.infinity,self.infinity]
+                self.signal_to_clock[sig] = related[0]
+                self.probe_signals[related[1]] = sig
+                self.probe_signal_directions[related[1]] = related[2]
+
+                print sig+","+" ".join([str(x) for x in self.current_delay[sig]])
+
+        self.added_timing_signals = True
 
     def write_header(self):
         self.append_out('.param tran_tend='+str(self.simulation_length)+'000000e-09')
@@ -232,56 +346,69 @@ class SimulationRun:
             self.write_spice_file()
             self.run()
             self.check_timing()
-            self.state_cnt += 1
 
-            return 1
-        elif self.state == 'delay' and self.state_cnt < len(self.delay_steps):
-            self.write_spice_file()
-            self.run()
-            self.check_timing()
-            self.state_cnt += 1
-
-            return 1
-        elif self.state == 'delay' and self.state_cnt == len(self.delay_steps):
             self.state = 'setup'
             self.state_cnt = 0
+
+        elif self.state == 'setup':
             self.write_spice_file()
             self.run()
             self.check_timing()
-            self.state_cnt += 1
 
-            return 1
-        elif self.state == 'setup' and self.state_cnt < len(self.setup_steps):
+            if self.state_cnt == self.max_setup_steps-1:
+                self.state_cnt = 0
+                self.state = 'hold'
+                for sig in self.timing_signals.iterkeys():
+
+                    self.setups[sig] = [self.lower_th[sig][0]+(self.upper_th[sig][0]-self.lower_th[sig][0])/2.,self.lower_th[sig][1]+(self.upper_th[sig][1] - self.lower_th[sig][1])/2.]
+                    self.logger.debug("Rise Setup time for signal "+sig+": "+str(self.setups[sig][0]))
+                    self.logger.debug("Fall Setup time for signal "+sig+": "+str(self.setups[sig][1]))
+                    # reset
+                    neg_inf = -1.*self.infinity
+                    self.lower_th[sig] = [neg_inf,neg_inf]
+                    self.upper_th[sig] = [self.infinity,self.infinity]
+                    self.current_delay[sig] = [self.initial_delay,self.initial_delay]
+                    self.current_stepsize[sig] = [self.initial_stepsize,self.initial_stepsize]
+                    self.current_delay[sig] = [self.initial_delay,self.initial_delay]
+                    self.current_stepsize[sig] = [self.initial_stepsize,self.initial_stepsize]
+                    self.direction[sig] = [-1.,-1.]
+
+            else:
+                self.state_cnt += 1
+
+        elif self.state == 'hold':
             self.write_spice_file()
             self.run()
             self.check_timing()
-            self.state_cnt += 1
 
-            return 1
-        elif self.state == 'setup' and self.state_cnt == len(self.setup_steps):
-            self.state = 'hold'
-            self.state_cnt = 0
-            self.write_spice_file()
-            self.run()
-            self.check_timing()
-            self.state_cnt += 1
+            if self.state_cnt == self.max_hold_steps-1:
+                self.state = 'done'
+                self.state_cnt = 0
+                for sig in self.timing_signals.iterkeys():
 
-            return 1
-        elif self.state == 'hold' and self.state_cnt < len(self.hold_steps):
-            self.write_spice_file()
-            self.run()
-            self.check_timing()
-            self.state_cnt += 1
+                    self.holds[sig] = [self.lower_th[sig][0]+(self.upper_th[sig][0]-self.lower_th[sig][0])/2.,self.lower_th[sig][0]+(self.upper_th[sig][1] - self.lower_th[sig][1])/2.]
+                    self.logger.debug("Rise Hold time for signal "+sig+": "+str(self.holds[sig][0]))
+                    self.logger.debug("Fall Hold time for signal "+sig+": "+str(self.holds[sig][1]))
+                    # reset
+                    neg_inf = -1.*self.infinity
+                    self.lower_th[sig] = [neg_inf,neg_inf]
+                    self.upper_th[sig] = [self.infinity,self.infinity]
+                    self.current_delay[sig] = [self.initial_delay,self.initial_delay]
+                    self.current_stepsize[sig] = [self.initial_stepsize,self.initial_stepsize]
+                    self.current_delay[sig] = [self.initial_delay,self.initial_delay]
+                    self.current_stepsize[sig] = [self.initial_stepsize,self.initial_stepsize]
+                    self.direction[sig] = [-1.,-1.]
+            else:
+                self.state_cnt += 1
 
-            return 1
         else:
             self.state = 'done'
             return 0
 
     def run(self):
         import subprocess
-        call = ['ultrasim', '-f', self.get_current_filename(), '-raw', self.output_dir, '-format', 'sst2', '-top', self.toplevel]
-        self.logger.info(" ".join(call))
+        call = ['ultrasim', '-f', self.get_current_filename(), '-outdir', self.output_dir, '-format', 'sst2', '-top', self.toplevel,'=log',self.get_current_logfile()]
+        self.logger.debug(" ".join(call))
         self.process = subprocess.Popen(call,stdout=subprocess.PIPE)
         self.process.wait()
 
@@ -309,54 +436,133 @@ class SimulationRun:
         # after this step, all edges are identified
         self.parse_print_file()
         # find clock edge
-        clock_edge = None
-        if (self.clock[1] == 'R'):
-            clock_edge = self.rising_edges[self.clock[0]]
-            self.logger.info( "Rising edge of "+self.clock[0]+" at "+str(clock_edge))
-        else:
-            clock_edge = self.falling_edges[self.clock[0]]
-            self.logger.info( "Falling edge of "+self.clock[0]+" at "+str(clock_edge))
+        clock_edges = {}
+        for clock_name, clock_dir in self.clocks.iteritems():
+            if not clock_edges.has_key(clock_name):
+                clock_edges[clock_name] = []
+            if (clock_dir == 'R'):
+                clock_edges[clock_name] = self.rising_edges[clock_name]
+                self.logger.debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
+            else:
+                clock_edges[clock_name] = self.falling_edges[clock_name]
+                self.logger.debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
 
         for signal,related in self.probe_signals.iteritems():
-            delta_t = 0
+            delta_t = [0,0]
             signal_lc = signal.lower()
-            if self.probe_signal_directions[signal] == 'R':
-                if self.rising_edges.has_key(signal_lc):
-                    delta_t = self.rising_edges[signal_lc]
-                    self.logger.info( "Rising edge for "+signal+" at "+str(delta_t))
-                    delta_t -= clock_edge
-                    self.logger.info( "Delay: "+str(delta_t))
+            if self.probe_signal_directions[signal] == 'positive_unate':
+                if self.rising_edges.has_key(signal_lc) and len(self.rising_edges[signal_lc]) > 0:
+                    delta_t[0] = self.rising_edges[signal_lc].pop(0)
+                    self.logger.debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
+                    delta_t[0] -= clock_edges[self.signal_to_clock[related]][0]
+                    if delta_t[0] > self.timing_offset*1.e-9:
+                        self.logger.debug("Rising edge for signal "+signal+" too far away from clock edge")
+                        delta_t[0] = self.infinity
+                    else:
+                        self.logger.debug( "Delay: "+str(delta_t[0]))
                 else:
-                    self.logger.warning("Rising edge for signal "+signal+" not found but expected")
-                    delta_t = self.infinity
-            elif self.probe_signal_directions[signal] == 'F':
-                if self.falling_edges.has_key(signal_lc):
-                    delta_t = self.falling_edges[signal_lc]
-                    self.logger.info( "Falling edge for "+signal+" at "+str(delta_t))
-                    delta_t -= clock_edge
-                    self.logger.info( "Delay: "+str(delta_t) )
-                else:
-                    self.logger.warning("Falling edge for signal "+signal+" not found but expected")
-                    delta_t = self.infinity
+                    self.logger.debug("Rising edge for signal "+signal+" not found but expected")
+                    delta_t[0] = self.infinity
 
-        if self.state == 'delay':
-            self.delays[self.delay_steps[self.state_cnt]] = delta_t
-        elif self.state == 'setup':
-            self.setups[self.setup_steps[self.state_cnt]] = delta_t
-        elif self.state == 'hold':
-            self.holds[self.hold_steps[self.state_cnt]] = delta_t
+                if self.falling_edges.has_key(signal_lc) and len(self.falling_edges[signal_lc]) > 0:
+                    delta_t[1] = self.falling_edges[signal_lc].pop(0)
+                    self.logger.debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
+                    delta_t[1] -= clock_edges[self.signal_to_clock[related]][1]
+                    if delta_t[1] > self.timing_offset*1.e-9:
+                        self.logger.debug("Falling edge for signal "+signal+" too far away from clock edge")
+                        delta_t[1] = self.infinity
+                    else:
+                        self.logger.debug( "Delay: "+str(delta_t[1]))
+                else:
+                    self.logger.debug("Falling edge for signal "+signal+" not found but expected")
+                    delta_t[1] = self.infinity
+            elif self.probe_signal_directions[signal] == 'negative_unate':
+                if self.falling_edges.has_key(signal_lc) and len(self.falling_edges[signal_lc]) > 0:
+                    delta_t[1] = self.falling_edges[signal_lc].pop(0)
+                    self.logger.debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
+                    delta_t[1] -= clock_edges[self.signal_to_clock[related]][0]
+                    if delta_t[1] > self.timing_offset*1.e-9:
+                        self.logger.debug("Falling edge for signal "+signal+" too far away from clock edge")
+                        delta_t[1] = self.infinity
+                    else:
+                        self.logger.debug( "Delay: "+str(delta_t[1]))
+                else:
+                    self.logger.debug("Falling edge for signal "+signal+" not found but expected")
+                    delta_t[1] = self.infinity
+
+                if self.rising_edges.has_key(signal_lc) and len(self.rising_edges[signal_lc]) > 0:
+                    delta_t[0] = self.rising_edges[signal_lc].pop(0)
+                    self.logger.debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
+                    delta_t[0] -= clock_edges[self.signal_to_clock[related]][1]
+                    if delta_t[0] > self.timing_offset*1.e-9:
+                        self.logger.debug("Rising edge for signal "+signal+" too far away from clock edge")
+                        delta_t[0] = self.infinity
+                    else:
+                        self.logger.debug( "Delay: "+str(delta_t[0]) )
+                else:
+                    self.logger.debug("Rising edge for signal "+signal+" not found but expected")
+                    delta_t[0] = self.infinity
+
+
+            #
+            # the following block implements
+            # a binary search algorithm that
+            # tries to look for the setup and
+            # hold time of a signal
+            #
+            if self.state == 'delay':
+                self.delays[related] = delta_t
+                self.lower_th[related] = self.current_delay[related]
+                self.current_delay[related][0] += self.direction[related][0] * self.current_stepsize[related][0]
+                self.current_delay[related][1] += self.direction[related][1] * self.current_stepsize[related][1]
+            elif self.state is 'setup' or self.state is 'hold':
+                # iterate over rising and falling constraint
+                for edge_type in [0,1]:
+                    if self.direction[related][edge_type] < 0 and delta_t[edge_type] < self.delays[related][edge_type]*self.point_of_failure:
+                        self.lower_th[related][edge_type] = self.current_delay[related][edge_type]
+                        self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
+                        # don't check points twice, step back a bit instead
+                        if abs(self.current_delay[related][edge_type] - self.upper_th[related][edge_type]) < self.epsilon:
+                            self.logger.debug("Hit upper threshold")
+                            self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
+                            self.current_delay[related][edge_type] -= self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
+
+                    elif self.direction[related][edge_type] < 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
+                        self.upper_th[related][edge_type] = self.current_delay[related][edge_type]
+                        self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
+                        self.direction[related][edge_type] = +1.
+                        self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
+                    elif self.direction[related][edge_type] > 0 and delta_t[edge_type] < self.delays[related][edge_type]*self.point_of_failure:
+                        self.lower_th[related][edge_type] = self.current_delay[related][edge_type]
+                        self.direction[related][edge_type] = -1.
+                        self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
+                        self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
+                    elif self.direction[related][edge_type] > 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
+                        self.upper_th[related][edge_type] = self.current_delay[related][edge_type]
+                        self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
+                        # don't check points twice, step back a bit instead
+                        if abs(self.current_delay[related][edge_type] - self.lower_th[related][edge_type]) < self.epsilon:
+                            self.logger.debug("Hit lower threshold")
+                            self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
+                            self.current_delay[related][edge_type] -= self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
+
+            #elif self.state == 'hold':
+            #    self.holds[self.hold_steps[self.state_cnt]] = delta_t
+
+    def get_printfile_name(self):
+        import os
+        return self.output_dir+'/'+os.path.splitext(os.path.basename(self.get_current_filename()))[0]+'.print0'
 
 
     def parse_print_file(self):
-        import os,re
-        print "parsing file: "+self.output_dir+'/'+os.path.splitext(self.get_current_filename())[0]+'.print0'
-        f = open(self.output_dir+'/'+os.path.splitext(self.get_current_filename())[0]+'.print0')
+        import re
+        f = open(self.get_printfile_name())
         comment = re.compile(r"^\*")
         start_value = re.compile(r"^x")
         stop_value = re.compile(r"^y")
         signal_name = re.compile(r"\s+([\w\[\]]+)\s+$")
         signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]]+)")
-        numbers = re.compile(r"([\d\.]+)([munp]?)\s+([\d\.]+)([munp]?)")
+        numbers = re.compile(r"([\d\.]+)([GMkmunpf]?)\s+([\d\.]+)([GMkmunpf]?)")
         found_start = 0
         current_signal_name = ''
         signal_value = 0
@@ -402,20 +608,22 @@ class SimulationRun:
                         if m.group(4):
                             voltage = voltage*self.oom(m.group(4))
                         if signal_value == 0:
-                            if voltage < self.high_value*self.rise_threshold:
+                            if voltage < self.high_value*self.fall_threshold:
                                 signal_value = 'R'
-                            elif voltage > self.high_value*self.fall_threshold:
+                            elif voltage > self.high_value*self.rise_threshold:
                                 signal_value = 'F'
                         elif signal_value == 'R':
                             if voltage > self.high_value*self.rise_threshold:
-                                self.rising_edges[current_signal_name] = time
-                                signal_value = 1
+                                if not self.rising_edges.has_key(current_signal_name):
+                                    self.rising_edges[current_signal_name] = []
+                                self.rising_edges[current_signal_name].append(time)
+                                signal_value = 'F'
                         elif signal_value == 'F':
                             if voltage < self.high_value*self.fall_threshold:
-                                self.falling_edges[current_signal_name] = time
-                                signal_value = 1
+                                if not self.falling_edges.has_key(current_signal_name):
+                                    self.falling_edges[current_signal_name] = []
+                                self.falling_edges[current_signal_name].append(time)
+                                signal_value = 'R'
 
         f.close()
-
-
 
