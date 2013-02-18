@@ -27,7 +27,7 @@ def create_cadence_absgen_task(self):
 
 	self.absgen_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'absgen_'+self.libname+'_'+self.cellname+'.il'))
 
-	input_layout_file = self.get_cellview_path(cellview).find_node('layout.oa').abspath()
+	input_layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
 
 	export_lef_file = getattr(self,'export_lef_file',None)
 
@@ -139,7 +139,7 @@ absSetOption("ExportGeometryLefData" 	"true")
 absSetOption("ExportTechLefData" 	"false")
 absSetOption("ExportLEFBin" 		"Block")
 absSetOption("ExportLEFFile" 		"{0}")
-""".format())
+""".format(export_lef_file.abspath()))
 
 	f.write("""
 absPins()
@@ -160,7 +160,12 @@ absExit()
 
 	f.close()
 
-	t = self.create_task('cdsAbsgenTask')# input_layout_file, )
+	inputs = [input_layout_node]
+	outputs = []
+	if export_lef_file:
+		outputs.append(export_lef_file)
+
+	t = self.create_task('cdsAbsgenTask',inputs,outputs)
 
 class cdsAbsgenTask(Task.Task):
 	vars = ['CADENCE_ABSTRACT','CADENCE_ABSTRACT_OPTIONS']

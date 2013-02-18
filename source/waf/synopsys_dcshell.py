@@ -1,5 +1,5 @@
 import os,re
-from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
+from waflib import Task,Errors,TaskGen,Configure,Node,Logs
 
 def configure(conf):
 	"""This function gets called by waf upon loading of this module in a configure method"""
@@ -47,6 +47,7 @@ def create_synopsys_dcshell_task(self):
 		self.results_dir.make_node('reports').mkdir()
 
 	output_netlist = self.results_dir.find_node('results').make_node(self.toplevel+'.v')
+	output_sdc_file = self.results_dir.find_node('results').make_node(self.toplevel+'.sdc')
 
 	constraints_file = '0'
 	if hasattr(self,'constraints_file'):
@@ -109,7 +110,7 @@ def create_synopsys_dcshell_task(self):
 	inputs.extend(self.verilog_sources)
 	inputs.extend(self.additional_library_files)
 
-	t = self.create_task('synopsysDcshellTask', inputs, output_netlist)
+	t = self.create_task('synopsysDcshellTask', inputs, [output_netlist,output_sdc_file])
 
 
 class synopsysDcshellTask(Task.Task):
