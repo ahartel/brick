@@ -59,6 +59,7 @@ LVS RECOGNIZE GATES {6}
 LVS ABORT ON SUPPLY ERROR YES
 LVS ISOLATE SHORTS NO
 LVS IGNORE PORTS NO
+LVS GLOBALS ARE PORTS NO
 VIRTUAL CONNECT COLON YES
 VIRTUAL CONNECT REPORT NO
 LVS EXECUTE ERC YES
@@ -82,7 +83,10 @@ LVS GROUND NAME
 "gndd"
 "gnd"
 
-	""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath(),recognize_gates))
+""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath(),recognize_gates))
+
+	for line in getattr(self,'mixins',[]):
+		f.write(line+'\n')
 
 	for inc in self.includes:
 		f.write('\nINCLUDE '+inc.abspath())
@@ -141,4 +145,4 @@ def calibre_lvs(bld,*k,**kw):
 	set_features(kw,'calibre_lvs')
 	return bld(*k,**kw)
 
-
+# vim: noexpandtab:

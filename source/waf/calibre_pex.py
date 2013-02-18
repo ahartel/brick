@@ -29,6 +29,7 @@ def create_calibre_pex_task(self):
 
 	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_pex_rules_'+self.cellname))
 	self.xcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_xcells_'+self.cellname))
+	self.hcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_hcells_'+self.cellname))
 
 	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
 	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
@@ -39,7 +40,17 @@ def create_calibre_pex_task(self):
 
 	selected_nets = ""
 	if hasattr(self,'only_extract_nets') and len(self.only_extract_nets) > 0:
-		selected_nets = 'PEX EXTRACT INCLUDE '+which_names+' TOPLEVEL "'+'" "'.join(getattr(self,'only_extract_nets',[]))+'"'
+		include_mode = 'TOPLEVEL'
+		if getattr(self,'extract_include_recursive',False):
+			include_mode = 'RECURSIVE'
+
+		selected_nets = 'PEX EXTRACT INCLUDE '+which_names+' '+include_mode+' "'+'" "'.join(getattr(self,'only_extract_nets',[]))+'"'
+	elif hasattr(self,'dont_extract_nets') and len(self.dont_extract_nets) > 0:
+		exclude_mode = 'TOPLEVEL'
+		if getattr(self,'extract_exclude_recursive',False):
+			exclude_mode = 'RECURSIVE'
+
+		selected_nets = 'PEX EXTRACT EXCLUDE '+which_names+' '+exclude_mode+' "'+'" "'.join(getattr(self,'dont_extract_nets',[]))+'"'
 
 	f = open(self.rule_file.abspath(),"w")
 	if 1:
@@ -86,6 +97,9 @@ PEX NETLIST MUTUAL RESISTANCE YES
 //PEX NETLIST ESCAPE CHARACTERS "<>"
 PEX NETLIST CHARACTER MAP "<[ >] %_"
 
+//PEX NETLIST GLOBAL NETS pc_pre_buf pc_pst_buf pc_preb_buf sense_pre_buf wen_pst_buf wen_pre_buf enb_int_left writeen_pst_buf
+
+
 LVS ISOLATE SHORTS YES
 
 LVS POWER NAME
@@ -123,6 +137,11 @@ DRC ICSTATION YES
 		f.write("\n".join(getattr(self,'xcells',[])))
 		f.close()
 
+		f = open(self.hcells_file.abspath(),"w")
+		f.write("\n".join(getattr(self,'hcells',[])))
+		f.close()
+
+
 	inputs = [self.layout_gds]
 	if hasattr(self,'source_netlist'):
 		layout_spice_node = self.svdb.make_node(self.cellname+'.sp')
@@ -143,8 +162,8 @@ class calibrePexTask(Task.Task):
 		conditional_options = ""
 		#if hasattr(self.generator,'only_extract_nets'): 
 		#	conditional_options += ' -select'
-		#if hasattr(self.generator,'xcells'):
-		#	conditional_options += ' -xcell '+self.generator.xcells_file.abspath()
+		if hasattr(self.generator,'xcells'):
+			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
 
 		run_str = '%s -xrc -phdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PHDB']), self.generator.rule_file.abspath())
 
@@ -165,7 +184,7 @@ class calibrePexTask(Task.Task):
 		if hasattr(self.generator,'only_extract_nets') and len(self.generator.only_extract_nets) > 0:
 			conditional_options += ' -select'
 		if hasattr(self.generator,'xcells'):
-			conditional_options += ' -xcell '+self.generator.xcells_file.abspath()
+			conditional_options += ' -full -xcell '+self.generator.xcells_file.abspath()
 
 		run_str = '%s -xrc -pdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PDB']), self.generator.rule_file.abspath())
 
