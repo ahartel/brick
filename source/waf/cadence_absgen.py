@@ -105,6 +105,8 @@ absSetBinOption( "Block" "AbstractBlockageCutAroundPin" "{6}")
 
 absSetBinOption( "Block" "AbstractBlockageDetailedLayers"       "{7}")
 
+;absSetBinOption("Block" "PinsTextManipulation" "{{\\\\.extra.*}} {{}} :.* : {{\\(([0-9]+)\\)}} {{<\\1>}} {{\\[([0-9]+)\\]}} {{<\\1>}}")
+absSetBinOption("Block" "PinsTextManipulation" "")
 absSetBinOption( "Block" "PinsPowerNames"        "{8}")
 absSetBinOption( "Block" "PinsGroundNames"       "{9}")
 absSetBinOption( "Block" "PinsClockNames"        "{10}")
