@@ -25,11 +25,33 @@ def create_cadence_absgen_task(self):
 	(self.libname,rest) = cellview.split(".")
 	(self.cellname,self.viewname) = rest.split(":")
 
+	# prepare nodes for script, layout and lef file
 	self.absgen_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'absgen_'+self.libname+'_'+self.cellname+'.il'))
-
 	input_layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
-
 	export_lef_file = getattr(self,'export_lef_file',None)
+
+	# generate some default options if none are given by the user
+	if not hasattr(self,'abstract_options'):
+		self.abstract_options = { 'Block': {
+			'AbstractBlockageShrinkWrapLayers': "(M9 M9) (M8 M8) (M7 M7) (M6 M6) (M5 M5) (M4 M4) (M3 M3) (M2 M2)",
+			'AbstractBlockageShrinkAdjust': "(M9 1) (M8 1) (M7 1) (M6 1) (M5 1) (M4 1) (M3 1) (M2 1)",
+			'AbstractBlockageCoverLayers': "(M1 M1)",
+			'AbstractBlockageCoverLayersDist': "(M1 1)",
+
+			'AbstractBlockagePinCutWindow': "(M1 0.15) (M2 0.15) (M3 0.15) (M4 0.15) (M5 0.15) (M6 0.15) (M7 0.15)",
+			'AbstractBlockageDownPinCutWindow': "(M1 0.15) (M2 0.15) (M3 0.15) (M4 0.15) (M5 0.15) (M6 0.15) (M7 0.15) ",
+			'AbstractBlockageCutAroundPin': "M1 M2 M3 M4 M5 M6 M7",
+
+			"PinsTextManipulation": "",
+			'PinsPowerNames': "vdd12d",
+			'PinsGroundNames': "gnd:d",
+			'PinsClockNames': "",
+			'PinsAnalogNames': "",
+			'PinsOutputNames': "",
+			'PinsTextPinMap': "((M1 pin) (M1 drawing)) ((M2 pin) (M2 drawing)) ((M3 pin) (M3 drawing)) ((M4 pin) (M4 drawing)) ((M5 pin) (M5 drawing)) ((M6 pin) (M6 drawing)) ((M7 pin) (M7 drawing))",
+			'ExtractConnectivity': "(M1 M2 VIA1)(M2 M3 VIA2)(M3 M4 VIA3)(M4 M5 VIA4)(M5 M6 VIA5)",
+			}
+		}
 
 	f = open(self.absgen_script.abspath(),"w")
 	f.write("""
@@ -93,46 +115,16 @@ absSetBinOption("Block" "AbstractGridMode" "off")
 absSetBinOption("Block" "AbstractRetainLayout" "true")
 absSetBinOption("Block" "AbstractSiteName" "")
 absSetBinOption("Block" "AbstractSiteNameDefine" "")
+""")
 
-absSetBinOption( "Block" "AbstractBlockageShrinkWrapLayers" "{0}")
-absSetBinOption( "Block" "AbstractBlockageShrinkAdjust" "{1}")
-absSetBinOption( "Block" "AbstractBlockageCoverLayers" "{2}")
-absSetBinOption( "Block" "AbstractBlockageCoverLayersDist" "{3}")
-	
-absSetBinOption( "Block" "AbstractBlockagePinCutWindow" "{4}" )
-absSetBinOption( "Block" "AbstractBlockageDownPinCutWindow" "{5}")
-absSetBinOption( "Block" "AbstractBlockageCutAroundPin" "{6}")
+	for bin_name,opts in self.abstract_options.iteritems():
+		for key,value in opts.iteritems():
+			f.write('absSetBinOption( "'+bin_name+'" "'+key+'" "'+value+'")\n')
 
-absSetBinOption( "Block" "AbstractBlockageDetailedLayers"       "{7}")
-
-;absSetBinOption("Block" "PinsTextManipulation" "{{\\\\.extra.*}} {{}} :.* : {{\\(([0-9]+)\\)}} {{<\\1>}} {{\\[([0-9]+)\\]}} {{<\\1>}}")
-absSetBinOption("Block" "PinsTextManipulation" "")
-absSetBinOption( "Block" "PinsPowerNames"        "{8}")
-absSetBinOption( "Block" "PinsGroundNames"       "{9}")
-absSetBinOption( "Block" "PinsClockNames"        "{10}")
-absSetBinOption( "Block" "PinsAnalogNames"       "{11}")
-absSetBinOption( "Block" "PinsOutputNames"       "{12}")
-absSetBinOption( "Block" "PinsTextPinMap"        "{13}" ) 
-absSetBinOption( "Block" "ExtractConnectivity"   "{14}")
-""".format(
-		getattr(self,'abstract_blockage_shrink_wrap_layers',""),
-		getattr(self,'abstract_blockage_shrink_adjust',""),
-		getattr(self,'abstract_blockage_cover_layers',""),
-		getattr(self,'abstract_blockage_cover_layers_dist',""),
-
-		getattr(self,'abstract_blockage_pincutwindow',''),
-		getattr(self,'abstract_blockage_down_pincutwindow',''),
-		getattr(self,'abstract_blockage_cutaroundpin',''),
-		getattr(self,'abstract_blockage_detailed_layers',''),
-
-		getattr(self,'pins_power_names',''),
-		getattr(self,'pins_ground_names',''),
-		getattr(self,'pins_clock_names',''),
-		getattr(self,'pins_analog_names',''),
-		getattr(self,'pins_output_names',''),
-		getattr(self,'pins_textpinmap',''),
-		getattr(self,'extract_connectivity',''),
-		))
+	if hasattr(self,'termprops'):
+		for cell, opts in self.termprops.iteritems():
+			for pin, props in opts.iteritems():
+				f.write('absSetTerminalProp( "'+cell+'" "'+pin+'" "'+('" "'.join(props))+'")\n')
 
 	if export_lef_file:
 		f.write("""
