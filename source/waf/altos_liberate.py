@@ -206,7 +206,9 @@ set gnd 0.0
 set temp 25
 
 set_gnd gnd $gnd
+set_gnd gndd $gnd
 set_vdd vdd $vdd
+set_vdd vdd12d $vdd
 
 set_var mx_find_memcores 0
 set_var mx_force_constraint_comb_off_if_noarray_found 0
@@ -246,6 +248,12 @@ set delay_template "delay_7x7_0"
 set constraint_template "constraint_3x3"
 set power_template "power_7x7_0"
 
+set_var mx_corecell "dual_port"
+
+""".format()
+
+		if hasattr(self,'mxtables'):
+			tcl_string += """
 set mxtables {{ {0} }}
 
 """.format(" ".join(getattr(self,'mxtables',[])))
@@ -274,16 +282,17 @@ define_cell \\
     -power $power_template \\
     -constraint $constraint_template \\
 	-pinlist {{ {0} {1} {2} {3} }} \\
-    -mxtable $mxtables \\
-    {{ {4} }}
-
 """.format(
 				' '.join(getattr(self,'input',[])),
 				" ".join(getattr(self,'output',[])),
 				" ".join(getattr(self,'clock',[])),
-				" ".join(getattr(self,'bidi',[])),
-				self.cell,
-			)
+				" ".join(getattr(self,'bidi',[]))
+		)
+
+		if hasattr(self,'mxtables'):
+			tcl_string += "-mxtable $mxtables \\\n"
+
+		tcl_string += "{{ {0} }}\n".format(self.cell)
 
 		tcl_string += """
 # setup partition simulator
@@ -299,24 +308,24 @@ mx_set_hsim_param [list \\
 
 # set characterization simulator
 # if none specified, internal alspice used
-#set characterization_simulator "ultrasim"
-set characterization_simulator "hspice"
+set characterization_simulator "ultrasim"
+#set characterization_simulator "hspice"
 #set characterization_simulator "eldo"
 #set characterization_simulator "spectre"
 
 # specify models the memory should be characterized for
 # partition (with fast spice) and characterize (with real spice)
-set models []
-#set models [list -ccs -ccsn -ecsm -ecsmn]
+#set models []
+set models [list -ccs -ccsn -ecsm -ecsmn]
 char_macro \\
     -extsim $partition_simulator \\
     -char_params [concat $models -extsim $characterization_simulator]
 # write models
-write_library -overwrite sram.lib
-#foreach model $models {{
-#    write_library -overwrite $model {0}_$model
-#}}
-""".format(output_library.abspath())
+#write_library -overwrite {0}{1}
+foreach model $models {{
+    write_library -overwrite $model {0}$model{1}
+}}
+""".format(output_library.change_ext("").abspath(),output_library.suffix())
 	except AttributeError:
 		Logs.error('Please define a cell name with parameter "cell" for feature "altos_liberate".')
 

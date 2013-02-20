@@ -1,4 +1,4 @@
-from verilog_scanner import verilog_scanner
+from verilog_scanner import verilog_scanner_task
 from vhdl_scanner import vhdl_scanner
 import os
 
@@ -42,7 +42,7 @@ from waflib import TaskGen
 #        ext_in       = ['.svh',],
 #        ext_out      = ['.svh.out',],
 #        reentrant    = False,
-#        scan         = verilog_scanner,
+#        scan         = verilog_scanner_task,
 #)
 #
 #TaskGen.declare_chain(
@@ -50,14 +50,14 @@ from waflib import TaskGen
 #        ext_in       = ['.sv',],
 #        ext_out      = ['.sv.out',],
 #        reentrant    = False,
-#        scan         = verilog_scanner
+#        scan         = verilog_scanner_task,
 #)
 
 TaskGen.declare_chain(
         rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
         ext_in       = ['.v', '.lib.src', '.vp', ],
         reentrant    = False,
-        scan         = verilog_scanner
+        scan         = verilog_scanner_task,
 )
 
 TaskGen.declare_chain(
@@ -74,12 +74,20 @@ class ModelsimSvlogTask(Task.Task):
 
 @TaskGen.extension(".sv",".svh")
 def gen_svlog_task(self,node):
+	import types
 	input = [node]
 	output = [node.change_ext(node.suffix()+'.out')]
 	sv_task = self.create_task("ModelsimSvlogTask",input,output)
-	additional_inputs = verilog_scanner(sv_task)[0]
+	sv_task.scan = types.MethodType(verilog_scanner_task,sv_task)
+	# <--- up to here the actual task has been created
+	# now we need to make some depencies explicit because
+	# the compiler needs those for packages --->
+	dep_files,dep_types = self.verilog_scanner(input[0])
+	additional_inputs = []
+	for dep_file, dep_type in zip(dep_files,dep_types):
+		if dep_type == 'package':
+			additional_inputs.append(dep_file)
 	sv_task.set_inputs(additional_inputs)
-
 
 from waflib import Task
 class vlibTask(Task.Task):

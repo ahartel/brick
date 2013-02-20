@@ -289,10 +289,12 @@ def create_encounter_task(self):
 	# Floorplan step
 	self.floorplan_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_floorplan_'+self.toplevel+'.tcl'))
 	with open(self.floorplan_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_floorplan(self.setup_tcl_script,self.parameters,self.floorplan_mixin))
+		f.write(config_object.insert_floorplan(self.setup_tcl_script,self.parameters,getattr(self,'floorplan_mixin',None)))
 	fp_inputs = [results_dir.make_node(self.toplevel+'_bind.enc')]
 	if hasattr(self,'io_file'):
 		fp_inputs.append(self.io_file)
+	if hasattr(self,'floorplan_mixin'):
+		fp_inputs.append(self.floorplan_mixin)
 	floorplan_task = self.create_task('EncounterFloorplanTask',fp_inputs,[results_dir.make_node(self.toplevel+'_floorplan.enc')])
 
 	if getattr(self,'stop_tep','') == 'floorplan':
