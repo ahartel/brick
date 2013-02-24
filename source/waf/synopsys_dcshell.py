@@ -117,17 +117,18 @@ class synopsysDcshellTask(Task.Task):
 	vars = ['SYNOPSYS_DCSHELL','SYNOPSYS_DCSHELL_OPTIONS']
 
 	def run(self):
-		run_str = '%s %s -f %s' % (self.env.SYNOPSYS_DCSHELL, " ".join(self.env.SYNOPSYS_DCSHELL_OPTIONS), self.generator.main_tcl_script.abspath())
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'dc_shell_'+self.generator.toplevel+'.log'))
+
+		run_str = '%s %s -f %s -output_log_file %s' % (self.env.SYNOPSYS_DCSHELL, " ".join(self.env.SYNOPSYS_DCSHELL_OPTIONS), self.generator.main_tcl_script.abspath(),logfile.abspath())
 		out = ""
 		try:
 			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
 		except Exception as e:
 			out = e.stdout + e.stderr
 
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'dc_shell_'+self.generator.toplevel+'.log'))
-		f = open(logfile.abspath(),'w')
-		f.write(out)
-		f.close()
+		#f = open(logfile.abspath(),'w')
+		#f.write(out)
+		#f.close()
 
 		return 0
 
