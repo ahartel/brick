@@ -341,7 +341,7 @@ init_design
 #
 #check timing of synthesized netlist
 #
-timeDesign -prePlace -outDir ./reports
+timeDesign -prePlace -outDir $BRICK_RESULTS/enc_$toplevel\_reports
 
 if {{$version != ""}} {{
 	if {{!$use_lef_flow}} {{
@@ -492,9 +492,9 @@ if {{{2}}} {{
 
 #clock tree specification file is needed for clock gate awareness placement, based on synthesis sdc
 if {{$use_external_cts_spec == 0}} {{
-    createClockTreeSpec -bufferList $clk_buffer_list -output ./scripts/$toplevel.cts.spec
+    createClockTreeSpec -bufferList $clk_buffer_list -output {4}
 }}
-specifyClockTree -file ./scripts/$toplevel.cts.spec
+specifyClockTree -file {4}
 
 
 #
@@ -542,3 +542,542 @@ if {{$version != ""}} {{
 exit
 
 """
+
+steps_tcl['prects'] = """
+#
+# Import place Step Encounter DB 
+#
+source {0}
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_place_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_place_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_place.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_place layout"
+	}}
+}}
+
+if {{{1}}} {{
+    source {2}
+}}
+
+if {{$enable_rcgen}} {{
+        #setExtractRCMode -engine preRoute
+        setExtractRCMode -effortLevel signoff -engine postRoute
+        setExtractRCMode -lefTechFileMap $qx_leflayer_map
+		setExtractRCMode -coupled true
+        #setExtractRCMode -qrcCmdType partial
+        #setExtractRCMode -qrcCmdFile ./scripts/qrc_custom_opt.cmd
+        generateRCFactor -outputFile {3} -preroute true -reference signoff
+}}
+# load RC Factors
+source {3}
+
+# 
+# Set optimization mode
+#
+setOptMode -holdTargetSlack $target_hold_slack
+setOptMode -setupTargetSlack $target_setup_slack
+setOptMode -drcMargin $drc_margin_factor
+setOptMode -fixFanoutLoad true
+
+if {{$enable_usefulskew}} {{
+	setOptMode -usefulSkew true
+	setUsefulSkewMode -delayPreCTS true
+}}
+
+#
+# Perform optimization, generate timing reports
+#
+optDesign -preCTS -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+trialRoute
+
+#
+# Save Pre-CTS Encounter DB
+#
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_prects_$version.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_prects_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_prects.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_prects layout"
+	}}
+}}
+
+exit
+"""
+
+steps_tcl['cts'] = """
+#
+# Import prects Step Encounter DB 
+#
+source {0}
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_prects_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_prects_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_prects.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_prects layout"
+	}}
+}}
+
+if {{{1}}} {{
+    source {2}
+}}
+
+#
+# Specify a clock tree specification file
+#
+cleanupSpecifyClockTree
+specifyClockTree -clkfile {3}
+
+
+if {{$enable_usefulskew}} {{
+    specifyClockTree -clkfile scheduling_file.cts
+}}
+
+setCTSMode -reset
+ckSynthesis -report $BRICK_RESULTS/enc_$toplevel\_reports/$toplevel.ctsrpt
+
+# make the tool use propagated clock timing
+# -> (ag) for some strange reason this is not automatically done in MMMC mode
+# -> should be investigated!
+set_interactive_constraint_modes [all_constraint_modes -active]
+set_propagated_clock [all_clocks]
+
+trialRoute
+
+#
+# Save CTS Encounter DB
+#
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_cts_$version.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_cts_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_cts.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_cts layout"
+	}}
+}}
+
+exit
+"""
+
+steps_tcl['postcts'] = """
+#
+# Import CTS Step Encounter DB 
+#
+source {0}
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_cts_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_cts_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_cts.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_cts layout"
+	}}
+}}
+
+if {{{1}}} {{
+    source {2}
+}}
+
+# load RC Factors (they have already been generated in preCTS
+source {3}
+
+#
+# Set optimization mode
+#
+setOptMode -holdTargetSlack $target_hold_slack
+setOptMode -setupTargetSlack $target_setup_slack
+setOptMode -drcMargin $drc_margin_factor
+setOptMode -effort low -fixFanoutLoad true
+
+if {{$enable_usefulskew}} {{
+    setOptMode -usefulskew
+    setUsefulSkewMode -useCells $clk_buffer_list
+    setUsefulSkewMode -maxSkew
+}}
+
+#
+# Perform optimization, generate timing reports
+#
+optDesign -postCTS -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+optDesign -postCTS -hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+
+#
+# Save Post-CTS Encounter DB
+#
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postcts_$version.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postcts_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postcts.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postcts layout"
+	}}
+}}
+
+exit
+"""
+
+steps_tcl['route'] = """
+#
+# Import postcts Step Encounter DB 
+#
+source {0}
+#source ./scripts/parameters.tcl
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postcts_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postcts_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postcts.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postcts layout"
+	}}
+}}
+
+if {{{1}}} {{
+    source {2}
+}}
+
+# 
+# delete all existing routing halo
+#
+deleteRoutingHalo -allBlocks
+
+foreach powernet $pwrnet {{
+	setAttribute -net $powernet -skip_antenna_fix true -skip_routing true
+}}
+foreach groundnet $gndnet {{
+	setAttribute -net $groundnet -skip_antenna_fix true -skip_routing true
+}}
+
+#
+# Perfom routing using NanoRoute
+#
+#do the clocks second
+#disable this section if design does not contain any clock nets
+setAttribute -net @CLOCK -preferred_extra_space 2 -avoid_detour true -weight 5     \
+			 -bottom_preferred_routing_layer 3
+
+selectNet -allDefClock
+
+setNanoRouteMode -routeSelectedNetOnly true
+setNanoRouteMode -routeTopRoutingLayer 5
+setNanoRouteMode -envNumberProcessor 8
+setNanoRouteMode -routeAntennaCellName $ant_cells
+globalDetailRoute
+deselectAll
+
+#
+# route remaining nets
+#
+setNanoRouteMode -routeSelectedNetOnly false
+setNanoRouteMode -routeTopRoutingLayer 9
+setNanoRouteMode -routeBottomRoutingLayer 1
+setNanoRouteMode -routeWithSiDriven true
+setNanoRouteMode -routeSiEffort normal
+setNanoRouteMode -routeTdrEffort 10
+setNanoRouteMode -routeAntennaCellName $ant_cells
+globalDetailRoute
+
+#
+# Save route Encounter DB
+#
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_route_$version.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_route_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_route.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_route layout"
+	}}
+}}
+
+exit
+"""
+
+steps_tcl['postroute'] = """
+#
+# Import route Step Encounter DB 
+#
+
+source {0}
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_route_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_route_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_route.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_route layout"
+	}}
+}}
+
+if {{{1}}} {{
+    source {2}
+}}
+
+setQRCTechfile $qx_tech_file_rctyp
+setExtractRCMode -effortLevel signoff -engine postRoute
+setExtractRCMode -lefTechFileMap $qx_leflayer_map
+setExtractRCMode -coupled true
+
+if {{$enable_qx && $enable_rcgen}} {{
+
+    #setExtractRCMode -qrcCmdType partial
+    #setExtractRCMode -qrcCmdFile ./config/qrc_custom_opt.cmd
+    generateRCFactor -outputFile {3} -preroute false -postroute medium -reference signoff
+
+    #
+    # RC factors are automatically set if WNS correlation is improved 
+    # (comparison of QX and FE built-in extraction)
+    #
+    #generateRCFactor -detailRC 
+    #generateRCFactor -reference high -detailRC 
+}}
+
+# load RC Factors
+source {3}
+
+#
+# On Chip Variation (OCV) analysis setup
+#
+if {{$enable_ocv}} {{
+    #setTimingDerate -early 0.95 -late 1.05 -delay_corner MIN_CORNER
+    #setTimingDerate -early 0.95 -late 1.05 -delay_corner MAX_CORNER
+    #setAnalysisMode -bcWc -crpr
+    setAnalysisMode -analysisType onChipVariation
+}}
+
+#
+# Set optimization mode
+#
+setOptMode -effort high
+setOptMode -holdTargetSlack $target_hold_slack
+setOptMode -setupTargetSlack $target_setup_slack
+setOptMode -drcMargin $drc_margin_factor
+setOptMode -fixFanoutLoad true
+
+#
+# Perform post route optimization, generate timing reports
+#
+if {{$enable_si && $enable_qx}} {{
+#     setExtractRCMode -assumeMetFill
+#    setExtractRCMode -effortLevel high
+    #
+    # Set Crosstalk Analyzing Mode
+    #
+    setSIMode -analyzeNoiseThreshold 20 \
+          -insCeltICPreTcl {{set_align_mode -mode peak}} \
+          -runStandAloneQX true -analysisType pessimistic
+
+	setDelayCalMode -engine feDC -SIAware false
+    #
+    # Perform crosstalk optimization, generate timing reports
+    #
+    optDesign -postRoute -signoff -si -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    optDesign -postRoute -signoff -si -hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+}} else {{
+    optDesign -signoff -postRoute -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    optDesign -signoff -postRoute -hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    #optDesign -postRoute -drv -excludeNets ./scripts/$toplevel.exclude.nets -outDir reports
+}}
+
+clearDrc
+
+verifyGeometry -noMinHole -noImplantCheck -noMinimumCut -noMinStep -noViaEnclosure -noInsuffMetalOverlap -regRoutingOnly
+
+#
+# Save postroute Encounter DB
+#
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postroute_$version.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postroute_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postroute.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postroute layout"
+	}}
+}}
+
+exit
+"""
+
+steps_tcl['final'] = """
+#
+# Import postroute Step Encounter DB 
+#
+source {0}
+source {1}
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postroute_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postroute_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_postroute.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postroute layout"
+	}}
+}}
+
+if {{{2}}} {{
+    source {3}
+}}
+
+
+#deleteAllObstruction
+deleteObstruction -all
+deleteAllRouteBlks
+
+# remove all cell padding - padforpinnearborder is considered by addFiller!
+deleteAllCellPad
+setPlaceMode -padForPinNearBorder false
+
+# 
+# Add Core filler cells:
+#
+if {{$enable_corefill}} {{
+	foreach filler $core_filler_list {{
+		addFiller -cell $filler -prefix corefill
+	}}
+}}
+
+#
+# Timing aware metal fill 
+#
+if {{$enable_metalfill}} {{
+	createRouteBlk -box  [expr $orgx] [expr $orgy] [expr $orgx+28] [expr $orgy+45] -layer all
+
+	setMetalFill -layer 1 -activeSpacing 3
+	setMetalFill -layer 2 -activeSpacing 3
+	setMetalFill -layer 3 -activeSpacing 3
+	setMetalFill -layer 4 -activeSpacing 3
+	setMetalFill -layer 5 -activeSpacing 3
+	setMetalFill -layer 6 -activeSpacing 3
+	setMetalFill -layer 7 -activeSpacing 3
+	setMetalFill -layer 8 -activeSpacing 3
+	setMetalFill -layer 9 -activeSpacing 3
+
+        addMetalFill -timingAware sta -slackThreshold 0.5 \
+				 -layer {{1 2 3 4 5 6 7 8 9}}  -area $xofset $yofset $top_pins_w $top_pins_h
+
+	deleteAllRouteBlks
+}}
+
+setExtractRCMode -coupled true
+setExtractRCMode -lefTechFileMap $qx_leflayer_map
+setExtractRCMode -effortLevel signoff -engine postRoute
+#setExtractRCMode -qrcCmdType partial -qrcCmdFile ./config/final_qrc.cmd
+
+if {{$enable_qx && !$enable_si}} {{
+
+    #extractRC
+    #               runQRC -multiCpu 6 -rcType coupledRc -libraryName $qx_library -techFile $qx_tech_file \
+    #          -grayData obs -logFile ./logfiles/qx_extraction.log \
+    #          -outputFileName ./extraction/$toplevel.spef -compressedOutput
+    #rcOut -setload ./extraction/$toplevel.setload
+    #rcOut -setres ./extraction/$toplevel.setres
+    #rcOut -spef ./extraction/$toplevel.spef
+    #exec gzip -f ./extraction/$toplevel.spef
+
+
+    #setExtractRCMode -effortLevel signoff -qrcCmdType custom -qrcCmdFile ./qrc/final_qrc.cmd
+    #extractRC
+
+    timeDesign -signoff	-prefix $toplevel\_final_signoff -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    timeDesign -signoff	-prefix $toplevel\_final_signoff -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport
+    timeDesign -signoff -hold -prefix $toplevel\_final_signoff_hold1 -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    timeDesign -signoff -hold -prefix $toplevel\_final_signoff_hold1 -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport
+}}
+
+
+if {{$enable_qx && $enable_si}} {{
+
+    setSIMode -analyzeNoiseThreshold 20 \
+                -insCeltICPreTcl {{set_align_mode -mode peak}} \
+                -runStandAloneQX true -analysisType pessimistic
+
+    #extractRC
+    #spefIn -rc_corner RCBEST ./extraction/Top_pins_RCBEST.spef.gz
+    #spefIn -rc_corner RCWORST ./extraction/Top_pins_RCWORST.spef.gz
+    #exec gzip -f ./extraction/$toplevel.spef
+
+    timeDesign -signoff -si -prefix $toplevel\_final_signoff_si -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    timeDesign -signoff -si -prefix $toplevel\_final_signoff_si -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport    -reportOnly
+    timeDesign -signoff -si -hold	-prefix $toplevel\_final_signoff_si_hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports                       -reportOnly
+    timeDesign -signoff -si -hold	-prefix $toplevel\_final_signoff_si_hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport    -reportOnly
+}}
+
+#
+# Save final Encounter DB
+#
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_final_$version.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_final_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		saveDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_final.enc -def
+	}} else {{
+		saveDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_final layout"
+	}}
+}}
+
+exit
+"""
+

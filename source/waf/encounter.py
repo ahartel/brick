@@ -26,7 +26,7 @@ class EncounterConfig:
 			'drc_margin_factor' : 0.2,
 			'enable_metalfill': False,
 			'enable_qx' : True,
-			'enable_rcgen' : False,
+			'enable_rcgen' : True,
 			'enable_si' : True,
 			'enable_usefulskew' : False,
 			'enable_ocv' : False,
@@ -85,14 +85,15 @@ class EncounterConfig:
 					'',
 					)
 
-	def insert_place(self,setup_tcl,parameters,place_script):
+	def insert_place(self,setup_tcl,parameters,place_script,cts_spec):
 		from encounter_tcl import steps_tcl
 		try:
 			return steps_tcl['place'].format(
 					setup_tcl.abspath(),
 					parameters.abspath(),
 					'1',
-					place.abspath(),
+					place_script.abspath(),
+					cts_spec.abspath()
 					)
 		except:
 			return steps_tcl['place'].format(
@@ -100,7 +101,109 @@ class EncounterConfig:
 					parameters.abspath(),
 					'0',
 					'',
+					cts_spec.abspath()
 					)
+
+	def insert_prects(self,setup_tcl,prects_script,rc_factors):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['prects'].format(
+					setup_tcl.abspath(),
+					'1',
+					prects.abspath(),
+					rc_factors.abspath()
+					)
+		except:
+			return steps_tcl['prects'].format(
+					setup_tcl.abspath(),
+					'0',
+					'',
+					rc_factors.abspath()
+					)
+
+	def insert_cts(self,setup_tcl,cts_script,cts_spec):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['cts'].format(
+					setup_tcl.abspath(),
+					'1',
+					cts.abspath(),
+					cts_spec.abspath()
+					)
+		except:
+			return steps_tcl['cts'].format(
+					setup_tcl.abspath(),
+					'0',
+					'',
+					cts_spec.abspath()
+					)
+
+	def insert_postcts(self,setup_tcl,cts_script,rc_factors):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['postcts'].format(
+					setup_tcl.abspath(),
+					'1',
+					cts.abspath(),
+					rc_factors.abspath()
+					)
+		except:
+			return steps_tcl['postcts'].format(
+					setup_tcl.abspath(),
+					'0',
+					'',
+					rc_factors.abspath()
+					)
+
+	def insert_route(self,setup_tcl,route_script):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['route'].format(
+					setup_tcl.abspath(),
+					'1',
+					route_script.abspath()
+					)
+		except:
+			return steps_tcl['route'].format(
+					setup_tcl.abspath(),
+					'0',
+					''
+					)
+
+	def insert_postroute(self,setup_tcl,postroute_script,rc_factors):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['postroute'].format(
+					setup_tcl.abspath(),
+					'1',
+					postroute_script.abspath(),
+					rc_factors.abspath()
+					)
+		except:
+			return steps_tcl['postroute'].format(
+					setup_tcl.abspath(),
+					'0',
+					'',
+					rc_factors.abspath()
+					)
+
+	def insert_final(self,setup_tcl,parameters,final_script):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['final'].format(
+					setup_tcl.abspath(),
+					parameters.abspath(),
+					'1',
+					final_script.abspath(),
+					)
+		except:
+			return steps_tcl['final'].format(
+					setup_tcl.abspath(),
+					parameters.abspath(),
+					'0',
+					'',
+					)
+
 
 	def insert_corner_def(self):
 		from encounter_tcl import corner_def_tcl
@@ -149,7 +252,7 @@ class EncounterTSMCConfig(EncounterConfig):
 			'drc_margin_factor' : 0.2,
 			'enable_metalfill': False,
 			'enable_qx' : True,
-			'enable_rcgen' : False,
+			'enable_rcgen' : True,
 			'enable_si' : True,
 			'enable_usefulskew' : False,
 			'enable_ocv' : False,
@@ -232,6 +335,72 @@ class EncounterPlaceTask(Task.Task):
 		except Exception as e:
 			out = e.stdout + e.stderr
 
+class EncounterPrectsTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_prects.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.prects_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+class EncounterCtsTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_cts.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.cts_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+class EncounterPostctsTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_postcts.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.postcts_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+class EncounterRouteTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_route.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.route_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+class EncounterPostrouteTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_postroute.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.postroute_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+class EncounterFinalTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_final.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.final_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
 
 def configure(conf):
 	conf.load('brick_general')
@@ -253,6 +422,11 @@ def create_encounter_task(self):
 	results_dir = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.toplevel+'_enc'))
 
 	self.flowsetting_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_flow_settings_'+self.toplevel+'.tcl'))
+
+	self.prects_rc_factors = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_prects_rc_factors'+self.toplevel+'.tcl'))
+	self.postroute_rc_factors = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_postroute_rc_factors'+self.toplevel+'.tcl'))
+
+	self.cts_spec = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_cts_'+self.toplevel+'.spec'))
 
 	with open(self.flowsetting_tcl_script.abspath(),'w') as f:
 		f.write(config_object.insert_flow_settings())
@@ -283,7 +457,7 @@ def create_encounter_task(self):
 		f.write(config_object.insert_bind(self.setup_tcl_script,self.corner_def_tcl_script))
 	bind_task = self.create_task('EncounterBindTask',[self.netlist,self.constraints_file]+getattr(self,'additional_physical_libraries',[])+getattr(self,'additional_timing_libraries',[]),[results_dir.make_node(self.toplevel+'_bind.enc')])
 
-	if getattr(self,'stop_tep','') == 'bind':
+	if getattr(self,'stop_step','') == 'bind':
 		return
 
 	# Floorplan step
@@ -297,19 +471,91 @@ def create_encounter_task(self):
 		fp_inputs.append(self.floorplan_mixin)
 	floorplan_task = self.create_task('EncounterFloorplanTask',fp_inputs,[results_dir.make_node(self.toplevel+'_floorplan.enc')])
 
-	if getattr(self,'stop_tep','') == 'floorplan':
+	if getattr(self,'stop_step','') == 'floorplan':
 		return
 
 	# Place step
 	self.place_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_place_'+self.toplevel+'.tcl'))
 	with open(self.place_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_place(self.setup_tcl_script,self.parameters,getattr(self,'place_mixin',None)))
+		f.write(config_object.insert_place(self.setup_tcl_script,self.parameters,getattr(self,'place_mixin',None),self.cts_spec))
 	place_inputs = [results_dir.make_node(self.toplevel+'_floorplan.enc')]
 	if hasattr(self,'place_mixin'):
 		place_inputs.append(self.io_file)
 	place_task = self.create_task('EncounterPlaceTask',place_inputs,[results_dir.make_node(self.toplevel+'_place.enc')])
 
-	if getattr(self,'stop_tep','') == 'place':
+	if getattr(self,'stop_step','') == 'place':
+		return
+
+	# prects step
+	self.prects_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_prects_'+self.toplevel+'.tcl'))
+	with open(self.prects_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_prects(self.setup_tcl_script,getattr(self,'prects_mixin',None),self.prects_rc_factors))
+	prects_inputs = [results_dir.make_node(self.toplevel+'_place.enc')]
+	if hasattr(self,'prects_mixin'):
+		prects_inputs.append(self.io_file)
+	prects_task = self.create_task('EncounterPrectsTask',prects_inputs,[results_dir.make_node(self.toplevel+'_prects.enc')])
+
+	if getattr(self,'stop_step','') == 'prects':
+		return
+
+	# cts step
+	self.cts_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_cts_'+self.toplevel+'.tcl'))
+	with open(self.cts_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_cts(self.setup_tcl_script,getattr(self,'cts_mixin',None),self.cts_spec))
+	cts_inputs = [results_dir.make_node(self.toplevel+'_prects.enc')]
+	if hasattr(self,'cts_mixin'):
+		cts_inputs.append(self.io_file)
+	cts_task = self.create_task('EncounterCtsTask',cts_inputs,[results_dir.make_node(self.toplevel+'_cts.enc')])
+
+	if getattr(self,'stop_step','') == 'cts':
+		return
+
+	# postcts step
+	self.postcts_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_postcts_'+self.toplevel+'.tcl'))
+	with open(self.postcts_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_postcts(self.setup_tcl_script,getattr(self,'postcts_mixin',None),self.prects_rc_factors))
+	postcts_inputs = [results_dir.make_node(self.toplevel+'_cts.enc')]
+	if hasattr(self,'postcts_mixin'):
+		postcts_inputs.append(self.io_file)
+	postcts_task = self.create_task('EncounterPostctsTask',postcts_inputs,[results_dir.make_node(self.toplevel+'_postcts.enc')])
+
+	if getattr(self,'stop_step','') == 'postcts':
+		return
+
+	# route step
+	self.route_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_route_'+self.toplevel+'.tcl'))
+	with open(self.route_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_route(self.setup_tcl_script,getattr(self,'route_mixin',None)))
+	route_inputs = [results_dir.make_node(self.toplevel+'_postcts.enc')]
+	if hasattr(self,'route_mixin'):
+		route_inputs.append(self.io_file)
+	route_task = self.create_task('EncounterRouteTask',route_inputs,[results_dir.make_node(self.toplevel+'_route.enc')])
+
+	if getattr(self,'stop_step','') == 'route':
+		return
+
+	# postroute step
+	self.postroute_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_postroute_'+self.toplevel+'.tcl'))
+	with open(self.postroute_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_postroute(self.setup_tcl_script,getattr(self,'postroute_mixin',None),self.postroute_rc_factors))
+	postroute_inputs = [results_dir.make_node(self.toplevel+'_route.enc')]
+	if hasattr(self,'postroute_mixin'):
+		postroute_inputs.append(self.io_file)
+	postroute_task = self.create_task('EncounterPostrouteTask',postroute_inputs,[results_dir.make_node(self.toplevel+'_postroute.enc')])
+
+	if getattr(self,'stop_step','') == 'postroute':
+		return
+
+	# final step
+	self.final_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_final_'+self.toplevel+'.tcl'))
+	with open(self.final_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_final(self.setup_tcl_script,self.parameters,getattr(self,'final_mixin',None)))
+	final_inputs = [results_dir.make_node(self.toplevel+'_postroute.enc')]
+	if hasattr(self,'final_mixin'):
+		final_inputs.append(self.io_file)
+	final_task = self.create_task('EncounterFinalTask',final_inputs,[results_dir.make_node(self.toplevel+'_final.enc')])
+
+	if getattr(self,'stop_step','') == 'final':
 		return
 
 # vim: noexpandtab:
