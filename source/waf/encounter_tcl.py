@@ -500,11 +500,6 @@ specifyClockTree -file {4}
 #
 # Place Std-Cells
 #
-setPlaceMode -placeIoPins true -clkGateAware true -congEffort high \
-             -honorSoftBlockage true -maxRouteLayer [llength $metal_layer] \
-             -maxDensity 0.7 -modulePlan true -timingDriven true \
-             -padForPinNearBorder true
-
 placeDesign
 
 
