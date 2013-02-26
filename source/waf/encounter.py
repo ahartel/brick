@@ -112,7 +112,7 @@ class EncounterConfig:
 			return steps_tcl['prects'].format(
 					setup_tcl.abspath(),
 					'1',
-					prects.abspath(),
+					prects_script.abspath(),
 					rc_factors.abspath()
 					)
 		except:
@@ -129,7 +129,7 @@ class EncounterConfig:
 			return steps_tcl['cts'].format(
 					setup_tcl.abspath(),
 					'1',
-					cts.abspath(),
+					cts_script.abspath(),
 					cts_spec.abspath()
 					)
 		except:
@@ -140,13 +140,13 @@ class EncounterConfig:
 					cts_spec.abspath()
 					)
 
-	def insert_postcts(self,setup_tcl,cts_script,rc_factors):
+	def insert_postcts(self,setup_tcl,postcts_script,rc_factors):
 		from encounter_tcl import steps_tcl
 		try:
 			return steps_tcl['postcts'].format(
 					setup_tcl.abspath(),
 					'1',
-					cts.abspath(),
+					postcts_script.abspath(),
 					rc_factors.abspath()
 					)
 		except:
