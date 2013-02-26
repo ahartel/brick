@@ -1,16 +1,10 @@
-import logging
+from brick_characterizer.CharBase import CharBase
 
-class SimulationRun:
+class SetupHold_Char(CharBase):
     def __init__(self,toplevel,output_filename):
-
+        super(SetupHold_Char,self).__init__()
         self.toplevel = toplevel
         self.output_filename = output_filename
-        self.spice_output = []
-        self.include_netlists = []
-        # hold static signals and their constant values
-        self.static_signals = {}
-        # store timing results
-        self.timing_signals = {}
         # store probe signals and their related inputs
         self.probe_signals = {}
         # store unateness of probe signals
@@ -19,12 +13,10 @@ class SimulationRun:
         self.clocks = {}
         # store which clock belongs to which input signal
         self.signal_to_clock = {}
-        self.powers = {'vdd': 1.2, 'gnd': 0.0}
         self.output_dir = 'output'
         self.rising_edges = {}
         self.falling_edges = {}
 
-        self.state = 'init'
         self.state_cnt = 0
         self.delays = { }
         self.setups = { }
@@ -38,36 +30,16 @@ class SimulationRun:
         self.upper_th = {}
         self.direction = {}
 
-        self.infinity = 1000.
         self.clock_rise_time = 0.1 #ns
         self.signal_rise_time = 0.1 #ns
         self.point_of_failure = 1.1 # 10 percent of delay
-        self.rise_threshold = 0.501
-        self.fall_threshold = 0.499
-        self.high_value = 1.2
-        self.low_value = 0.0
-        self.timing_offset = 4.0 #ns
-        self.simulation_length = 10.0 #ns
+
         self.max_setup_steps = 9
         self.max_hold_steps = 9
-        self.epsilon = 1.e-6
 
-        self.added_static_signals = False
-        self.added_timing_signals = False
-
-        # logger bleiben
-        #self.logger = logging.getLogger('SetupAndHold')
-        #self.logger.setLevel(logging.DEBUG)
-        #ch = logging.FileHandler('./logfiles/'+self.whats_my_name()+'.log')
-        #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        #ch.setFormatter(formatter)
-        #self.logger.addHandler(ch)
-
-    def logger_debug(self,text):
-        logging.debug(self.whats_my_name()+' '+text)
 
     def whats_my_name(self):
-        return 'SimulationRun_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)
+        return 'SetupHold_Char_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)
 
     def get_holds(self):
         return self.holds
@@ -87,42 +59,6 @@ class SimulationRun:
     def set_signal_rise_time(self,value):
         self.signal_rise_time = value
 
-    def set_rise_threshold(self,value):
-        if value > 1:
-            raise Exception('rise threshold cannot be greater than 1')
-
-        self.rise_threshold = value
-
-    def set_fall_threshold(self,value):
-        if value > 1:
-            raise Exception('fall threshold cannot be greater than 1')
-        self.fall_threshold = value
-
-    def set_powers(self,values):
-        self.powers = values
-
-    def append_out(self,line):
-        self.spice_output.append(line)
-
-    def add_static_signals(self,signals):
-        if self.added_timing_signals:
-            for name in signals.iterkeys():
-                if self.timing_signals.has_key(name) or self.clocks.has_key(name):
-                    raise Exception('Static signal '+name+' has already been defined as a timing or clock signal.')
-
-        self.static_signals = signals
-        self.added_static_signals = True
-
-    def generate_single_signal(self,signal,value):
-        self.append_out('V'+signal+' '+signal+' 0 pwl(')
-        if value == 1:
-            value = str(self.high_value)
-        else:
-            value = str(self.low_value)
-
-        self.append_out('+ 0.0000000e+00 '+value+'000000e+00')
-        self.append_out('+ 2.4999999e-13 '+value+'000000e+00')
-        self.append_out('+ 5.0000000e-09 '+value+'000000e+00)')
 
     def generate_single_edge(self,signal,rise_time,start_delay,edge_type):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
@@ -172,37 +108,6 @@ class SimulationRun:
         self.append_out('+ '+str(start_time_2)+'e-9 '+str(second_value)+'e+00')
         self.append_out('+ '+str(start_time_2+transition_time)+'e-09 '+str(first_value)+'e+00)')
 
-    def generate_clock_edge(self,name,direction):
-        self.append_out('V'+name+' '+name+' 0 pwl(')
-        if direction == 'R':
-            self.append_out('+ 0.0000000e+00 0.0000000e+00')
-            self.append_out('+ '+str(self.timing_offset)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time)+'e-09 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*2)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time)+'e-09 '+str(self.high_value))
-        else:
-            self.append_out('+ 0.0000000e+00 '+str(self.high_value)+'000000e+00')
-            self.append_out('+ '+str(self.timing_offset)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time)+'e-09 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*2)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time)+'e-09 '+str(self.low_value))
-
-    def generate_static_signals(self):
-        import re
-        for power_name,power_value in self.powers.iteritems():
-            self.append_out('V'+power_name+' '+power_name+' 0 '+str(power_value))
-
-        for (signal,value) in self.static_signals.iteritems():
-            #single net
-            self.generate_single_signal(signal,value)
-
-    def add_probe(self,signal):
-        self.append_out('.print v('+signal+')')
-        self.append_out('.probe v('+signal+')')
 
     #def get_current_input_delay(self):
     #    if self.state == 'delay':
@@ -232,39 +137,9 @@ class SimulationRun:
         name,ext = os.path.splitext(self.output_filename)
         return name+'_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)+'_'+self.state+'_'+str(self.state_cnt)+ext
 
-    def get_current_logfile(self):
-        import os
-        name,ext = os.path.splitext(self.get_current_filename())
-        return name+'.log'
-
-    def write_spice_file(self):
-
-        self.append_out('* brick characterizer')
-        self.write_include_netlists()
-        self.write_header()
-        self.generate_static_signals()
-        self.generate_timing_signals()
-
-        self.logger_debug("Writing to filename "+self.get_current_filename())
-
-        f = open(self.get_current_filename(),'w')
-        for line in self.spice_output:
-            f.write(line+'\n')
-        f.close()
-
-        self.spice_output = []
-
-    def add_include_netlist(self,netlist):
-        import os
-        if not os.path.isfile(netlist):
-            raise Exception('include-netlist not found')
-
-        self.include_netlists.append(netlist)
 
     def add_timing_signals(self,clocks,tim_sig):
         import re
-        #import pprint
-        #pp = pprint.PrettyPrinter(indent=4)
 
         self.clocks = clocks
 
@@ -307,8 +182,8 @@ class SimulationRun:
 
             else:
                 if self.added_static_signals:
-                    if self.static_signals.has_key(name):
-                        raise Exception('Timing signal '+name+' has already been defined as a static signal.')
+                    if self.static_signals.has_key(sig):
+                        raise Exception('Timing signal '+sig+' has already been defined as a static signal.')
 
                 self.timing_signals[sig] = {}
                 self.current_delay[sig] = [self.initial_delay,self.initial_delay]
@@ -322,21 +197,6 @@ class SimulationRun:
 
         self.added_timing_signals = True
 
-    def write_header(self):
-        self.append_out('.param tran_tend='+str(self.simulation_length)+'000000e-09')
-        self.append_out('.tran 1.00e-12 \'tran_tend\'')
-        self.append_out('')
-
-    def write_include_netlists(self):
-        for netlist in self.include_netlists:
-            self.append_out('.include '+netlist+'')
-        self.append_out('')
-
-    def has_steps(self):
-        if self.state == 'done':
-            return 0
-        else:
-            return 1
 
     def next_step(self):
         if self.state == 'init':
@@ -403,31 +263,6 @@ class SimulationRun:
         else:
             self.state = 'done'
             return 0
-
-    def run(self):
-        import subprocess
-        call = ['ultrasim', '-f', self.get_current_filename(), '-outdir', self.output_dir, '-format', 'sst2', '-top', self.toplevel,'=log',self.get_current_logfile()]
-        self.logger_debug(" ".join(call))
-        process = subprocess.Popen(call,stdout=subprocess.PIPE)
-        process.wait()
-
-    def oom(self,exp):
-        if exp == 'm':
-            return 1.e-3
-        elif exp == 'u':
-            return 1.e-6
-        elif exp == 'n':
-            return 1.e-9
-        elif exp == 'p':
-            return 1.e-12
-        elif exp == 'f':
-            return 1.e-15
-        elif exp == 'k':
-            return 1.e3
-        elif exp == 'M':
-            return 1.e6
-        elif exp == 'G':
-            return 1.e9
 
 
     def check_timing(self):
@@ -502,6 +337,8 @@ class SimulationRun:
                     self.logger_debug("Rising edge for signal "+signal+" not found but expected")
                     delta_t[0] = self.infinity
 
+            if delta_t[0] == self.infinity or delta_t[1] == self.infinity:
+                self.logger_warning('Delay for signal '+signal+' cannot be determined in '+self.whats_my_name()+' step '+self.state+'_'+str(self.state_cnt))
 
             #
             # the following block implements
@@ -565,5 +402,77 @@ class SimulationRun:
             self.rising_edges = pickle.load(input)
         with open(self.get_printfile_name()+'_falling') as input:
             self.falling_edges = pickle.load(input)
+        return
 
+        import re
+        f = open(self.get_printfile_name())
+        comment = re.compile(r"^\*")
+        start_value = re.compile(r"^x")
+        stop_value = re.compile(r"^y")
+        signal_name = re.compile(r"\s+([\w\[\]]+)\s+$")
+        signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]]+)")
+        numbers = re.compile(r"([\d\.]+)([GMkmunpf]?)\s+([\d\.]+)([GMkmunpf]?)")
+        found_start = 0
+        current_signal_name = ''
+        signal_value = 0
+        read_numbers = False
+        self.rising_edges = {}
+        self.falling_edges = {}
+
+        for line in f:
+            if found_start > 0:
+                if found_start < 3:
+                    found_start += 1
+                    continue
+                elif found_start >= 3 and not read_numbers:
+                    m = signal_name.match(line)
+                    if m:
+                        current_signal_name = m.group(1)
+                        signal_value = 0
+                    else:
+                        m = signal_name_wrap.match(line)
+                        if m:
+                            current_signal_name += m.group(1)
+                        else:
+                            read_numbers = True
+
+                    found_start += 1
+            else:
+                read_numbers = False
+                if comment.match(line):
+                    continue
+                elif start_value.match(line):
+                    found_start = 1
+
+            if read_numbers:
+                if stop_value.match(line):
+                    found_start = 0
+                else:
+                    m = numbers.search(line)
+                    if m:
+                        time = float(m.group(1))
+                        if m.group(2):
+                            time = time*self.oom(m.group(2))
+                        voltage = float(m.group(3))
+                        if m.group(4):
+                            voltage = voltage*self.oom(m.group(4))
+                        if signal_value == 0:
+                            if voltage < self.high_value*self.fall_threshold:
+                                signal_value = 'R'
+                            elif voltage > self.high_value*self.rise_threshold:
+                                signal_value = 'F'
+                        elif signal_value == 'R':
+                            if voltage > self.high_value*self.rise_threshold:
+                                if not self.rising_edges.has_key(current_signal_name):
+                                    self.rising_edges[current_signal_name] = []
+                                self.rising_edges[current_signal_name].append(time)
+                                signal_value = 'F'
+                        elif signal_value == 'F':
+                            if voltage < self.high_value*self.fall_threshold:
+                                if not self.falling_edges.has_key(current_signal_name):
+                                    self.falling_edges[current_signal_name] = []
+                                self.falling_edges[current_signal_name].append(time)
+                                signal_value = 'R'
+
+        f.close()
 
