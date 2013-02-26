@@ -218,7 +218,7 @@ if {[shell_is_in_topographical_mode]} {
 
 
 ## set multicore usage
-set_host_options -max_cores 8
+set_host_options -max_cores %s
 
 
 echo "Information: Starting Synopsys Design Compiler synthesis run ... "

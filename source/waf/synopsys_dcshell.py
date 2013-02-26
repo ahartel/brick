@@ -70,6 +70,7 @@ def create_synopsys_dcshell_task(self):
 				self.sourcelist_tcl_script.abspath(),
 				self.setup_tcl_script.abspath(),
 				'{'+' '.join([x.abspath() for x in getattr(self,'search_paths',[])])+'}',
+				getattr(self,'max_cores','4'),
 				constraints_file,
 				'0', # compile_ultra -scan
 				' '.join(compile_ultra_options)))

@@ -653,7 +653,8 @@ if {{$enable_usefulskew}} {{
     specifyClockTree -clkfile scheduling_file.cts
 }}
 
-setCTSMode -reset -routeClkNet false
+setCTSMode -reset
+setCTSMode -routeClkNet false
 ckSynthesis -report $BRICK_RESULTS/enc_$toplevel\_reports/$toplevel.ctsrpt
 
 # make the tool use propagated clock timing
