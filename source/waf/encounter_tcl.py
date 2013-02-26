@@ -30,41 +30,46 @@ set enable_corefill         {3}
 set enable_load_floorplan   {4}
 
 #
+# Load saved floorplan
+#
+set enable_route_clk_first  {5}
+
+#
 # Define hold and setup target slacks (prects/postcts/postroute steps)
 #
-set target_hold_slack       {5}
-set target_setup_slack      {6}
-set drc_margin_factor       {7}
+set target_hold_slack       {6}
+set target_setup_slack      {7}
+set drc_margin_factor       {8}
 
 #
 # Enable enable metal fill (final step)
 #
-set enable_metalfill        {8}
+set enable_metalfill        {9}
 
 #
 # Enable Fire & Ice QX Extraction
 #
-set enable_qx               {9}
+set enable_qx               {10}
 
 #
 # Enable RC factor generation for better result matching (Fire & Ice QX Extraction required)
 #
-set enable_rcgen            {10}
+set enable_rcgen            {11}
 
 #
 # Enable Crosstalk fixing using CeltIC (Fire & Ice QX Extraction required)
 #
-set enable_si               {11}
+set enable_si               {12}
 
 #
 # Enable Usefulskew optimization
 #
-set enable_usefulskew       {12}
+set enable_usefulskew       {13}
 
 #
 # Enable On Chip Variation (OCV) timing analysis (postroute step, preliminary flow!)
 #
-set enable_ocv              {13}
+set enable_ocv              {14}
 
 #
 # Power Analysis Setup
@@ -648,7 +653,7 @@ if {{$enable_usefulskew}} {{
     specifyClockTree -clkfile scheduling_file.cts
 }}
 
-setCTSMode -reset
+setCTSMode -reset -routeClkNet false
 ckSynthesis -report $BRICK_RESULTS/enc_$toplevel\_reports/$toplevel.ctsrpt
 
 # make the tool use propagated clock timing
@@ -791,15 +796,16 @@ foreach groundnet $gndnet {{
 setAttribute -net @CLOCK -preferred_extra_space 2 -avoid_detour true -weight 5     \
 			 -bottom_preferred_routing_layer 3
 
-selectNet -allDefClock
+if {{$enable_route_clk_first}} {{
+    selectNet -allDefClock
 
-setNanoRouteMode -routeSelectedNetOnly true
-setNanoRouteMode -routeTopRoutingLayer 5
-setNanoRouteMode -envNumberProcessor 8
-setNanoRouteMode -routeAntennaCellName $ant_cells
-globalDetailRoute
-deselectAll
-
+    setNanoRouteMode -routeSelectedNetOnly true
+    setNanoRouteMode -routeTopRoutingLayer 5
+    setNanoRouteMode -envNumberProcessor 8
+    setNanoRouteMode -routeAntennaCellName $ant_cells
+    globalDetailRoute
+    deselectAll
+}}
 #
 # route remaining nets
 #
