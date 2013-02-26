@@ -138,6 +138,27 @@ class calibreLvsTask(Task.Task):
 
 		return 0
 
+@TaskGen.feature('calibre_rve_lvs')
+def create_calibre_rve_lvs_task(self):
+	if not self.svdb:
+		Logs.error('Please name an existing svdb directory for feature \'cds_rve_lvs\'')
+		return
+
+	spice_file = self.svdb.find_node(self.cellname+'.sp')
+
+	t = self.create_task('calibreRveLvsTask',spice_file)
+
+@Task.always_run
+class calibreRveLvsTask(Task.Task):
+	vars = ['CALIBRE_LVS','CALIBRE_LVS_OPTIONS','CALIBRE_LVS_RULES']
+	def run(self):
+		run_str = "%s -rve -lvs %s %s" % (self.env.CALIBRE_LVS, self.generator.svdb.abspath(),self.generator.cellname)
+		out = ""
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout
+
 
 # for convenience
 @Configure.conf
