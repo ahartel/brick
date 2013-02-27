@@ -637,7 +637,7 @@ def create_encounter_task(self):
 	extract_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
 	if hasattr(self,'extract_mixin'):
 		extract_inputs.append(self.io_file)
-	extract_task = self.create_task('EncounterExtractTask',extract_inputs,[results_dir.make_node('extraction/encounter_'+self.toplevel+'_RCTYP.spef.gz'),results_dir.make_node('encounter_'+self.toplevel+'.sdf.gz')])
+	extract_task = self.create_task('EncounterExtractTask',extract_inputs,[results_dir.make_node('../extraction/'+self.toplevel+'_RCTYP.spef.gz'),results_dir.make_node('../encounter_'+self.toplevel+'.sdf.gz')])
 
 	if getattr(self,'stop_step','') == 'extract':
 		return
@@ -649,7 +649,7 @@ def create_encounter_task(self):
 	streamout_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
 	if hasattr(self,'streamout_mixin'):
 		streamout_inputs.append(self.io_file)
-	streamout_task = self.create_task('EncounterStreamoutTask',streamout_inputs,[results_dir.make_node('encounter_'+self.toplevel+'.v'),results_dir.make_node('encounter_'+self.toplevel+'.sdc'),results_dir.make_node('encounter_'+self.toplevel+'.gds')])
+	streamout_task = self.create_task('EncounterStreamoutTask',streamout_inputs,[results_dir.make_node('../encounter_'+self.toplevel+'.v'),results_dir.make_node('../encounter_'+self.toplevel+'.sdc'),results_dir.make_node('../encounter_'+self.toplevel+'.gds')])
 
 	if getattr(self,'stop_step','') == 'streamout':
 		return
