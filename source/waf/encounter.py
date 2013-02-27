@@ -42,6 +42,9 @@ class EncounterConfig:
 		self.cap_tables = {'typ':'undefined_typ','max':'undefined_max','min':'undefined_min'}
 		self.qx_tech_files = {'rctyp':'undefined_typ','max':'undefined_max','min':'undefined_min'}
 
+		self.clk_buffer_list = []
+		self.hold_buffer_list = []
+
 	def insert_flow_settings(self):
 		from encounter_tcl import flow_settings_tcl
 		return flow_settings_tcl.format(
@@ -270,6 +273,8 @@ class EncounterConfig:
 					self.cap_tables['max'],
 					self.cap_tables['min'],
 					gds_map.abspath(),
+					' '.join(self.clk_buffer_list),
+					' '.join(self.hold_buffer_list),
 					self.qx_tech_files['rctyp'],
 					self.qx_tech_files['rcworst'],
 					self.qx_tech_files['rcbest'],
@@ -325,6 +330,10 @@ class EncounterTSMCConfig(EncounterConfig):
 
 #				"/cad/libs/tsmc/digital/Back_End/lef/tpan65lpnv2_140b/mt/9lm/lef/tpan65lpnv2_9lm.lef",
 			]
+
+
+		self.clk_buffer_list = ["CKBD1", 'CKBD2', 'CKBD3', 'CKBD4', 'CKBD6', 'CKBD8', 'CKBD12', 'CKBD16']
+		self.hold_buffer_list = ['DEL0', 'DEL1', 'DEL2', 'DEL3', 'DEL4', 'DEL02', 'DEL015', 'DEL01', 'DEL005']
 
 		self.gds_files = [
 				"/cad/libs/tsmc/asic_lab/gds4lvs/tpan65lpnv2_9lm.mod.lef.gds",

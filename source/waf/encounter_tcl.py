@@ -231,7 +231,8 @@ set delay_footprint        "del1"
 
 set inv_footprint          "invd1"
 
-set clk_buffer_list        "CKBD1 CKBD2 CKBD3 CKBD4 CKBD6 CKBD8 CKBD12 CKBD16 "
+set clk_buffer_list        "{13}"
+set hold_buffer_list        "{14}"
 
 set core_filler_list       "DCAP64 DCAP32 DCAP16 DCAP8 DCAP4 DCAP FILL64 FILL32 FILL16 FILL8 FILL4 FILL2 FILL1"
 
@@ -258,10 +259,10 @@ set noise_process          "65"
 #
 # Fire and Ice Setup
 #
-set qx_tech_file_rctyp         "{13}"
-set qx_tech_file_rcworst       "{14}"
-set qx_tech_file_rcbest        "{15}"
-set qx_leflayer_map            "{16}"
+set qx_tech_file_rctyp         "{15}"
+set qx_tech_file_rcworst       "{16}"
+set qx_tech_file_rcbest        "{17}"
+set qx_leflayer_map            "{18}"
 
 
 
@@ -269,7 +270,7 @@ set qx_leflayer_map            "{16}"
 #
 # Flow Setup
 #
-source {17}
+source {19}
 """
 
 steps_tcl = {}
@@ -912,6 +913,7 @@ setOptMode -holdTargetSlack $target_hold_slack
 setOptMode -setupTargetSlack $target_setup_slack
 setOptMode -drcMargin $drc_margin_factor
 setOptMode -fixFanoutLoad true
+setOptMode -holdFixingCells $hold_buffer_list
 
 #
 # Perform post route optimization, generate timing reports
