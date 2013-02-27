@@ -1,5 +1,5 @@
 import os,re
-from waflib import Task,Errors,Node,TaskGen,Configure,Node
+from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
 
 def configure(conf):
 	conf.load('brick_general')
@@ -22,7 +22,11 @@ def create_cds_strmout_task(self):
 			return
 		(self.libname,rest) = cellview.split(".")
 		(self.cellname,self.viewname) = rest.split(":")
-		layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
+		try:
+			layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
+		except AttributeError:
+			Logs.error("Cellview '"+cellview+"' not found in path "+self.get_cellview_path(cellview))
+			return
 
 		strmfile = getattr(self,'strmfile', self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.libname+'_'+self.cellname+'.gds')))
 		t = self.create_task('cdsStrmoutTask', layout_node, strmfile)

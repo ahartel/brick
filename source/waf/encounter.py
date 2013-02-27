@@ -8,6 +8,7 @@ class EncounterConfig:
 	opconds = []
 	opcond_library = {}
 	lef_files = []
+	gds_files = []
 	max_timing_files = []
 	typ_timing_files = []
 	min_timing_files = []
@@ -206,6 +207,41 @@ class EncounterConfig:
 					'',
 					)
 
+	def insert_extract(self,setup_tcl,extract_script,qrc_type,qrc_file):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['extract'].format(
+					setup_tcl.abspath(),
+					'1',
+					extract_script.abspath(),
+					1 if qrc_type else 0,
+					str(qrc_type),
+					qrc_file.abspath() if qrc_type else '',
+					)
+		except:
+			return steps_tcl['extract'].format(
+					setup_tcl.abspath(),
+					'0',
+					'',
+					1 if qrc_type else 0,
+					str(qrc_type),
+					qrc_file.abspath() if qrc_type else '',
+					)
+
+	def insert_streamout(self,setup_tcl,streamout_script):
+		from encounter_tcl import steps_tcl
+		try:
+			return steps_tcl['streamout'].format(
+					setup_tcl.abspath(),
+					'1',
+					streamout_script.abspath(),
+					)
+		except:
+			return steps_tcl['streamout'].format(
+					setup_tcl.abspath(),
+					'0',
+					'',
+					)
 
 	def insert_corner_def(self):
 		from encounter_tcl import corner_def_tcl
@@ -218,7 +254,7 @@ class EncounterConfig:
 				self.opconds[2],
 				)
 
-	def insert_setup(self,toplevel,netlist,sdc,io_file,add_lef_files,add_lib_files,gds_map,lef_layermap,flow_settings):
+	def insert_setup(self,toplevel,netlist,sdc,io_file,add_lef_files,add_gds_files,add_lib_files,gds_map,lef_layermap,flow_settings):
 		from encounter_tcl import setup_tcl
 		return setup_tcl.format(
 					toplevel,
@@ -226,6 +262,7 @@ class EncounterConfig:
 					sdc.abspath(),
 					io_file.abspath(),
 					'" \\\n"'.join(self.lef_files + add_lef_files),
+					'" \\\n"'.join(self.gds_files + add_gds_files),
 					'" \\\n"'.join(self.max_timing_files + add_lib_files),
 					'" \\\n"'.join(self.typ_timing_files + add_lib_files),
 					'" \\\n"'.join(self.min_timing_files + add_lib_files),
@@ -288,6 +325,12 @@ class EncounterTSMCConfig(EncounterConfig):
 
 #				"/cad/libs/tsmc/digital/Back_End/lef/tpan65lpnv2_140b/mt/9lm/lef/tpan65lpnv2_9lm.lef",
 			]
+
+		self.gds_files = [
+				"/cad/libs/tsmc/asic_lab/gds4lvs/tpan65lpnv2_9lm.mod.lef.gds",
+				"/cad/libs/tsmc/asic_lab/gds4lvs/tpdn65lpnv2_9lm.mod.lef.gds",
+			]
+
 		self.max_timing_files = [
 				"/cad/libs/tsmc/digital/Front_End/timing_power_noise/NLDM/tcbn65lp_200a/tcbn65lpwc.lib",
 				"/cad/libs/tsmc/digital/Front_End/timing_power_noise/NLDM/tpan65lpnv2_140b/tpan65lpnv2wc.lib",
@@ -404,6 +447,27 @@ class EncounterFinalTask(Task.Task):
 		except Exception as e:
 			out = e.stdout + e.stderr
 
+class EncounterExtractTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_extract.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.extract_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+class EncounterStreamoutTask(Task.Task):
+	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	def run(self):
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'encounter_streamout.log'))
+		run_str = '%s %s -init %s -log %s' % (self.env.ENCOUNTER," ".join(self.env.ENCOUNTER_OPTIONS),self.generator.streamout_tcl_script.abspath(),logfile.abspath())
+
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr 
 
 def configure(conf):
 	conf.load('brick_general')
@@ -443,6 +507,8 @@ def create_encounter_task(self):
 			self.io_file,
 			# lef files
 			[x.abspath() for x in getattr(self,'additional_physical_libraries',[])],
+			# gds files
+			[x.abspath() for x in getattr(self,'additional_gds_files',[])],
 			# lib files
 			[x.abspath() for x in getattr(self,'additional_timing_libraries',[])],
 			self.gds_map,
@@ -453,6 +519,9 @@ def create_encounter_task(self):
 	self.corner_def_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_corner_def_'+self.toplevel+'.tcl'))
 	with open(self.corner_def_tcl_script.abspath(),'w') as f:
 		f.write(config_object.insert_corner_def())
+
+	self.qrc_cmd_file = getattr(self,'qrc_cmd_file',None)
+	self.qrc_cmd_type = getattr(self,'qrc_cmd_type',None)
 
 	# Bind step
 	self.bind_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_bind_'+self.toplevel+'.tcl'))
@@ -559,6 +628,30 @@ def create_encounter_task(self):
 	final_task = self.create_task('EncounterFinalTask',final_inputs,[results_dir.make_node(self.toplevel+'_final.enc')])
 
 	if getattr(self,'stop_step','') == 'final':
+		return
+
+	# extract step
+	self.extract_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_extract_'+self.toplevel+'.tcl'))
+	with open(self.extract_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_extract(self.setup_tcl_script,getattr(self,'extract_mixin',None),self.qrc_cmd_type,self.qrc_cmd_file))
+	extract_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
+	if hasattr(self,'extract_mixin'):
+		extract_inputs.append(self.io_file)
+	extract_task = self.create_task('EncounterExtractTask',extract_inputs,[results_dir.make_node(self.toplevel+'_extract.enc'),results_dir.make_node('extraction/encounter_'+self.toplevel+'_RCTYP.spef.gz'),results_dir.make_node('encounter_'+self.toplevel+'.sdf.gz')])
+
+	if getattr(self,'stop_step','') == 'extract':
+		return
+
+	# streamout step
+	self.streamout_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_streamout_'+self.toplevel+'.tcl'))
+	with open(self.streamout_tcl_script.abspath(),'w') as f:
+		f.write(config_object.insert_streamout(self.setup_tcl_script,getattr(self,'streamout_mixin',None)))
+	streamout_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
+	if hasattr(self,'streamout_mixin'):
+		streamout_inputs.append(self.io_file)
+	streamout_task = self.create_task('EncounterStreamoutTask',streamout_inputs,[results_dir.make_node(self.toplevel+'_streamout.enc'),results_dir.make_node('encounter_'+self.toplevel+'.v'),results_dir.make_node('encounter_'+self.toplevel+'.sdc'),results_dir.make_node('encounter_'+self.toplevel+'.gds')])
+
+	if getattr(self,'stop_step','') == 'streamout':
 		return
 
 # vim: noexpandtab:

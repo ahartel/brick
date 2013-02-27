@@ -205,20 +205,21 @@ set enc_save_oalib			"encounter_oa"
 
 set lef_files              [list "{4}"]
 
+set gds_files              [list "{5}"]
 
-set max_timing_lib         [list "{5}"]
-set typ_timing_lib         [list "{6}"]
-set min_timing_lib         [list "{7}"]
+set max_timing_lib         [list "{6}"]
+set typ_timing_lib         [list "{7}"]
+set min_timing_lib         [list "{8}"]
 
 
 
 ###################################################################################################
 
-set cap_table_typ          "{8}"
-set cap_table_max          "{9}"
-set cap_table_min          "{10}"
+set cap_table_typ          "{9}"
+set cap_table_max          "{10}"
+set cap_table_min          "{11}"
 
-set stream_out_map         "{11}"
+set stream_out_map         "{12}"
 
 set pwrnet                 "vdd12d vdd25a vdd12a vdd25d"
 
@@ -257,10 +258,10 @@ set noise_process          "65"
 #
 # Fire and Ice Setup
 #
-set qx_tech_file_rctyp         "{12}"
-set qx_tech_file_rcworst       "{13}"
-set qx_tech_file_rcbest        "{14}"
-set qx_leflayer_map            "{15}"
+set qx_tech_file_rctyp         "{13}"
+set qx_tech_file_rcworst       "{14}"
+set qx_tech_file_rcbest        "{15}"
+set qx_leflayer_map            "{16}"
 
 
 
@@ -268,7 +269,7 @@ set qx_leflayer_map            "{15}"
 #
 # Flow Setup
 #
-source {16}
+source {17}
 """
 
 steps_tcl = {}
@@ -416,7 +417,8 @@ if {{$enable_load_floorplan == 0}} {{
 # place hard macros bloks, make routing blokiges arriund them
 # Route Power
 #
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{2}}} {{
     source {3}
 }}
@@ -486,7 +488,8 @@ if {{$version != ""}} {{
 }}
 
 source {1}
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{2}}} {{
     source {3}
 }}
@@ -562,7 +565,8 @@ if {{$version != ""}} {{
 		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_place layout"
 	}}
 }}
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{1}}} {{
     source {2}
 }}
@@ -637,7 +641,8 @@ if {{$version != ""}} {{
 		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_prects layout"
 	}}
 }}
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{1}}} {{
     source {2}
 }}
@@ -704,7 +709,8 @@ if {{$version != ""}} {{
 		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_cts layout"
 	}}
 }}
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{1}}} {{
     source {2}
 }}
@@ -772,7 +778,8 @@ if {{$version != ""}} {{
 		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postcts layout"
 	}}
 }}
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{1}}} {{
     source {2}
 }}
@@ -859,7 +866,8 @@ if {{$version != ""}} {{
 		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_route layout"
 	}}
 }}
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{1}}} {{
     source {2}
 }}
@@ -974,7 +982,8 @@ if {{$version != ""}} {{
 		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_postroute layout"
 	}}
 }}
-
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
 if {{{2}}} {{
     source {3}
 }}
@@ -1019,49 +1028,6 @@ if {{$enable_metalfill}} {{
 	deleteAllRouteBlks
 }}
 
-setExtractRCMode -coupled true
-setExtractRCMode -lefTechFileMap $qx_leflayer_map
-setExtractRCMode -effortLevel signoff -engine postRoute
-#setExtractRCMode -qrcCmdType partial -qrcCmdFile ./config/final_qrc.cmd
-
-if {{$enable_qx && !$enable_si}} {{
-
-    #extractRC
-    #               runQRC -multiCpu 6 -rcType coupledRc -libraryName $qx_library -techFile $qx_tech_file \
-    #          -grayData obs -logFile ./logfiles/qx_extraction.log \
-    #          -outputFileName ./extraction/$toplevel.spef -compressedOutput
-    #rcOut -setload ./extraction/$toplevel.setload
-    #rcOut -setres ./extraction/$toplevel.setres
-    #rcOut -spef ./extraction/$toplevel.spef
-    #exec gzip -f ./extraction/$toplevel.spef
-
-
-    #setExtractRCMode -effortLevel signoff -qrcCmdType custom -qrcCmdFile ./qrc/final_qrc.cmd
-    #extractRC
-
-    timeDesign -signoff	-prefix $toplevel\_final_signoff -outDir $BRICK_RESULTS/enc_$toplevel\_reports
-    timeDesign -signoff	-prefix $toplevel\_final_signoff -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport
-    timeDesign -signoff -hold -prefix $toplevel\_final_signoff_hold1 -outDir $BRICK_RESULTS/enc_$toplevel\_reports
-    timeDesign -signoff -hold -prefix $toplevel\_final_signoff_hold1 -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport
-}}
-
-
-if {{$enable_qx && $enable_si}} {{
-
-    setSIMode -analyzeNoiseThreshold 20 \
-                -insCeltICPreTcl {{set_align_mode -mode peak}} \
-                -runStandAloneQX true -analysisType pessimistic
-
-    #extractRC
-    #spefIn -rc_corner RCBEST ./extraction/Top_pins_RCBEST.spef.gz
-    #spefIn -rc_corner RCWORST ./extraction/Top_pins_RCWORST.spef.gz
-    #exec gzip -f ./extraction/$toplevel.spef
-
-    timeDesign -signoff -si -prefix $toplevel\_final_signoff_si -outDir $BRICK_RESULTS/enc_$toplevel\_reports
-    timeDesign -signoff -si -prefix $toplevel\_final_signoff_si -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport    -reportOnly
-    timeDesign -signoff -si -hold	-prefix $toplevel\_final_signoff_si_hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports                       -reportOnly
-    timeDesign -signoff -si -hold	-prefix $toplevel\_final_signoff_si_hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport    -reportOnly
-}}
 
 #
 # Save final Encounter DB
@@ -1083,3 +1049,155 @@ if {{$version != ""}} {{
 exit
 """
 
+steps_tcl['extract'] = """
+#
+# Import Encounter DB
+#
+source {0}
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_final_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_final_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_final.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_final layout"
+	}}
+}}
+
+# if you read if {{0}} here, it is on purpose, because the author
+# of the script that generated this file is lazy
+if {{{1}}} {{
+    source {2}
+}}
+
+exec mkdir -p $BRICK_RESULTS/extraction
+
+# Sign-Off Extraction
+if {{$enable_qx}} {{
+    if {{{3}}} {{
+        setExtractRCMode -qrcCmdType {4}
+        setExtractRCMode -qrcCmdFile {5}
+    }}
+
+    setExtractRCMode -coupled true
+    setExtractRCMode -lefTechFileMap $qx_leflayer_map
+    setExtractRCMode -engine postRoute -effortLevel signoff
+
+    extractRC
+    #
+    # Delay calculation:
+    #
+    # write nelits with delays
+    write_sdf $BRICK_RESULTS/encounter_$toplevel.sdf.gz
+    rcOut -rc_corner RCTYP -spef $BRICK_RESULTS/extraction/$toplevel\_RCTYP.spef.gz
+    rcOut -rc_corner RCWORST -spef $BRICK_RESULTS/extraction/$toplevel\_RCWORST.spef.gz
+    rcOut -rc_corner RCBEST -spef $BRICK_RESULTS/extraction/$toplevel\_RCBEST.spef.gz
+}} else {{
+    setExtractRCMode -detail
+    extractRC -outfile $BRICK_RESULTS/extraction/$toplevel.cap
+    rcOut -setload $BRICK_RESULTS/extraction/$toplevel.setload
+    rcOut -setres $BRICK_RESULTS/extraction/$toplevel.setres
+    rcOut -spef $BRICK_RESULTS/extraction/$toplevel.spef.gz
+}}
+
+
+
+if {{$enable_qx && !$enable_si}} {{
+
+    timeDesign -signoff	-prefix $toplevel\_final_signoff -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    timeDesign -signoff	-prefix $toplevel\_final_signoff -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport
+    timeDesign -signoff -hold -prefix $toplevel\_final_signoff_hold1 -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    timeDesign -signoff -hold -prefix $toplevel\_final_signoff_hold1 -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport
+}}
+
+
+if {{$enable_qx && $enable_si}} {{
+
+    setSIMode -analyzeNoiseThreshold 20 \
+                -insCeltICPreTcl {{set_align_mode -mode peak}} \
+                -runStandAloneQX true -analysisType pessimistic
+
+    timeDesign -signoff -si -prefix $toplevel\_final_signoff_si -outDir $BRICK_RESULTS/enc_$toplevel\_reports
+    timeDesign -signoff -si -prefix $toplevel\_final_signoff_si -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport    -reportOnly
+    timeDesign -signoff -si -hold	-prefix $toplevel\_final_signoff_si_hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports                       -reportOnly
+    timeDesign -signoff -si -hold	-prefix $toplevel\_final_signoff_si_hold -outDir $BRICK_RESULTS/enc_$toplevel\_reports -timingDebugReport    -reportOnly
+}}
+
+exit
+"""
+
+steps_tcl['streamout'] = """
+#
+# Import Encounter DB
+#
+source {0}
+
+if {{$version != ""}} {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_final_$version.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_final_$version layout"
+	}}
+}} else {{
+	if {{$use_lef_flow}} {{
+		restoreDesign $BRICK_RESULTS/$toplevel\_enc/$toplevel\_final.enc.dat $toplevel
+	}} else {{
+		restoreDesign -cellview "${{enc_save_oalib}} ${{toplevel}}_final layout"
+	}}
+}}
+
+if {{{1}}} {{
+    source {{2}}
+}}
+
+#
+# Prepare result export
+#
+
+# Netlist for timing simulations
+saveNetlist $BRICK_RESULTS/encounter_$toplevel.v
+
+
+# Place&Route constraints
+write_sdc $BRICK_RESULTS/encounter_$toplevel.sdc
+
+#
+# Netlist for lvs including physical cells (fillers ? - TBD) and power/ground network
+#
+if {{0}} {{
+    saveNetlist $BRICK_RESULTS/encounter_$toplevel.phys.v -includePhysicalCell $lvs_phy_cells -includePowerGround -excludeLeafCell
+}}
+
+if {{1}} {{
+    saveNetlist $BRICK_RESULTS/encounter_$toplevel.phys.v -includePhysicalCell $lvs_phy_cells -includePowerGround 
+}}
+
+# lef Export
+lefOut $BRICK_RESULTS/encounter_$toplevel.lef
+
+# def Export
+defOut -floorplan -routing $BRICK_RESULTS/encounter_$toplevel.def
+
+#
+# stream everything out
+# merge GDS
+#
+if {{1}} {{
+    streamOut $BRICK_RESULTS/encounter_$toplevel.gds \
+        -mapFile $stream_out_map \
+        -libName DesignLib \
+        -structureName $toplevel \
+        -merge $gds_files \
+        -uniquifyCellNames \
+        -stripes 1 \
+        -units 1000 \
+        -mode ALL
+}}
+
+exit
+"""

@@ -1,5 +1,5 @@
 import os,re,copy
-from waflib import Configure, TaskGen, Task, Logs
+from waflib import Configure, TaskGen, Task, Logs, Errors
 
 def configure(conf):
 	# Here, we check if all the libraries given in CDS_LIBS
@@ -74,10 +74,14 @@ def get_cellview_path(self,libcellview):
 			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
 			return
 		try:
+			return_path = None
 			if os.path.isabs(self.env.CDS_LIBS_FLAT[lib]):
-				return rootnode.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+				return_path = rootnode.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
 			else:
-				return self.path.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+				return_path = self.path.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+			if not return_path:
+				raise Errors.WafError('Path for cellview \''+libcellview+'\' not found in cadence_base.py')
+			return return_path
 		except TypeError:
 			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
 
