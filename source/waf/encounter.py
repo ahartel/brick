@@ -552,38 +552,42 @@ def create_encounter_task(self):
 
 	self.cts_spec = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_cts_'+self.toplevel+'.spec'))
 
-	with open(self.flowsetting_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_flow_settings())
+	if not freeze_scripts:
+		with open(self.flowsetting_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_flow_settings())
 
 	self.setup_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_setup_'+self.toplevel+'.tcl'))
-	with open(self.setup_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_setup(
-			self.toplevel,
-			self.netlist,
-			self.constraints_file,
-			self.io_file,
-			# lef files
-			[x.abspath() for x in getattr(self,'additional_physical_libraries',[])],
-			# gds files
-			[x.abspath() for x in getattr(self,'additional_gds_files',[])],
-			# lib files
-			[x.abspath() for x in getattr(self,'additional_timing_libraries',[])],
-			self.gds_map,
-			self.qx_leflayer_map,
-			self.flowsetting_tcl_script,
-		))
+	if not freeze_scripts:
+		with open(self.setup_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_setup(
+				self.toplevel,
+				self.netlist,
+				self.constraints_file,
+				self.io_file,
+				# lef files
+				[x.abspath() for x in getattr(self,'additional_physical_libraries',[])],
+				# gds files
+				[x.abspath() for x in getattr(self,'additional_gds_files',[])],
+				# lib files
+				[x.abspath() for x in getattr(self,'additional_timing_libraries',[])],
+				self.gds_map,
+				self.qx_leflayer_map,
+				self.flowsetting_tcl_script,
+			))
 
 	self.corner_def_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_corner_def_'+self.toplevel+'.tcl'))
-	with open(self.corner_def_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_corner_def())
+	if not freeze_scripts:
+		with open(self.corner_def_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_corner_def())
 
 	self.qrc_cmd_file = getattr(self,'qrc_cmd_file',None)
 	self.qrc_cmd_type = getattr(self,'qrc_cmd_type',None)
 
 	# Bind step
 	self.bind_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_bind_'+self.toplevel+'.tcl'))
-	with open(self.bind_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_bind(self.setup_tcl_script,self.corner_def_tcl_script))
+	if not freeze_scripts:
+		with open(self.bind_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_bind(self.setup_tcl_script,self.corner_def_tcl_script))
 	bind_task = self.create_task('EncounterBindTask',[self.netlist,self.constraints_file]+getattr(self,'additional_physical_libraries',[])+getattr(self,'additional_timing_libraries',[]),[results_dir.make_node(self.toplevel+'_bind.enc')])
 
 	if getattr(self,'stop_step','') == 'bind':
@@ -591,8 +595,9 @@ def create_encounter_task(self):
 
 	# Floorplan step
 	self.floorplan_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_floorplan_'+self.toplevel+'.tcl'))
-	with open(self.floorplan_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_floorplan(self.setup_tcl_script,self.parameters,getattr(self,'floorplan_mixin',None)))
+	if not freeze_scripts:
+		with open(self.floorplan_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_floorplan(self.setup_tcl_script,self.parameters,getattr(self,'floorplan_mixin',None)))
 	fp_inputs = [results_dir.make_node(self.toplevel+'_bind.enc')]
 	if hasattr(self,'io_file'):
 		fp_inputs.append(self.io_file)
@@ -605,8 +610,9 @@ def create_encounter_task(self):
 
 	# Place step
 	self.place_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_place_'+self.toplevel+'.tcl'))
-	with open(self.place_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_place(self.setup_tcl_script,self.parameters,getattr(self,'place_mixin',None),self.cts_spec))
+	if not freeze_scripts:
+		with open(self.place_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_place(self.setup_tcl_script,self.parameters,getattr(self,'place_mixin',None),self.cts_spec))
 	place_inputs = [results_dir.make_node(self.toplevel+'_floorplan.enc')]
 	if hasattr(self,'place_mixin'):
 		place_inputs.append(self.io_file)
@@ -617,8 +623,9 @@ def create_encounter_task(self):
 
 	# prects step
 	self.prects_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_prects_'+self.toplevel+'.tcl'))
-	with open(self.prects_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_prects(self.setup_tcl_script,getattr(self,'prects_mixin',None),self.prects_rc_factors))
+	if not freeze_scripts:
+		with open(self.prects_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_prects(self.setup_tcl_script,getattr(self,'prects_mixin',None),self.prects_rc_factors))
 	prects_inputs = [results_dir.make_node(self.toplevel+'_place.enc')]
 	if hasattr(self,'prects_mixin'):
 		prects_inputs.append(self.io_file)
@@ -629,8 +636,9 @@ def create_encounter_task(self):
 
 	# cts step
 	self.cts_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_cts_'+self.toplevel+'.tcl'))
-	with open(self.cts_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_cts(self.setup_tcl_script,getattr(self,'cts_mixin',None),self.cts_spec))
+	if not freeze_scripts:
+		with open(self.cts_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_cts(self.setup_tcl_script,getattr(self,'cts_mixin',None),self.cts_spec))
 	cts_inputs = [results_dir.make_node(self.toplevel+'_prects.enc')]
 	if hasattr(self,'cts_mixin'):
 		cts_inputs.append(self.io_file)
@@ -641,8 +649,9 @@ def create_encounter_task(self):
 
 	# postcts step
 	self.postcts_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_postcts_'+self.toplevel+'.tcl'))
-	with open(self.postcts_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_postcts(self.setup_tcl_script,getattr(self,'postcts_mixin',None),self.prects_rc_factors))
+	if not freeze_scripts:
+		with open(self.postcts_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_postcts(self.setup_tcl_script,getattr(self,'postcts_mixin',None),self.prects_rc_factors))
 	postcts_inputs = [results_dir.make_node(self.toplevel+'_cts.enc')]
 	if hasattr(self,'postcts_mixin'):
 		postcts_inputs.append(self.io_file)
@@ -653,8 +662,9 @@ def create_encounter_task(self):
 
 	# route step
 	self.route_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_route_'+self.toplevel+'.tcl'))
-	with open(self.route_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_route(self.setup_tcl_script,getattr(self,'route_mixin',None)))
+	if not freeze_scripts:
+		with open(self.route_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_route(self.setup_tcl_script,getattr(self,'route_mixin',None)))
 	route_inputs = [results_dir.make_node(self.toplevel+'_postcts.enc')]
 	if hasattr(self,'route_mixin'):
 		route_inputs.append(self.io_file)
@@ -665,8 +675,9 @@ def create_encounter_task(self):
 
 	# postroute step
 	self.postroute_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_postroute_'+self.toplevel+'.tcl'))
-	with open(self.postroute_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_postroute(self.setup_tcl_script,getattr(self,'postroute_mixin',None),self.postroute_rc_factors))
+	if not freeze_scripts:
+		with open(self.postroute_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_postroute(self.setup_tcl_script,getattr(self,'postroute_mixin',None),self.postroute_rc_factors))
 	postroute_inputs = [results_dir.make_node(self.toplevel+'_route.enc')]
 	if hasattr(self,'postroute_mixin'):
 		postroute_inputs.append(self.io_file)
@@ -677,8 +688,9 @@ def create_encounter_task(self):
 
 	# final step
 	self.final_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_final_'+self.toplevel+'.tcl'))
-	with open(self.final_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_final(self.setup_tcl_script,self.parameters,getattr(self,'final_mixin',None)))
+	if not freeze_scripts:
+		with open(self.final_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_final(self.setup_tcl_script,self.parameters,getattr(self,'final_mixin',None)))
 	final_inputs = [results_dir.make_node(self.toplevel+'_postroute.enc')]
 	if hasattr(self,'final_mixin'):
 		final_inputs.append(self.io_file)
@@ -689,8 +701,9 @@ def create_encounter_task(self):
 
 	# extract step
 	self.extract_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_extract_'+self.toplevel+'.tcl'))
-	with open(self.extract_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_extract(self.setup_tcl_script,getattr(self,'extract_mixin',None),self.qrc_cmd_type,self.qrc_cmd_file))
+	if not freeze_scripts:
+		with open(self.extract_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_extract(self.setup_tcl_script,getattr(self,'extract_mixin',None),self.qrc_cmd_type,self.qrc_cmd_file))
 	extract_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
 	if hasattr(self,'extract_mixin'):
 		extract_inputs.append(self.io_file)
@@ -701,8 +714,9 @@ def create_encounter_task(self):
 
 	# streamout step
 	self.streamout_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_streamout_'+self.toplevel+'.tcl'))
-	with open(self.streamout_tcl_script.abspath(),'w') as f:
-		f.write(config_object.insert_streamout(self.setup_tcl_script,getattr(self,'streamout_mixin',None)))
+	if not freeze_scripts:
+		with open(self.streamout_tcl_script.abspath(),'w') as f:
+			f.write(config_object.insert_streamout(self.setup_tcl_script,getattr(self,'streamout_mixin',None)))
 	streamout_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
 	if hasattr(self,'streamout_mixin'):
 		streamout_inputs.append(self.io_file)
