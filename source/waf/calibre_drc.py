@@ -8,9 +8,11 @@ def configure(conf):
 	if not conf.env.BRICK_LOGFILES:
 		conf.env.BRICK_LOGFILES = './logfiles'
 	conf.env['CALIBRE_DRC'] = 'calibre'
+	conf.env['CALIBRE_DRV'] = 'calibredrv'
 	conf.env['CALIBRE_DRC_OPTIONS'] = [
 			'-64', '-hier', '-turbo' ,'-turbo_all',
 		]
+	conf.env['CALIBRE_DRV_OPTIONS'] = []
 
 
 @TaskGen.feature('calibre_drc')
@@ -104,11 +106,16 @@ def create_calibre_rve_drc_task(self):
 		Logs.error('Please name an existing report file for feature \'cds_rve_drc\'')
 		return
 
-	t = self.create_task('calibreRveDrcTask', self.report)
+	try:
+		getattr(self,'gds',None).abspath()
+	except AttributeError:
+		Logs.error('Please name an existing GDSII file for feature \'cds_rve_drc\'')
+
+	t = self.create_task('calibreRveDrcTask', [self.gds, self.report])
 
 @Task.always_run
 class calibreRveDrcTask(Task.Task):
-	run_str = "${CALIBRE_DRC} -rve -drc ${SRC[0].abspath()}"
+	run_str = "${CALIBRE_DRV} -m ${SRC[0].abspath()} -rve -drc ${SRC[1].abspath()}"
 
 # for convenience
 @Configure.conf
