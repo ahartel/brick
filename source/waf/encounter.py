@@ -550,7 +550,11 @@ def create_encounter_task(self):
 	self.prects_rc_factors = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_prects_rc_factors'+self.toplevel+'.tcl'))
 	self.postroute_rc_factors = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_postroute_rc_factors'+self.toplevel+'.tcl'))
 
-	self.cts_spec = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_cts_'+self.toplevel+'.spec'))
+	if not hasattr(self,'cts_spec_file'):
+		config_object.flow_settings['use_external_cts_spec'] = False
+		self.cts_spec_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_cts_'+self.toplevel+'.spec'))
+	else:
+		config_object.flow_settings['use_external_cts_spec'] = True
 
 	if not freeze_scripts:
 		with open(self.flowsetting_tcl_script.abspath(),'w') as f:
@@ -612,10 +616,13 @@ def create_encounter_task(self):
 	self.place_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_place_'+self.toplevel+'.tcl'))
 	if not freeze_scripts:
 		with open(self.place_tcl_script.abspath(),'w') as f:
-			f.write(config_object.insert_place(self.setup_tcl_script,self.parameters,getattr(self,'place_mixin',None),self.cts_spec))
+			f.write(config_object.insert_place(self.setup_tcl_script,self.parameters,getattr(self,'place_mixin',None),self.cts_spec_file))
 	place_inputs = [results_dir.make_node(self.toplevel+'_floorplan.enc')]
 	if hasattr(self,'place_mixin'):
-		place_inputs.append(self.io_file)
+		place_inputs.append(self.place_mixin)
+	if config_object.flow_settings['use_external_cts_spec']:
+		place_inputs.append(self.cts_spec_file)
+
 	place_task = self.create_task('EncounterPlaceTask',place_inputs,[results_dir.make_node(self.toplevel+'_place.enc')])
 
 	if getattr(self,'stop_step','') == 'place':
@@ -628,7 +635,7 @@ def create_encounter_task(self):
 			f.write(config_object.insert_prects(self.setup_tcl_script,getattr(self,'prects_mixin',None),self.prects_rc_factors))
 	prects_inputs = [results_dir.make_node(self.toplevel+'_place.enc')]
 	if hasattr(self,'prects_mixin'):
-		prects_inputs.append(self.io_file)
+		prects_inputs.append(self.prects_mixin)
 	prects_task = self.create_task('EncounterPrectsTask',prects_inputs,[results_dir.make_node(self.toplevel+'_prects.enc')])
 
 	if getattr(self,'stop_step','') == 'prects':
@@ -638,10 +645,12 @@ def create_encounter_task(self):
 	self.cts_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_cts_'+self.toplevel+'.tcl'))
 	if not freeze_scripts:
 		with open(self.cts_tcl_script.abspath(),'w') as f:
-			f.write(config_object.insert_cts(self.setup_tcl_script,getattr(self,'cts_mixin',None),self.cts_spec))
+			f.write(config_object.insert_cts(self.setup_tcl_script,getattr(self,'cts_mixin',None),self.cts_spec_file))
 	cts_inputs = [results_dir.make_node(self.toplevel+'_prects.enc')]
 	if hasattr(self,'cts_mixin'):
-		cts_inputs.append(self.io_file)
+		cts_inputs.append(self.cts_mixin)
+	if config_object.flow_settings['use_external_cts_spec']:
+		place_inputs.append(self.cts_spec_file)
 	cts_task = self.create_task('EncounterCtsTask',cts_inputs,[results_dir.make_node(self.toplevel+'_cts.enc')])
 
 	if getattr(self,'stop_step','') == 'cts':
@@ -654,7 +663,7 @@ def create_encounter_task(self):
 			f.write(config_object.insert_postcts(self.setup_tcl_script,getattr(self,'postcts_mixin',None),self.prects_rc_factors))
 	postcts_inputs = [results_dir.make_node(self.toplevel+'_cts.enc')]
 	if hasattr(self,'postcts_mixin'):
-		postcts_inputs.append(self.io_file)
+		postcts_inputs.append(self.postcts_mixin)
 	postcts_task = self.create_task('EncounterPostctsTask',postcts_inputs,[results_dir.make_node(self.toplevel+'_postcts.enc')])
 
 	if getattr(self,'stop_step','') == 'postcts':
@@ -667,7 +676,7 @@ def create_encounter_task(self):
 			f.write(config_object.insert_route(self.setup_tcl_script,getattr(self,'route_mixin',None)))
 	route_inputs = [results_dir.make_node(self.toplevel+'_postcts.enc')]
 	if hasattr(self,'route_mixin'):
-		route_inputs.append(self.io_file)
+		route_inputs.append(self.route_mixin)
 	route_task = self.create_task('EncounterRouteTask',route_inputs,[results_dir.make_node(self.toplevel+'_route.enc')])
 
 	if getattr(self,'stop_step','') == 'route':
@@ -680,7 +689,7 @@ def create_encounter_task(self):
 			f.write(config_object.insert_postroute(self.setup_tcl_script,getattr(self,'postroute_mixin',None),self.postroute_rc_factors))
 	postroute_inputs = [results_dir.make_node(self.toplevel+'_route.enc')]
 	if hasattr(self,'postroute_mixin'):
-		postroute_inputs.append(self.io_file)
+		postroute_inputs.append(self.postroute_mixin)
 	postroute_task = self.create_task('EncounterPostrouteTask',postroute_inputs,[results_dir.make_node(self.toplevel+'_postroute.enc')])
 
 	if getattr(self,'stop_step','') == 'postroute':
@@ -693,7 +702,7 @@ def create_encounter_task(self):
 			f.write(config_object.insert_final(self.setup_tcl_script,self.parameters,getattr(self,'final_mixin',None)))
 	final_inputs = [results_dir.make_node(self.toplevel+'_postroute.enc')]
 	if hasattr(self,'final_mixin'):
-		final_inputs.append(self.io_file)
+		final_inputs.append(self.final_mixin)
 	final_task = self.create_task('EncounterFinalTask',final_inputs,[results_dir.make_node(self.toplevel+'_final.enc')])
 
 	if getattr(self,'stop_step','') == 'final':
@@ -706,7 +715,7 @@ def create_encounter_task(self):
 			f.write(config_object.insert_extract(self.setup_tcl_script,getattr(self,'extract_mixin',None),self.qrc_cmd_type,self.qrc_cmd_file))
 	extract_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
 	if hasattr(self,'extract_mixin'):
-		extract_inputs.append(self.io_file)
+		extract_inputs.append(self.extract_mixin)
 	extract_task = self.create_task('EncounterExtractTask',extract_inputs,[results_dir.make_node('../extraction/'+self.toplevel+'_RCTYP.spef.gz'),results_dir.make_node('../encounter_'+self.toplevel+'.sdf.gz')])
 
 	if getattr(self,'stop_step','') == 'extract':
@@ -719,7 +728,7 @@ def create_encounter_task(self):
 			f.write(config_object.insert_streamout(self.setup_tcl_script,getattr(self,'streamout_mixin',None)))
 	streamout_inputs = [results_dir.make_node(self.toplevel+'_final.enc')]
 	if hasattr(self,'streamout_mixin'):
-		streamout_inputs.append(self.io_file)
+		streamout_inputs.append(self.streamout_mixin)
 	streamout_task = self.create_task('EncounterStreamoutTask',streamout_inputs,[results_dir.make_node('../encounter_'+self.toplevel+'.v'),results_dir.make_node('../encounter_'+self.toplevel+'.sdc'),results_dir.make_node('../encounter_'+self.toplevel+'.gds')])
 
 	if getattr(self,'stop_step','') == 'streamout':
