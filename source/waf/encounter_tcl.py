@@ -221,29 +221,29 @@ set cap_table_min          "{11}"
 
 set stream_out_map         "{12}"
 
-set pwrnet                 "vdd12d vdd25a vdd12a vdd25d"
+set pwrnet                 "{13}"
 
-set gndnet					"gndd gnda"
+set gndnet				   "{14}"
 
-set buf_footprint          "buffd1"
+set buf_footprint          "{15}"
 
-set delay_footprint        "del1"
+set delay_footprint        "{16}"
 
-set inv_footprint          "invd1"
+set inv_footprint          "{17}"
 
-set clk_buffer_list        "{13}"
-set hold_buffer_list        "{14}"
+set clk_buffer_list        "{18}"
+set hold_buffer_list       "{19}"
 
-set core_filler_list       "DCAP64 DCAP32 DCAP16 DCAP8 DCAP4 DCAP FILL64 FILL32 FILL16 FILL8 FILL4 FILL2 FILL1"
+set core_filler_list       "{20}"
 
-set io_filler_list         "PFILLER20A PFILLER10A PFILLER5A PFILLER1A PFILLER05A PFILLER0005A"
-set io_filler_list_dig     "PFILLER20  PFILLER10  PFILLER5  PFILLER1  PFILLER05  PFILLER0005"
+set io_filler_list         "{21}"
+set io_filler_list_dig     "{22}"
 
-set lvs_phy_cells          "DCAP64 DCAP32 DCAP16 DCAP8 DCAP4 DCAP FILL64 FILL32 FILL16 FILL8 FILL4 FILL2 FILL1 PVDD1ANA PVDD1CDG PVDD2CDG PVDD2POC PVDD3A PVDD3AC PVSS1CDG PVSS2A PVSS2CDG PVSS3A PVSS3AC"
+set lvs_phy_cells          "{23}"
 
-set ant_cells              "ANTENNA"
+set ant_cells              "{24}"
 
-set metal_layer            "M1 M2 M3 M4 M5 M6 M7 M8 M9"
+set metal_layer            "{25}"
 
 #
 # CeltIC Setup
@@ -254,15 +254,15 @@ set typ_noise_lib          ""
 
 set min_noise_lib          ""
 
-set noise_process          "65"
+set noise_process          "{26}"
 
 #
 # Fire and Ice Setup
 #
-set qx_tech_file_rctyp         "{15}"
-set qx_tech_file_rcworst       "{16}"
-set qx_tech_file_rcbest        "{17}"
-set qx_leflayer_map            "{18}"
+set qx_tech_file_rctyp         "{27}"
+set qx_tech_file_rcworst       "{28}"
+set qx_tech_file_rcbest        "{29}"
+set qx_leflayer_map            "{30}"
 
 
 
@@ -270,7 +270,7 @@ set qx_leflayer_map            "{18}"
 #
 # Flow Setup
 #
-source {19}
+source {31}
 """
 
 steps_tcl = {}

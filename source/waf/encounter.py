@@ -14,6 +14,23 @@ class EncounterConfig:
 	min_timing_files = []
 	cap_tables = {}
 	qx_tech_files = {}
+	power_nets = ['vdd']
+	gnd_nets = ['gnd']
+	buffer_footprint = ''
+	delay_footprint = ''
+	inv_footprint = ''
+
+	core_filler_list = []
+	io_filler_list=[]
+	io_filler_list_dig=[]
+
+	lvs_phy_cells=[]
+
+	ant_cells=[]
+
+	metal_layers=[]
+
+	noise_process=''
 
 	def __init__(self):
 		self.flow_settings = {
@@ -273,8 +290,20 @@ class EncounterConfig:
 					self.cap_tables['max'],
 					self.cap_tables['min'],
 					gds_map.abspath(),
+					' '.join(self.power_nets),
+					' '.join(self.gnd_nets),
+					self.buffer_footprint,
+					self.delay_footprint,
+					self.inv_footprint,
 					' '.join(self.clk_buffer_list),
 					' '.join(self.hold_buffer_list),
+					' '.join(self.core_filler_list),
+					' '.join(self.io_filler_list),
+					' '.join(self.io_filler_list_dig),
+					' '.join(self.lvs_phy_cells),
+					' '.join(self.ant_cells),
+					' '.join(self.metal_layers),
+					self.noise_process,
 					self.qx_tech_files['rctyp'],
 					self.qx_tech_files['rcworst'],
 					self.qx_tech_files['rcbest'],
@@ -307,6 +336,24 @@ class EncounterTSMCConfig(EncounterConfig):
 		self.opcond_library['WCCOM'] = 'tcbn65lpwc'
 		self.opcond_library['NCCOM'] = 'tcbn65lptc'
 		self.opcond_library['BCCOM'] = 'tcbn65lpbc'
+
+		self.power_nets = ['vdd']
+		self.gnd_nets = ['gnd']
+		self.buffer_footprint = 'buffd11'
+		self.delay_footprint = 'del1'
+		self.inv_footprint = 'invd1'
+
+		self.core_filler_list = ["DCAP64", "DCAP32", "DCAP16", "DCAP8", "DCAP4", "DCAP", "FILL64", "FILL32", "FILL16", "FILL8", "FILL4", "FILL2", "FILL1"]
+		self.io_filler_list=["PFILLER20A", "PFILLER10A", "PFILLER5A", "PFILLER1A", "PFILLER05A", "PFILLER0005A"]
+		self.io_filler_list_dig=["PFILLER20", "PFILLER10", "PFILLER5", "PFILLER1", "PFILLER05", "PFILLER0005"]
+
+		self.lvs_phy_cells=["DCAP64", "DCAP32", "DCAP16", "DCAP8", "DCAP4", "DCAP", "FILL64", "FILL32", "FILL16", "FILL8", "FILL4", "FILL2", "FILL1", "PVDD1ANA", "PVDD1CDG", "PVDD2CDG", "PVDD2POC", "PVDD3A", "PVDD3AC", "PVSS1CDG", "PVSS2A", "PVSS2CDG", "PVSS3A", "PVSS3AC"]
+
+		self.ant_cells=["ANTENNA"]
+
+		self.metal_layers=["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9"]
+
+		self.noise_process='65'
 
 		self.cap_tables = {
 				'typ':'/cad/libs/tsmc/encounter/captbl/tsmc_crn65lp_1p09m+alrdl_6x1z1u_typ_extended.captbl',
@@ -489,7 +536,8 @@ def configure(conf):
 @TaskGen.feature('encounter')
 def create_encounter_task(self):
 
-	config_object = EncounterTSMCConfig()
+	config_object = getattr(self,'config_object',EncounterTSMCConfig())
+	freeze_scripts = getattr(self,'freeze_scripts',False)
 
 	if not hasattr(self,'toplevel'):
 		Logs.error('You have not specified a toplevel module for an Encounter run.')
