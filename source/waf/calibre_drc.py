@@ -71,25 +71,23 @@ class calibreDrcTask(Task.Task):
 		conditional_options = ""
 		if hasattr(self.generator,'hcells'):
 			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
-		run_str = '%s -drc %s %s %s' % (self.env.CALIBRE_DRC, conditional_options, " ".join(self.env.CALIBRE_DRC_OPTIONS), self.generator.rule_file.abspath())
+
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_drc_'+self.generator.cellname+'.log'))
+
+		run_str = '%s -drc %s %s %s > %s 2>&1' % (self.env.CALIBRE_DRC, conditional_options, " ".join(self.env.CALIBRE_DRC_OPTIONS), self.generator.rule_file.abspath(),logfile.abspath())
 		out = ""
 		try:
 			out = self.generator.bld.cmd_and_log(run_str, quiet=Context.STDOUT)
 		except Exception as e:
 			out = e.stderr
 
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_drc_'+self.generator.cellname+'.log'))
-		f = open(logfile.abspath(),'w')
-		f.write(out)
-		f.close()
-
 		found_error = 0
 		with open(logfile.abspath(),'r') as lgf:
 			for line in lgf:
-				if re.match('LVS completed. INCORRECT',line):
-					print line
-					found_error = 1
-				elif re.match('ERROR:',line):
+				#if re.match('LVS completed. INCORRECT',line):
+				#	print line
+				#	found_error = 1
+				if re.match('ERROR:',line):
 					print line
 					found_error = 1
 				#elif re.match('@W: CL218',line):
