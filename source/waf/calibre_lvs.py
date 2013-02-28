@@ -1,5 +1,5 @@
 import os,re
-from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
+from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs,Context
 
 def configure(conf):
 	conf.load('brick_general')
@@ -112,9 +112,9 @@ class calibreLvsTask(Task.Task):
 		run_str = '%s -lvs %s -spice %s %s %s' % (self.env.CALIBRE_LVS, conditional_options, self.generator.svdb.make_node(self.generator.cellname+'.sp').abspath()," ".join(self.env.CALIBRE_LVS_OPTIONS), self.generator.rule_file.abspath())
 		out = ""
 		try:
-			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+			out = self.generator.bld.cmd_and_log(run_str, quiet=Context.STDOUT)
 		except Exception as e:
-			out = e.stdout
+			out = e.stderr
 
 		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_lvs_'+self.generator.cellname+'.log'))
 		f = open(logfile.abspath(),'w')
