@@ -339,7 +339,7 @@ class EncounterTSMCConfig(EncounterConfig):
 
 		self.power_nets = ['vdd']
 		self.gnd_nets = ['gnd']
-		self.buffer_footprint = 'buffd11'
+		self.buffer_footprint = 'buffd1'
 		self.delay_footprint = 'del1'
 		self.inv_footprint = 'invd1'
 
