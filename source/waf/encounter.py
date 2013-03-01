@@ -127,13 +127,16 @@ class EncounterConfig:
 					cts_spec.abspath()
 					)
 
-	def insert_prects(self,setup_tcl,prects_script,rc_factors):
+	def insert_prects(self,setup_tcl,prects_script,rc_factors,qrc_type,qrc_file):
 		from encounter_tcl import steps_tcl
 		try:
 			return steps_tcl['prects'].format(
 					setup_tcl.abspath(),
 					'1',
 					prects_script.abspath(),
+					1 if qrc_type else 0,
+					str(qrc_type),
+					qrc_file.abspath() if qrc_type else '',
 					rc_factors.abspath()
 					)
 		except:
@@ -141,6 +144,9 @@ class EncounterConfig:
 					setup_tcl.abspath(),
 					'0',
 					'',
+					1 if qrc_type else 0,
+					str(qrc_type),
+					qrc_file.abspath() if qrc_type else '',
 					rc_factors.abspath()
 					)
 
@@ -193,13 +199,16 @@ class EncounterConfig:
 					''
 					)
 
-	def insert_postroute(self,setup_tcl,postroute_script,rc_factors):
+	def insert_postroute(self,setup_tcl,postroute_script,rc_factors,qrc_type,qrc_file):
 		from encounter_tcl import steps_tcl
 		try:
 			return steps_tcl['postroute'].format(
 					setup_tcl.abspath(),
 					'1',
 					postroute_script.abspath(),
+					1 if qrc_type else 0,
+					str(qrc_type),
+					qrc_file.abspath() if qrc_type else '',
 					rc_factors.abspath()
 					)
 		except:
@@ -207,6 +216,9 @@ class EncounterConfig:
 					setup_tcl.abspath(),
 					'0',
 					'',
+					1 if qrc_type else 0,
+					str(qrc_type),
+					qrc_file.abspath() if qrc_type else '',
 					rc_factors.abspath()
 					)
 
@@ -632,7 +644,7 @@ def create_encounter_task(self):
 	self.prects_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_prects_'+self.toplevel+'.tcl'))
 	if not freeze_scripts:
 		with open(self.prects_tcl_script.abspath(),'w') as f:
-			f.write(config_object.insert_prects(self.setup_tcl_script,getattr(self,'prects_mixin',None),self.prects_rc_factors))
+			f.write(config_object.insert_prects(self.setup_tcl_script,getattr(self,'prects_mixin',None),self.prects_rc_factors,self.qrc_cmd_type,self.qrc_cmd_file))
 	prects_inputs = [results_dir.make_node(self.toplevel+'_place.enc')]
 	if hasattr(self,'prects_mixin'):
 		prects_inputs.append(self.prects_mixin)
@@ -686,7 +698,7 @@ def create_encounter_task(self):
 	self.postroute_tcl_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'enc_postroute_'+self.toplevel+'.tcl'))
 	if not freeze_scripts:
 		with open(self.postroute_tcl_script.abspath(),'w') as f:
-			f.write(config_object.insert_postroute(self.setup_tcl_script,getattr(self,'postroute_mixin',None),self.postroute_rc_factors))
+			f.write(config_object.insert_postroute(self.setup_tcl_script,getattr(self,'postroute_mixin',None),self.postroute_rc_factors,self.qrc_cmd_type,self.qrc_cmd_file))
 	postroute_inputs = [results_dir.make_node(self.toplevel+'_route.enc')]
 	if hasattr(self,'postroute_mixin'):
 		postroute_inputs.append(self.postroute_mixin)

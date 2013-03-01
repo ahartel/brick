@@ -577,12 +577,14 @@ if {{$enable_rcgen}} {{
         setExtractRCMode -effortLevel signoff -engine postRoute
         setExtractRCMode -lefTechFileMap $qx_leflayer_map
 		setExtractRCMode -coupled true
-        #setExtractRCMode -qrcCmdType partial
-        #setExtractRCMode -qrcCmdFile ./scripts/qrc_custom_opt.cmd
-        generateRCFactor -outputFile {3} -preroute true -reference signoff
+        if {{{3}}} {{
+            setExtractRCMode -qrcCmdType {4}
+            setExtractRCMode -qrcCmdFile {5}
+        }}
+        generateRCFactor -outputFile {6} -preroute true -reference signoff
 }}
 # load RC Factors
-source {3}
+source {6}
 
 # 
 # Set optimization mode
@@ -880,9 +882,11 @@ setExtractRCMode -coupled true
 
 if {{$enable_qx && $enable_rcgen}} {{
 
-    #setExtractRCMode -qrcCmdType partial
-    #setExtractRCMode -qrcCmdFile ./config/qrc_custom_opt.cmd
-    generateRCFactor -outputFile {3} -preroute false -postroute medium -reference signoff
+    if {{{3}}} {{
+        setExtractRCMode -qrcCmdType {4}
+        setExtractRCMode -qrcCmdFile {5}
+    }}
+    generateRCFactor -outputFile {6} -preroute false -postroute medium -reference signoff
 
     #
     # RC factors are automatically set if WNS correlation is improved 
@@ -893,7 +897,7 @@ if {{$enable_qx && $enable_rcgen}} {{
 }}
 
 # load RC Factors
-source {3}
+source {6}
 
 #
 # On Chip Variation (OCV) analysis setup
