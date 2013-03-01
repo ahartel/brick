@@ -23,8 +23,7 @@ def create_cds_strmin_task(self):
 	(self.libname,rest) = cellview.split(".")
 	(self.cellname,self.viewname) = rest.split(":")
 
-	layout_node = self.get_cellview_path(cellview).make_node('layout.oa')
-
+	layout_node = self.get_cellview_path(cellview,True).make_node('layout.oa')
 
 	try:
 		getattr(self,'strmfile',None).abspath()

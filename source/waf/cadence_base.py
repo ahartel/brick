@@ -57,7 +57,7 @@ def configure(conf):
 			conf.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(conf.path)
 
 @TaskGen.taskgen_method
-def get_cellview_path(self,libcellview):
+def get_cellview_path(self,libcellview,create_if_not_exists=False):
 	# get an instance of the root node
 	# ugly but hackalicious
 	up = "../"
@@ -79,9 +79,22 @@ def get_cellview_path(self,libcellview):
 				return_path = rootnode.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
 			else:
 				return_path = self.path.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+
 			if not return_path:
-				raise Errors.WafError('Path for cellview \''+libcellview+'\' not found in cadence_base.py')
+				print create_if_not_exists
+				if create_if_not_exists:
+					Logs.warn('Path for cellview \''+libcellview+'\' not found, creating it.')
+					if os.path.isabs(self.env.CDS_LIBS_FLAT[lib]):
+						return_path = self.rootnode.make_node(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+						return_path.mkdir()
+					else:
+						return_path = self.path.make_node(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
+						return_path.mkdir()
+				else:
+					raise Errors.WafError('Path for cellview \''+libcellview+'\' not found in cadence_base.py')
+
 			return return_path
+
 		except TypeError:
 			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
 
@@ -140,3 +153,4 @@ def check_cds_libs(self,*k,**kw):
 			# TODO: implement
 			pass
 
+# vim: noexpandtab
