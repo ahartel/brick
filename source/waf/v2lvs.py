@@ -1,4 +1,3 @@
-import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs,Context
 
 def configure(conf):
@@ -31,8 +30,9 @@ class v2lvsTask(Task.Task):
 	vars = ['V2LVS','V2LVS_OPTIONS']
 
 	def run(self):
+		import os
 
-		run_str = '%s -v %s -log %s -o %s' % (self.env.V2LVS, self.inputs[0].abspath(),self.env.BRICK_LOGFILES+'/'+self.generator.name+'_v2lvs.log',self.generator.target_netlist.abspath())
+		run_str = '%s -v %s -log %s -o %s' % (self.env.V2LVS, self.inputs[0].abspath(),os.environ['BRICK_LOGFILES']+'/'+os.path.basename(self.generator.verilog_netlist.abspath())+'_v2lvs.log',self.generator.target_netlist.abspath())
 
 		if hasattr(self.generator,'include_netlists'):
 			for filename in self.generator.include_netlists:

@@ -22,7 +22,7 @@ def build(bld):
 
 	if not bld.bldnode.find_dir(bld.env.BRICK_LOGFILES):
 		bld.bldnode.make_node(bld.env.BRICK_LOGFILES).mkdir()
-	os.environ['BRICK_LOGFILES'] = bld.bldnode.make_node(bld.env.LOGFILES).abspath()
+	os.environ['BRICK_LOGFILES'] = bld.bldnode.make_node(bld.env.BRICK_LOGFILES).abspath()
 	os.environ['PROJECT_ROOT'] = bld.path.make_node(bld.env.PROJECT_ROOT).abspath()
 
 
