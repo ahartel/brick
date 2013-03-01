@@ -23,7 +23,7 @@ def create_cds_strmout_task(self):
 		(self.libname,rest) = cellview.split(".")
 		(self.cellname,self.viewname) = rest.split(":")
 		try:
-			layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
+			layout_node = self.get_cellview_path(cellview).make_node('layout.oa')
 		except AttributeError:
 			Logs.error("Cellview '"+cellview+"' not found in path "+self.get_cellview_path(cellview))
 			return
