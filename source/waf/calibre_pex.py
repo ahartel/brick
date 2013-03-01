@@ -132,7 +132,7 @@ DRC ICSTATION YES
 	f.write('\n}')
 	f.close()
 
-	if hasattr(self,'xcells'):
+	if len(getattr(self,'xcells',[])) > 0:
 		f = open(self.xcells_file.abspath(),"w")
 		f.write("\n".join(getattr(self,'xcells',[])))
 		f.close()
@@ -162,7 +162,7 @@ class calibrePexTask(Task.Task):
 		conditional_options = ""
 		#if hasattr(self.generator,'only_extract_nets'): 
 		#	conditional_options += ' -select'
-		if hasattr(self.generator,'xcells'):
+		if len(getattr(self.generator,'xcells',[])) > 0:
 			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
 
 		run_str = '%s -xrc -phdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PHDB']), self.generator.rule_file.abspath())
@@ -183,7 +183,7 @@ class calibrePexTask(Task.Task):
 		conditional_options = ""
 		if hasattr(self.generator,'only_extract_nets') and len(self.generator.only_extract_nets) > 0:
 			conditional_options += ' -select'
-		if hasattr(self.generator,'xcells'):
+		if len(getattr(self.generator,'xcells',[])) > 0:
 			conditional_options += ' -full -xcell '+self.generator.xcells_file.abspath()
 
 		run_str = '%s -xrc -pdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PDB']), self.generator.rule_file.abspath())
@@ -203,7 +203,7 @@ class calibrePexTask(Task.Task):
 
 	def run_fmt(self):
 		conditional_options = ""
-		if hasattr(self.generator,'xcells'):
+		if len(getattr(self.generator,'xcells',[])) > 0:
 			conditional_options = ' -full'
 		run_str = '%s -xrc -fmt %s %s %s' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_FMT']), self.generator.rule_file.abspath())
 

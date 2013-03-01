@@ -16,10 +16,22 @@ def configure(conf):
 @TaskGen.feature('calibre_lvs')
 def create_calibre_lvs_task(self):
 
-	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_lvs_rules_'+self.cellname))
-	self.hcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_hcells_'+self.cellname))
+	if not hasattr(self,'cellname'):
+		Logs.error('Please name a cell for which to run LVS for feature \'calibre_lvs\'')
 
-	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
+	try:
+		self.path_cellname = self.cellname[0]
+		self.layout_cellname = self.cellname[0]
+		self.source_cellname = self.cellname[1]
+	except:
+		self.path_cellname = self.cellname
+		self.layout_cellname = self.cellname
+		self.source_cellname = self.cellname
+
+	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_lvs_rules_'+self.path_cellname))
+	self.hcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_hcells_'+self.path_cellname))
+
+	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.path_cellname))
 	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
 	if not os.path.exists(self.svdb.abspath()):
 		self.svdb.mkdir()
@@ -31,7 +43,7 @@ def create_calibre_lvs_task(self):
 	f = open(self.rule_file.abspath(),"w")
 	f.write("""
 LAYOUT PATH "{0}"
-LAYOUT PRIMARY {1}
+LAYOUT PRIMARY "{1}"
 LAYOUT SYSTEM GDSII
 LAYOUT CASE YES
 
@@ -70,7 +82,7 @@ ERC MAXIMUM VERTEX 4096
 
 DRC ICSTATION YES
 
-""".format(self.layout_gds.abspath(),self.cellname,self.source_netlist.abspath(),self.cellname,self.output_file_base.abspath(),self.svdb.abspath(),recognize_gates))
+""".format(self.layout_gds.abspath(),self.layout_cellname,self.source_netlist.abspath(),self.source_cellname,self.output_file_base.abspath(),self.svdb.abspath(),recognize_gates))
 
 	for line in getattr(self,'mixins',[]):
 		f.write(line+'\n')
@@ -80,12 +92,12 @@ DRC ICSTATION YES
 
 	f.close()
 
-	if hasattr(self,'hcells'):
+	if len(getattr(self,'hcells',[])) > 0:
 		f = open(self.hcells_file.abspath(),"w")
 		f.write("\n".join(getattr(self,'hcells',[])))
 		f.close()
 
-	output = self.svdb.make_node(self.cellname+'.sp')
+	output = self.svdb.make_node(self.layout_cellname+'.sp')
 	open(output.abspath(),'w').close() 
 
 	t = self.create_task('calibreLvsTask', [self.layout_gds,self.source_netlist], [self.output_file_base.change_ext(".lvs.report"), output])
@@ -94,12 +106,12 @@ class calibreLvsTask(Task.Task):
 	vars = ['CALIBRE_LVS','CALIBRE_LVS_OPTIONS','CALIBRE_LVS_RULES']
 	def run(self):
 		conditional_options = ""
-		if hasattr(self.generator,'hcells'):
+		if len(getattr(self,'hcells',[])) > 0:
 			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
 
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_lvs_'+self.generator.cellname+'.log'))
+		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_lvs_'+self.generator.path_cellname+'.log'))
 
-		run_str = '%s -lvs %s -spice %s %s %s > %s 2>&1' % (self.env.CALIBRE_LVS, conditional_options, self.generator.svdb.make_node(self.generator.cellname+'.sp').abspath()," ".join(self.env.CALIBRE_LVS_OPTIONS), self.generator.rule_file.abspath(),logfile.abspath())
+		run_str = '%s -lvs %s -spice %s %s %s > %s 2>&1' % (self.env.CALIBRE_LVS, conditional_options, self.generator.svdb.make_node(self.generator.layout_cellname+'.sp').abspath()," ".join(self.env.CALIBRE_LVS_OPTIONS), self.generator.rule_file.abspath(),logfile.abspath())
 		out = ""
 		try:
 			out = self.generator.bld.cmd_and_log(run_str, quiet=Context.STDOUT)
