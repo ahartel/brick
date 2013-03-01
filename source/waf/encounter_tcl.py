@@ -811,9 +811,6 @@ if {{$enable_route_clk_first}} {{
     selectNet -allDefClock
 
     setNanoRouteMode -routeSelectedNetOnly true
-    setNanoRouteMode -routeTopRoutingLayer 5
-    setNanoRouteMode -envNumberProcessor 8
-    setNanoRouteMode -routeAntennaCellName $ant_cells
     globalDetailRoute
     deselectAll
 }}
@@ -821,12 +818,6 @@ if {{$enable_route_clk_first}} {{
 # route remaining nets
 #
 setNanoRouteMode -routeSelectedNetOnly false
-setNanoRouteMode -routeTopRoutingLayer 9
-setNanoRouteMode -routeBottomRoutingLayer 1
-setNanoRouteMode -routeWithSiDriven true
-setNanoRouteMode -routeSiEffort normal
-setNanoRouteMode -routeTdrEffort 10
-setNanoRouteMode -routeAntennaCellName $ant_cells
 globalDetailRoute
 
 #
