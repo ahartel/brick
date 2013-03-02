@@ -43,7 +43,7 @@ def parse_print_file(filename,rise_th,fall_th):
 
     rise_check_time = 10.0e-9
     fall_check_time = 10.0e-9
-    check_wait_time = 1.0e-9
+    check_wait_time = 0.7e-9
 
     for line in f:
         if found_start > 0:

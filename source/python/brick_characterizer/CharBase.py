@@ -8,6 +8,7 @@ class CharBase(object):
         self.high_value = 1.2
         self.low_value = 0.0
         self.timing_offset = 4.0 #ns
+        self.clock_period = 2.0 #ns
         self.simulation_length = 10.0 #ns
         self.epsilon = 1.e-6
         self.infinity = 1000.
@@ -119,6 +120,11 @@ class CharBase(object):
         self.append_out('.param tran_tend='+str(self.simulation_length)+'000000e-09')
         self.append_out('.tran 1.00e-12 \'tran_tend\'')
         self.append_out('')
+        self.append_out('simulator lang=spectre')
+        self.append_out('simulatorOptions options temp=27 tnom=27 scale=1.0 scalem=1.0')
+        self.append_out('usim_opt sim_mode=s')
+        self.append_out('simulator lang=spice')
+
 
     def oom(self,exp):
         if exp == 'm':
@@ -183,26 +189,6 @@ class CharBase(object):
         f.close()
 
         self.spice_output = []
-
-
-    def generate_clock_edge(self,name,direction):
-        self.append_out('V'+name+' '+name+' 0 pwl(')
-        if direction == 'R':
-            self.append_out('+ 0.0000000e+00 0.0000000e+00')
-            self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*2 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
-        else:
-            self.append_out('+ 0.0000000e+00 '+str(self.high_value)+'000000e+00')
-            self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*2 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
 
 
     def get_printfile_name(self):

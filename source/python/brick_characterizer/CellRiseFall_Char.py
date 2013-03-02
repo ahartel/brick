@@ -132,6 +132,27 @@ class CellRiseFall_Char(CharBase):
             self.add_probe(signal)
             self.add_capacitance(related,self.load_capacitance)
 
+
+    def generate_clock_edge(self,name,direction):
+        self.append_out('V'+name+' '+name+' 0 pwl(')
+        if direction == 'R':
+            self.append_out('+ 0.0000000e+00 0.0000000e+00')
+            self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*2 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+        else:
+            self.append_out('+ 0.0000000e+00 '+str(self.high_value)+'000000e+00')
+            self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*2 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+
+
     def generate_two_edges(self,signal,transition_time,rising_delay,falling_delay):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
 
@@ -195,6 +216,7 @@ class CellRiseFall_Char(CharBase):
                     cnt = cnt + 1 if cnt < 2 else 0
                 self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
             else:
+                cnt = 0
                 for edge in self.falling_edges[clock_name]:
                     if cnt == 1:
                         clock_edges[clock_name].append(edge)

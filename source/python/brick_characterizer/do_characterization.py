@@ -4,7 +4,7 @@ sh_lock = threading.Lock()
 dt_lock = threading.Lock()
 
 threads_running = 0
-max_threads = 8
+max_threads = 9
 
 setups = {}
 holds = {}

@@ -61,27 +61,43 @@ class SetupHold_Char(CharBase):
     def generate_two_edges(self,signal,transition_time,rising_delay,falling_delay):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
 
-        if self.state == 'delay':
+        if self.state == 'delay' or self.state == 'setup':
             start_time = self.timing_offset - rising_delay
-            start_time_2 = self.timing_offset*2 - falling_delay
+            start_time_2 = self.timing_offset + self.clock_period*2 - falling_delay
             first_value = self.low_value
             second_value = self.high_value
-        elif self.state == 'setup':
-            start_time = self.timing_offset - rising_delay
-            start_time_2 = self.timing_offset*2 - falling_delay
-            first_value = self.low_value
-            second_value = self.high_value
+
+            self.append_out('+ 0.0000000e+00 '+str(first_value)+'e+00')
+            self.append_out('+ '+str(start_time-transition_time*0.5)+'e-9 '+str(first_value)+'e+00')
+            self.append_out('+ '+str(start_time+transition_time*0.5)+'e-09 '+str(second_value)+'e+00')
+            self.append_out('+ '+str(start_time_2-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
+            self.append_out('+ '+str(start_time_2+transition_time*0.5)+'e-09 '+str(first_value)+'e+00)')
+
         elif self.state == 'hold':
             start_time = self.timing_offset + rising_delay
-            start_time_2 = self.timing_offset*2 + falling_delay
+            start_time_2 = self.timing_offset + self.clock_period*2 + falling_delay
+            mid_time = self.timing_offset + self.clock_period - self.initial_delay
+            mid_time_2 = self.timing_offset + self.clock_period + self.initial_delay
             first_value = self.high_value
             second_value = self.low_value
 
-        self.append_out('+ 0.0000000e+00 '+str(first_value)+'e+00')
-        self.append_out('+ '+str(start_time-transition_time*0.5)+'e-9 '+str(first_value)+'e+0')
-        self.append_out('+ '+str(start_time+transition_time*0.5)+'e-09 '+str(second_value)+'e+00)')
-        self.append_out('+ '+str(start_time_2-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
-        self.append_out('+ '+str(start_time_2+transition_time*0.5)+'e-09 '+str(first_value)+'e+00)')
+            self.append_out('+ 0.0000000e+00 '+str(second_value)+'e+00')
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 - 0.1)+'e-09 '+str(second_value)+'e+00')
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 + 0.1)+'e-09 '+str(first_value)+'e+00')
+
+            self.append_out('+ '+str(start_time-transition_time*0.5)+'e-9 '+str(first_value)+'e+00')
+            self.append_out('+ '+str(start_time+transition_time*0.5)+'e-09 '+str(second_value)+'e+00')
+
+            if mid_time > 0 and mid_time_2 > 0:
+                self.append_out('+ '+str(mid_time-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
+                self.append_out('+ '+str(mid_time+transition_time*0.5)+'e-09 '+str(first_value)+'e+00')
+
+                self.append_out('+ '+str(mid_time_2-transition_time*0.5)+'e-9 '+str(first_value)+'e+00')
+                self.append_out('+ '+str(mid_time_2+transition_time*0.5)+'e-09 '+str(second_value)+'e+00')
+
+            self.append_out('+ '+str(start_time_2-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
+            self.append_out('+ '+str(start_time_2+transition_time*0.5)+'e-09 '+str(first_value)+'e+00)')
+
 
     def set_initial_condition(self,signal):
         if self.probe_signal_directions[signal] == 'positive_unate':
@@ -90,6 +106,58 @@ class SetupHold_Char(CharBase):
             self.append_out('.NODESET V('+signal+')='+str(self.high_value))
         else:
             raise Exception('Probe signal '+signal+' has unknown unate-ness. Please specify \'positive_unate\' or \'negative_unate\'')
+
+
+    def generate_clock_edge(self,name,direction):
+        self.append_out('V'+name+' '+name+' 0 pwl(')
+        if direction == 'R':
+            #low
+            self.append_out('+ 0.0000000e+00 '+str(self.low_value)+'e+00')
+            #up
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            #down
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            #up
+            self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            #down
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*0.5 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*0.5 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            #up
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            #down
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.5 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.5 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            #up
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*2.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*2.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value)+')')
+        else:
+            #high
+            self.append_out('+ 0.0000000e+00 '+str(self.high_value)+'000000e+00')
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            #down
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            #down
+            self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            #up
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*0.5 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*0.5 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            #down
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            #up
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.5 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*1.5 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            #down
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*2.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset + self.clock_period*2.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value)+')')
+
 
     def generate_timing_signals(self):
         import re
@@ -239,7 +307,7 @@ class SetupHold_Char(CharBase):
 
         else:
             self.state = 'done'
-            return 0
+            return00
 
 
     def check_timing(self):
@@ -253,9 +321,13 @@ class SetupHold_Char(CharBase):
                 clock_edges[clock_name] = []
             if (clock_dir == 'R'):
                 clock_edges[clock_name] = self.rising_edges[clock_name]
+                # remove middle clock edge, since it is not relevant for the calculations
+                del clock_edges[clock_name][1]
                 self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
             else:
                 clock_edges[clock_name] = self.falling_edges[clock_name]
+                # remove middle clock edge, since it is not relevant for the calculations
+                del clock_edges[clock_name][1]
                 self.logger_debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
 
         for signal,related in self.probe_signals.iteritems():
@@ -314,8 +386,11 @@ class SetupHold_Char(CharBase):
                     self.logger_debug("Rising edge for signal "+signal+" not found but expected")
                     delta_t[0] = self.infinity
 
-            if delta_t[0] == self.infinity or delta_t[1] == self.infinity:
-                self.logger_warning('Delay for signal '+signal+' cannot be determined in '+self.whats_my_name()+' step '+self.state+'_'+str(self.state_cnt))
+            if delta_t[0] == self.infinity:
+                self.logger_warning('Rising delay for signal '+signal+' could not be determined in '+self.whats_my_name()+' step '+self.state+'_'+str(self.state_cnt))
+            if delta_t[1] == self.infinity:
+                self.logger_warning('Falling delay for signal '+signal+' could not be determined in '+self.whats_my_name()+' step '+self.state+'_'+str(self.state_cnt))
+
 
             #
             # the following block implements
@@ -333,6 +408,7 @@ class SetupHold_Char(CharBase):
                 for edge_type in [0,1]:
                     self.logger_debug("Checking "+("rising" if edge_type==0 else 'falling')+" edge.")
                     if self.direction[related][edge_type] < 0 and delta_t[edge_type] < self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Delay is fine, keeping direction")
                         self.logger_debug("Setting lower threshold to "+str(self.current_delay[related][edge_type]))
                         self.lower_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
@@ -344,18 +420,21 @@ class SetupHold_Char(CharBase):
                             self.current_delay[related][edge_type] -= self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
 
                     elif self.direction[related][edge_type] < 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Delay is too large, switching direction")
                         self.logger_debug("Setting upper threshold to "+str(self.current_delay[related][edge_type]))
                         self.upper_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
                         self.direction[related][edge_type] = +1.
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
                     elif self.direction[related][edge_type] > 0 and delta_t[edge_type] < self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Delay is fine, switching direction")
                         self.logger_debug("Setting lower threshold to "+str(self.current_delay[related][edge_type]))
                         self.lower_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.direction[related][edge_type] = -1.
                         self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
                     elif self.direction[related][edge_type] > 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Delay is too large, keeping direction")
                         self.logger_debug("Setting upper threshold to "+str(self.current_delay[related][edge_type]))
                         self.upper_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
