@@ -2,12 +2,17 @@ import re
 
 class LibBackend:
 
-    def __init__(self,constr_templ):
+    def __init__(self,constr_templ,del_templ):
         self.indentation = 0
-        self.buses = {}
         self.constraint_template = constr_templ
+        self.delay_template = del_templ
 
         self.bus_reg = re.compile(r"([\w_]+)\[(\d+):(\d+)\]")
+        self.signal_to_bus = {}
+        self.buses = {}
+
+        self.max_voltage = None
+        self.time_base_unit = 1.0e-9 # i.e. ns
 
     def write_templates(self):
         dim1 = len(self.constraint_template[0])
@@ -20,13 +25,28 @@ class LibBackend:
         output += ['\tindex_2 ("'+', '.join([str(x) for x in self.constraint_template[1]])+'");']
 
         output += ['}']
+
+
+        dim1 = len(self.delay_template[0])
+        dim2 = len(self.delay_template[1])
+        self.delay_template_name = 'delay_template'+str(dim1)+'x'+str(dim2)
+        output += ['lu_table_template (delay_template'+str(dim1)+'x'+str(dim2)+') {']
+        output += ['\tvariable_1 : input_net_transition;']
+        output += ['\tvariable_2 : total_output_net_capacitance;']
+        output += ['\tindex_1 ("'+', '.join([str(x) for x in self.delay_template[0]])+'");']
+        output += ['\tindex_2 ("'+', '.join([str(x) for x in self.delay_template[1]])+'");']
+
+        output += ['}']
         return output
 
-    def write_bus_def(self,from_bit,to_bit,downto):
+    def write_bus_def(self,signal_name,from_bit,to_bit,downto):
         width = abs(from_bit-to_bit)+1
 
-        if not self.buses.has_key('bus'+str(width)):
-            output = ['type (bus'+str(width)+') {']
+        # let's try to create a bus with the following name
+        bus_name = 'bus'+str(width)+'_'+str(from_bit)+'_'+str(to_bit)+'_'+str(downto)
+        # if there is no bus by this name yet, we'll create one
+        if not self.buses.has_key(bus_name):
+            output = ['type ('+bus_name+') {']
             output += ['\tbase_type : array;']
             output += ['\tdata_type : bit;']
             output += ['\tbit_width : '+str(width)+';']
@@ -34,11 +54,14 @@ class LibBackend:
             output += ['\tbit_to : '+str(to_bit)+';']
             output.append('}')
 
-            self.buses['bus'+str(width)] = [from_bit,to_bit,downto]
+            self.buses[bus_name] = [from_bit,to_bit,downto]
+            self.signal_to_bus[signal_name] = bus_name
 
             return output
         else:
+            self.signal_to_bus[signal_name] = bus_name
             return []
+
 
     def indent(self,input_list,num=None):
         output_list = []
@@ -67,6 +90,100 @@ class LibBackend:
                 new_signals[bus] = timing_signals[bus][0]
 
         return new_signals
+
+    def write_delay_timing(self,timing_signals,delays,transitions,signal):
+        output = []
+        if delays.has_key(signal) and transitions.has_key(signal):
+            output += self.indent(['timing() {'])
+            self.indentation += 1
+            try:
+                output += self.indent(['related_pin : "'+timing_signals[signal]+'";'])
+            except KeyError:
+                print "Error in Library generation. Pin "+signal+" is not in timing_signals list. Unable to determine related_pin. Please change this and re-run. Omitting timing block for cell delay for this pin."
+                return []
+
+            # rising table
+            output += self.indent(['cell_rise ('+self.delay_template_name+') {'])
+            self.indentation += 1
+            output+= self.indent(['index_1 ("'+', '.join([str(x) for x in self.delay_template[0]])+'");'])
+            output+= self.indent(['index_2 ("'+', '.join([str(x) for x in self.delay_template[1]])+'");'])
+            values = ['values (']
+            for i in range(len(self.delay_template[0])):
+                values[i] += '"'
+                values[i] += ', '.join([str(delays[signal][self.delay_template[0][i]][self.delay_template[1][j]][0] / self.time_base_unit) for j in range(len(self.delay_template[1]))])
+                if i == len(self.delay_template[0])-1:
+                    values[i] += '"'
+                else:
+                    values[i] += '", \\'
+                    values.append('')
+            values [len(self.delay_template[0])-1] += ');'
+            output += self.indent(values)
+            self.indentation -= 1
+            output += self.indent(['}'])
+
+            # fallng table
+            output += self.indent(['cell_fall ('+self.delay_template_name+') {'])
+            self.indentation += 1
+            output+= self.indent(['index_1 ("'+', '.join([str(x) for x in self.delay_template[0]])+'");'])
+            output+= self.indent(['index_2 ("'+', '.join([str(x) for x in self.delay_template[1]])+'");'])
+            values = ['values (']
+            for i in range(len(self.delay_template[0])):
+                values[i] += '"'
+                values[i] += ', '.join([str(delays[signal][self.delay_template[0][i]][self.delay_template[1][j]][1] / self.time_base_unit) for j in range(len(self.delay_template[1]))])
+                if i == len(self.delay_template[0])-1:
+                    values[i] += '"'
+                else:
+                    values[i] += '", \\'
+                    values.append('')
+            values [len(self.delay_template[0])-1] += ');'
+            output += self.indent(values)
+            self.indentation -= 1
+            output += self.indent(['}'])
+
+            # rising table
+            output += self.indent(['rise_transition ('+self.delay_template_name+') {'])
+            self.indentation += 1
+            output+= self.indent(['index_1 ("'+', '.join([str(x) for x in self.delay_template[0]])+'");'])
+            output+= self.indent(['index_2 ("'+', '.join([str(x) for x in self.delay_template[1]])+'");'])
+            values = ['values (']
+            for i in range(len(self.delay_template[0])):
+                values[i] += '"'
+                values[i] += ', '.join([str(transitions[signal][self.delay_template[0][i]][self.delay_template[1][j]][0] / self.time_base_unit) for j in range(len(self.delay_template[1]))])
+                if i == len(self.delay_template[0])-1:
+                    values[i] += '"'
+                else:
+                    values[i] += '", \\'
+                    values.append('')
+            values [len(self.delay_template[0])-1] += ');'
+            output += self.indent(values)
+            self.indentation -= 1
+            output += self.indent(['}'])
+
+            # fallng table
+            output += self.indent(['fall_transition ('+self.delay_template_name+') {'])
+            self.indentation += 1
+            output+= self.indent(['index_1 ("'+', '.join([str(x) for x in self.delay_template[0]])+'");'])
+            output+= self.indent(['index_2 ("'+', '.join([str(x) for x in self.delay_template[1]])+'");'])
+            values = ['values (']
+            for i in range(len(self.delay_template[0])):
+                values[i] += '"'
+                values[i] += ', '.join([str(transitions[signal][self.delay_template[0][i]][self.delay_template[1][j]][1] / self.time_base_unit) for j in range(len(self.delay_template[1]))])
+                if i == len(self.delay_template[0])-1:
+                    values[i] += '"'
+                else:
+                    values[i] += '", \\'
+                    values.append('')
+            values [len(self.delay_template[0])-1] += ');'
+            output += self.indent(values)
+            self.indentation -= 1
+            output += self.indent(['}'])
+
+            # end of timing block
+            self.indentation -= 1
+            output += self.indent(['}'])
+
+        return output
+
 
 
     def write_setup_timing(self,timing_signals,setups,signal):
@@ -131,7 +248,7 @@ class LibBackend:
             try:
                 output += self.indent(['related_pin : "'+timing_signals[signal]+'";'])
             except KeyError:
-                print "Error in Library generation. Pin "+signal+" is not in timing_signals list. Unable to determine related_pin. Please change this and re-run. Omitting timing block for setup_cosntraint for this pin."
+                print "Error in Library generation. Pin "+signal+" is not in timing_signals list. Unable to determine related_pin. Please change this and re-run. Omitting timing block for hold_cosntraint for this pin."
                 return []
             output += self.indent(['timing_type : "hold_rising";'])
 
@@ -182,14 +299,14 @@ class LibBackend:
     def iterate_power_signals(self,pin_list):
         output = []
         # write bus and pin definitions
+        pwr_cnt = 0
+        gnd_cnt = 0
         for signal,voltage in pin_list.iteritems():
             #
             # pg_pins
             #
             output += self.indent(['pg_pin ('+signal+') {'])
             self.indentation +=1
-            pwr_cnt = 0
-            gnd_cnt = 0
             # here
             if voltage > 0:
                 output += self.indent(['pg_type : primary_power;'])
@@ -212,12 +329,16 @@ class LibBackend:
         gnd_cnt = 0
         for voltage in powers.itervalues():
             if voltage > 0:
+                if not self.max_voltage:
+                    self.max_voltage = voltage
                 output += ['voltage_map(COREVDD'+str(pwr_cnt)+', '+str(voltage)+');']
+                pwr_cnt += 1
             else:
                 output += ['voltage_map(COREGND'+str(gnd_cnt)+', '+str(voltage)+');']
+                gnd_cnt += 1
         return output
 
-    def iterate_output_signals(self,pin_list):
+    def iterate_inout_signals(self,pin_list,caps):
         output = []
         # write bus and pin definitions
         for signal in pin_list:
@@ -235,7 +356,57 @@ class LibBackend:
 
                 output += self.indent(['bus ('+m.group(1)+') {'])
                 self.indentation +=1
-                output += self.indent(['bus_type : bus'+str(width)+';'])
+                output += self.indent(['bus_type : '+self.signal_to_bus[m.group(1)]+';'])
+                output += self.indent(['direction : inout;'])
+
+                for i in range(smaller,larger+1):
+                    signal_name = m.group(1)+'['+str(i)+']'
+                    output += self.indent(['pin ('+signal_name+') {'])
+                    self.indentation +=1
+                    # here
+                    output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+
+                    # end of pin block
+                    self.indentation -= 1
+                    output += self.indent(['}'])
+
+                self.indentation -= 1
+                output += self.indent(['}'])
+            else:
+                #
+                # pins
+                #
+                output += self.indent(['pin ('+signal+') {'])
+                self.indentation +=1
+                output += self.indent(['direction : inout;'])
+                # here
+                output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
+
+                # end of pin block
+                self.indentation -= 1
+                output += self.indent(['}'])
+
+        return output
+
+    def iterate_output_signals(self,pin_list,timing_signals,delays,transitions):
+        output = []
+        # write bus and pin definitions
+        for signal in pin_list:
+            m = self.bus_reg.search(signal)
+            if m:
+                #
+                # buses
+                #
+                smaller = int(m.group(3))
+                larger = int(m.group(2))
+                if smaller >= larger:
+                    smaller,larger = larger,smaller
+
+                width = abs(smaller-larger)+1
+
+                output += self.indent(['bus ('+m.group(1)+') {'])
+                self.indentation +=1
+                output += self.indent(['bus_type : '+self.signal_to_bus[m.group(1)]+';'])
                 output += self.indent(['direction : output;'])
 
                 for i in range(smaller,larger+1):
@@ -245,31 +416,34 @@ class LibBackend:
                     # here
                     output += self.indent(['max_capacitance : 0.010;'])
 
-                    if m.group(1) == 'd_out_pst' or m.group(1) == 'd_out_pre':
-                        output += self.indent(['timing() {'])
-                        self.indentation += 1
+                    output += self.write_delay_timing(timing_signals,delays,transitions,signal_name)
 
-                        if m.group(1) == 'd_out_pst':
-                            output += self.indent(['related_pin : "clk_pst";'])
-                        elif m.group(1) == 'd_out_pre':
-                            output += self.indent(['related_pin : "clk_pre";'])
+                    #if m.group(1) == 'd_out_pst' or m.group(1) == 'd_out_pre':
+                    #    output += self.indent(['timing() {'])
+                    #    self.indentation += 1
 
-                        output += self.indent(['cell_rise(scalar) {',
-                            '\tvalues( " 0.200 ");',
-                            '}'])
-                        output += self.indent(['cell_fall(scalar) {',
-                            '\tvalues( " 0.200 ");',
-                            '}'])
-                        output += self.indent(['rise_transition(scalar) {',
-                            '    values( " 0.100 ");',
-                            '}',
-                            'fall_transition(scalar) {',
-                            '    values( " 0.100 ");',
-                            '}'])
+                    #    if m.group(1) == 'd_out_pst':
+                    #        output += self.indent(['related_pin : "clk_pst";'])
+                    #    elif m.group(1) == 'd_out_pre':
+                    #        output += self.indent(['related_pin : "clk_pre";'])
 
-                        # end of timing block
-                        self.indentation -= 1
-                        output += self.indent(['}'])
+                    #    output += self.indent(['cell_rise(scalar) {',
+                    #        '\tvalues( " 0.200 ");',
+                    #        '}'])
+                    #    output += self.indent(['cell_fall(scalar) {',
+                    #        '\tvalues( " 0.200 ");',
+                    #        '}'])
+                    #    output += self.indent(['rise_transition(scalar) {',
+                    #        '    values( " 0.100 ");',
+                    #        '}',
+                    #        'fall_transition(scalar) {',
+                    #        '    values( " 0.100 ");',
+                    #        '}'])
+
+                    #    # end of timing block
+                    #    self.indentation -= 1
+                    #    output += self.indent(['}'])
+
                     # end of pin block
                     self.indentation -= 1
                     output += self.indent(['}'])
@@ -286,6 +460,7 @@ class LibBackend:
                 # here
                 output += self.indent(['max_capacitance : 0.010;'])
 
+                output += self.write_delay_timing(timing_signals,delays,transitions,signal)
 
                 # end of pin block
                 self.indentation -= 1
@@ -312,7 +487,7 @@ class LibBackend:
 
                 output += self.indent(['bus ('+m.group(1)+') {'])
                 self.indentation +=1
-                output += self.indent(['bus_type : bus'+str(width)+';'])
+                output += self.indent(['bus_type : '+self.signal_to_bus[m.group(1)]+';'])
                 output += self.indent(['direction : input;'])
 
                 for i in range(smaller,larger+1):
@@ -337,7 +512,7 @@ class LibBackend:
                 output += self.indent(['pin ('+signal+') {'])
                 self.indentation +=1
                 output += self.indent(['direction : input;'])
-                output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+                output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
 
                 output += self.write_setup_timing(timing_signals,setups,signal)
                 output += self.write_hold_timing(timing_signals,holds,signal)
@@ -347,11 +522,11 @@ class LibBackend:
 
         return output
 
-    def write(self,library,cell,filename,inputs,outputs,powers,caps,timing_signals,setups,holds):
+    def write(self,library,cell,filename,inputs,outputs,inouts,powers,caps,input_timing_signals,output_timing_signals,setups,holds,delays,transitions):
         output = []
 
-        timing_signals = self.transform_timing_signals(timing_signals)
-
+        input_timing_signals = self.transform_timing_signals(input_timing_signals)
+        output_timing_signals = self.transform_timing_signals(output_timing_signals)
 
         output += ['library ('+library+') {']
         self.indentation = 1
@@ -362,21 +537,26 @@ class LibBackend:
         'current_unit : "1mA" ;',
         'time_unit : "1ns" ;',
         'pulling_resistance_unit : "1kohm";',
+        'default_max_transition : 0.2;',
+        ])
+
+        tmp_output = self.indent(self.create_power_names(powers))
+
+        output += self.indent([
         'operating_conditions("NCCOM"){',
         '\tprocess : 1; /* TT TT_25 */',
         '\ttemperature : 25;',
-        '\tvoltage : 1.2;',
+        '\tvoltage : '+str(self.max_voltage)+';',
         '\ttree_type : "balanced_tree";',
         '}',
         'default_operating_conditions : NCCOM ;',
         ])
 
-        output += self.indent(self.create_power_names(powers))
-
+        output += tmp_output
         output += self.indent(self.write_templates())
 
         # write bus defs
-        for bus in inputs:
+        for bus in inputs+outputs+inouts:
             m = self.bus_reg.search(bus)
             if m:
                 left = int(m.group(3))
@@ -385,13 +565,14 @@ class LibBackend:
                 if left <= right:
                     downto = False
 
-                output.extend(self.indent(self.write_bus_def(left,right,downto)))
+                output.extend(self.indent(self.write_bus_def(m.group(1),left,right,downto)))
 
         output += self.indent(['cell ('+cell+') {'])
         self.indentation += 1
 
-        output += self.iterate_input_signals(inputs,caps,timing_signals,setups,holds)
-        output += self.iterate_output_signals(outputs)
+        output += self.iterate_input_signals(inputs,caps,input_timing_signals,setups,holds)
+        output += self.iterate_output_signals(outputs,output_timing_signals,delays,transitions)
+        output += self.iterate_inout_signals(inouts,caps)
         output += self.iterate_power_signals(powers)
 
         self.indentation -= 1

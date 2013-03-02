@@ -13,10 +13,25 @@ class CellRiseFall_Char(CharBase):
         self.clock_rise_time = 0.1 #ns
         self.signal_rise_time = 0.1 #ns
         self.initial_delay = 0.4 #ns
+        self.simulation_length = 12.0 #ns
+
+        self.slew_lower_rise = 0.3
+        self.slew_upper_rise = 0.7
+        self.slew_lower_fall = 0.3
+        self.slew_upper_fall = 0.7
 
         self.signal_to_clock = {}
         self.source_signals = {}
-        self.source_signal_directions = {}
+        self.probe_signal_directions = {}
+
+        self.delays = {}
+        self.transitions = {}
+
+    def get_delays(self):
+        return self.delays
+
+    def get_transitions(self):
+        return self.transitions
 
     def get_input_rise_time(self):
         return self.input_rise_time
@@ -82,19 +97,21 @@ class CellRiseFall_Char(CharBase):
                             cur_probe = test.sub(str(int(eval(match.group(1)))),cur_probe,count=1)
                             match = test.search(cur_probe)
 
-                    self.timing_signals[cur_sig] = {}
                     self.signal_to_clock[cur_sig] = related[0]
                     self.source_signals[cur_probe] = cur_sig
-                    self.source_signal_directions[cur_probe] = related[2]
+                    self.probe_signal_directions[cur_probe] = related[2]
+                    self.delays[cur_sig] = []
+                    self.transitions[cur_sig] = []
             else:
                 if self.added_static_signals:
                     if self.static_signals.has_key(sig):
                         raise Exception('Timing signal '+sig+' has already been defined as a static signal.')
 
-                self.timing_signals[sig] = {}
                 self.signal_to_clock[sig] = related[0]
                 self.source_signals[related[1]] = sig
-                self.source_signal_directions[related[1]] = related[2]
+                self.probe_signal_directions[related[1]] = related[2]
+                self.delays[sig] = []
+                self.transitions[sig] = []
 
 
         self.added_timing_signals = True
@@ -133,6 +150,9 @@ class CellRiseFall_Char(CharBase):
         self.append_out('C'+signal_name+' '+signal_name+' 0 '+str(capacitance)+'pf')
 
     def add_pseudo_static_signals(self,signals):
+        if not self.added_timing_signals:
+            raise Exception('Cannot add pseudo-static signals before timing_signals have been added. Please call this function afterwards.')
+
         import re
         for name,value in signals.iteritems():
             bus = re.compile(r"\[(\d+):(\d+)\]")
@@ -145,21 +165,20 @@ class CellRiseFall_Char(CharBase):
 
                 for index in range(smaller,larger+1):
                     cur_sig = re.sub(r"\[\d+:\d+\]","["+str(index)+"]",name)
-                    self.static_signals[cur_sig] = 0
-                    if self.added_timing_signals:
-                        if self.timing_signals.has_key(cur_sig) or self.clocks.has_key(cur_sig):
-                            raise Exception('Static signal '+cur_sig+' has already been defined as a timing or clock signal.')
+                    if self.source_signals.has_key(cur_sig) or self.clocks.has_key(cur_sig):
+                        pass
+                    else:
+                        self.static_signals[cur_sig] = 0
 
             else:
-                self.static_signals[name] = 0
-                if self.added_timing_signals:
-                    if self.timing_signals.has_key(name) or self.clocks.has_key(name):
-                        raise Exception('Static signal '+name+' has already been defined as a timing or clock signal.')
-
+                if self.source_signals.has_key(name) or self.clocks.has_key(name):
+                    pass
+                else:
+                    self.static_signals[name] = 0
         self.added_static_signals = True
- 
 
-     def check_timing(self):
+
+    def check_timing(self):
         # parse result file
         # after this step, all edges are identified
         self.parse_print_file()
@@ -169,22 +188,91 @@ class CellRiseFall_Char(CharBase):
             if not clock_edges.has_key(clock_name):
                 clock_edges[clock_name] = []
             if (clock_dir == 'R'):
-                clock_edges[clock_name] = self.rising_edges[clock_name]
+                cnt = 0
+                for edge in self.rising_edges[clock_name]:
+                    if cnt == 1:
+                        clock_edges[clock_name].append(edge)
+                    cnt = cnt + 1 if cnt < 2 else 0
                 self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
             else:
-                clock_edges[clock_name] = self.falling_edges[clock_name]
-                self.logger_debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]])) 
+                for edge in self.falling_edges[clock_name]:
+                    if cnt == 1:
+                        clock_edges[clock_name].append(edge)
+                    cnt = cnt + 1 if cnt < 2 else 0
+                self.logger_debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
 
-     def parse_print_file(self):
-        import subprocess
-        call = ['python', './brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
-        #self.logger_debug(" ".join(call))
+
+
+        for source,probe in self.source_signals.iteritems():
+            delta_t = [0,0]
+            tran = [0,0]
+            probe_lc = probe.lower()
+
+            if self.probe_signal_directions[source] == 'positive_unate':
+                if self.rising_edges.has_key(probe_lc) and len(self.rising_edges[probe_lc]) > 0:
+                    # get threshold time for rising transition lower
+                    tran[0] = self.rising_edges[probe_lc].pop(0)
+                    # get threshold time for switching point
+                    delta_t[0] = self.rising_edges[probe_lc].pop(0)
+                    delta_t[0] -= clock_edges[self.signal_to_clock[probe]][0]
+                    # get threshold time for rising transition upper
+                    tran[0] = self.rising_edges[probe_lc].pop(0) - tran[0]
+                else:
+                    self.logger_debug("Rising edge for signal "+probe_lc+" not found but expected.")
+
+                if self.falling_edges.has_key(probe_lc) and len(self.falling_edges[probe_lc]) > 0:
+                    # get threshold time for rising transition lower
+                    tran[1] = self.falling_edges[probe_lc].pop(0)
+                    # get threshold time for switching point
+                    delta_t[1] = self.falling_edges[probe_lc].pop(0)
+                    delta_t[1] -= clock_edges[self.signal_to_clock[probe]][1]
+                    # get threshold time for falling transition upper
+                    tran[1] = self.falling_edges[probe_lc].pop(0) - tran[1]
+                else:
+                    self.logger_debug("Falling edge for signal "+probe_lc+" not found but expected.")
+
+
+            elif self.probe_signal_directions[source] == 'negative_unate':
+                if self.falling_edges.has_key(probe_lc) and len(self.falling_edges[probe_lc]) > 0:
+                    # get threshold time for falling transition lower
+                    tran[1] = self.rising_edges[probe_lc].pop(0)
+                    # get threshold time for switching point
+                    delta_t[1] = self.rising_edges[probe_lc].pop(0)
+                    delta_t[1] -= clock_edges[self.signal_to_clock[probe]][0]
+                    # get threshold time for rising transition upper
+                    tran[1] = self.rising_edges[probe_lc].pop(0) - tran[1]
+                else:
+                    self.logger_debug("Falling edge for signal "+probe_lc+" not found but expected.")
+
+                if self.rising_edges.has_key(probe_lc) and len(self.rising_edges[probe_lc]) > 0:
+                    # get threshold time for rising transition lower
+                    tran[0] = self.rising_edges[probe_lc].pop(0)
+                    # get threshold time for switching point
+                    delta_t[0] = self.rising_edges[probe_lc].pop(0)
+                    delta_t[0] -= clock_edges[self.signal_to_clock[probe]][1]
+                    # get threshold time for rising transition upper
+                    tran[0] = self.rising_edges[probe_lc].pop(0) - tran[0]
+                else:
+                    self.logger_debug("Rising edge for signal "+probe_lc+" not found but expected.")
+
+            self.delays[probe] = delta_t
+            self.transitions[probe] = tran
+
+            self.logger_debug('Delays for signal \''+probe+'\' are rising: '+str(self.delays[probe][0])+' and falling: '+str(self.delays[probe][1]))
+            self.logger_debug('Transition times for signal \''+probe+'\' are rising: '+str(self.transitions[probe][0])+' and falling: '+str(self.transitions[probe][1]))
+
+    def parse_print_file(self):
+        import subprocess,os
+        call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
+        self.logger_debug(" ".join(call))
         process = subprocess.Popen(call,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         process.wait()
+        #for line in process.stdout:
+        #    print line
 
         import pickle
         with open(self.get_printfile_name()+'_rising') as input:
             self.rising_edges = pickle.load(input)
         with open(self.get_printfile_name()+'_falling') as input:
             self.falling_edges = pickle.load(input)
- 
+

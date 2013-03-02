@@ -1,12 +1,12 @@
 
-def extract_capacitance(filename,inputs,calibre_bus_delim='<'):
+def extract_capacitance(filename,inputs,inouts,calibre_bus_delim='<'):
     import re
 
     caps = {}
     bus = re.compile(r"\[(\d+):(\d+)\]")
     capacitance = re.compile(r"^\d+\s+[\d\.]+\s+([\d\.e\-\+]+)\s+[\d\.]+\s+[\d\.]+\s+(.+)")
 
-    for input in inputs:
+    for input in inputs+inouts:
         m = bus.search(input)
         if m:
             smaller = int(m.group(1))

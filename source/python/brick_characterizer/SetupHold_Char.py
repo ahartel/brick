@@ -13,7 +13,6 @@ class SetupHold_Char(CharBase):
         self.clocks = {}
         # store which clock belongs to which input signal
         self.signal_to_clock = {}
-        self.output_dir = 'output'
         self.rising_edges = {}
         self.falling_edges = {}
 
@@ -59,30 +58,6 @@ class SetupHold_Char(CharBase):
     def set_signal_rise_time(self,value):
         self.signal_rise_time = value
 
-
-    def generate_single_edge(self,signal,rise_time,start_delay,edge_type):
-        self.append_out('V'+signal+' '+signal+' 0 pwl(')
-
-        if self.state == 'delay':
-            start_time = self.timing_offset - start_delay
-        elif self.state == 'setup':
-            start_time = self.timing_offset - start_delay
-        elif self.state == 'hold':
-            start_time = self.timing_offset + start_delay
-            if edge_type == 'R':
-                edge_type = 'F'
-            else:
-                edge_type = 'R'
-
-        if edge_type == 'R':
-            self.append_out('+ 0.0000000e+00 0.0000000e+00')
-            self.append_out('+ '+str(start_time)+'e-9 0.0000000e+00')
-            self.append_out('+ '+str(start_time+rise_time)+'000000e-09 '+str(self.high_value)+'000000e+00)')
-        else:
-            self.append_out('+ 0.0000000e+00 '+str(self.high_value)+'000000e+00')
-            self.append_out('+ '+str(start_time)+'e-9 '+str(self.high_value)+'000000e+00')
-            self.append_out('+ '+str(start_time+rise_time)+'000000e-09 '+str(self.low_value)+'000000e+00)')
-
     def generate_two_edges(self,signal,transition_time,rising_delay,falling_delay):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
 
@@ -103,19 +78,18 @@ class SetupHold_Char(CharBase):
             second_value = self.low_value
 
         self.append_out('+ 0.0000000e+00 '+str(first_value)+'e+00')
-        self.append_out('+ '+str(start_time)+'e-9 '+str(first_value)+'e+0')
-        self.append_out('+ '+str(start_time+transition_time)+'e-09 '+str(second_value)+'e+00)')
-        self.append_out('+ '+str(start_time_2)+'e-9 '+str(second_value)+'e+00')
-        self.append_out('+ '+str(start_time_2+transition_time)+'e-09 '+str(first_value)+'e+00)')
+        self.append_out('+ '+str(start_time-transition_time*0.5)+'e-9 '+str(first_value)+'e+0')
+        self.append_out('+ '+str(start_time+transition_time*0.5)+'e-09 '+str(second_value)+'e+00)')
+        self.append_out('+ '+str(start_time_2-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
+        self.append_out('+ '+str(start_time_2+transition_time*0.5)+'e-09 '+str(first_value)+'e+00)')
 
-
-    #def get_current_input_delay(self):
-    #    if self.state == 'delay':
-    #        return self.delay_steps[self.state_cnt]
-    #    elif self.state == 'setup':
-    #        return self.setup_steps[self.state_cnt]
-    #    elif self.state == 'hold':
-    #        return self.hold_steps[self.state_cnt]
+    def set_initial_condition(self,signal):
+        if self.probe_signal_directions[signal] == 'positive_unate':
+            self.append_out('.NODESET V('+signal+')='+str(self.low_value))
+        elif self.probe_signal_directiobs[signal] == 'negative_unate':
+            self.append_out('.NODESET V('+signal+')='+str(self.high_value))
+        else:
+            raise Exception('Probe signal '+signal+' has unknown unate-ness. Please specify \'positive_unate\' or \'negative_unate\'')
 
     def generate_timing_signals(self):
         import re
@@ -131,6 +105,8 @@ class SetupHold_Char(CharBase):
 
         for signal in self.probe_signals.iterkeys():
             self.add_probe(signal)
+            self.set_initial_condition(signal)
+
 
     def get_current_filename(self):
         import os
@@ -199,6 +175,7 @@ class SetupHold_Char(CharBase):
 
 
     def next_step(self):
+
         if self.state == 'init':
             self.state = 'delay'
             self.state_cnt = 0
@@ -218,8 +195,8 @@ class SetupHold_Char(CharBase):
                 self.state_cnt = 0
                 self.state = 'hold'
                 for sig in self.timing_signals.iterkeys():
-
-                    self.setups[sig] = [self.lower_th[sig][0]+(self.upper_th[sig][0]-self.lower_th[sig][0])/2.,self.lower_th[sig][1]+(self.upper_th[sig][1] - self.lower_th[sig][1])/2.]
+                    # be conservative!
+                    self.setups[sig] = [self.lower_th[sig][0],self.lower_th[sig][1]]
                     self.logger_debug("Rise Setup time for signal "+sig+": "+str(self.setups[sig][0]))
                     self.logger_debug("Fall Setup time for signal "+sig+": "+str(self.setups[sig][1]))
                     # reset
@@ -244,8 +221,8 @@ class SetupHold_Char(CharBase):
                 self.state = 'done'
                 self.state_cnt = 0
                 for sig in self.timing_signals.iterkeys():
-
-                    self.holds[sig] = [self.lower_th[sig][0]+(self.upper_th[sig][0]-self.lower_th[sig][0])/2.,self.lower_th[sig][0]+(self.upper_th[sig][1] - self.lower_th[sig][1])/2.]
+                    # be conservative!
+                    self.holds[sig] = [self.lower_th[sig][0],self.lower_th[sig][1]]
                     self.logger_debug("Rise Hold time for signal "+sig+": "+str(self.holds[sig][0]))
                     self.logger_debug("Fall Hold time for signal "+sig+": "+str(self.holds[sig][1]))
                     # reset
@@ -354,54 +331,71 @@ class SetupHold_Char(CharBase):
             elif self.state == 'setup' or self.state == 'hold':
                 # iterate over rising and falling constraint
                 for edge_type in [0,1]:
+                    self.logger_debug("Checking "+("rising" if edge_type==0 else 'falling')+" edge.")
                     if self.direction[related][edge_type] < 0 and delta_t[edge_type] < self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Setting lower threshold to "+str(self.current_delay[related][edge_type]))
                         self.lower_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
                         # don't check points twice, step back a bit instead
                         if abs(self.current_delay[related][edge_type] - self.upper_th[related][edge_type]) < self.epsilon:
                             self.logger_debug("Hit upper threshold")
                             self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
+                            # step half a step back, already went too far
                             self.current_delay[related][edge_type] -= self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
 
                     elif self.direction[related][edge_type] < 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Setting upper threshold to "+str(self.current_delay[related][edge_type]))
                         self.upper_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
                         self.direction[related][edge_type] = +1.
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
                     elif self.direction[related][edge_type] > 0 and delta_t[edge_type] < self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Setting lower threshold to "+str(self.current_delay[related][edge_type]))
                         self.lower_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.direction[related][edge_type] = -1.
                         self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
                     elif self.direction[related][edge_type] > 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
+                        self.logger_debug("Setting upper threshold to "+str(self.current_delay[related][edge_type]))
                         self.upper_th[related][edge_type] = self.current_delay[related][edge_type]
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
                         # don't check points twice, step back a bit instead
                         if abs(self.current_delay[related][edge_type] - self.lower_th[related][edge_type]) < self.epsilon:
                             self.logger_debug("Hit lower threshold")
                             self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
+                            # step half a step back, already went too far
                             self.current_delay[related][edge_type] -= self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
+
 
             #elif self.state == 'hold':
             #    self.holds[self.hold_steps[self.state_cnt]] = delta_t
 
-    def get_printfile_name(self):
-        import os
-        return self.output_dir+'/'+os.path.splitext(os.path.basename(self.get_current_filename()))[0]+'.print0'
 
 
     def parse_print_file(self):
-        import subprocess
-        call = ['python', './brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
-        #self.logger_debug(" ".join(call))
+        import subprocess,os
+        call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
+        self.logger_debug(" ".join(call))
         process = subprocess.Popen(call,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         process.wait()
+
+        # TODO: DELME
+        #if self.clock_rise_time == 0.01 and self.signal_rise_time == 0.01:
+        #    output = process.stdout.read()
+        #    print "Output of parse_print_file for "+self.whats_my_name()+" in state "+self.state+"_"+str(self.state_cnt)
+        #    print output
+
+        #    #if self.state == 'hold' and self.state_cnt == 2:
+        #    #    print self.rising_edges
+        #    #    print self.falling_edges
 
         import pickle
         with open(self.get_printfile_name()+'_rising') as input:
             self.rising_edges = pickle.load(input)
         with open(self.get_printfile_name()+'_falling') as input:
             self.falling_edges = pickle.load(input)
+
+
         return
 
         import re
