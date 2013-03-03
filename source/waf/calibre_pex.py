@@ -145,9 +145,9 @@ DRC ICSTATION YES
 	inputs = [self.layout_gds]
 	if hasattr(self,'source_netlist'):
 		layout_spice_node = self.svdb.make_node(self.cellname+'.sp')
-		if not os.path.exists(layout_spice_node.abspath()):
-			from waflib.Errors import WafError
-			raise WafError('File '+self.cellname+'.sp not found in '+self.svdb.abspath()+' (tool calibre_pex). Probably, you forgot to run LVS first.')
+		#if not os.path.exists(layout_spice_node.abspath()):
+		#	from waflib.Errors import WafError
+		#	raise WafError('File '+self.cellname+'.sp not found in '+self.svdb.abspath()+' (tool calibre_pex). Probably, you forgot to run LVS first.')
 
 		inputs.append(layout_spice_node)
 		inputs.append(self.source_netlist)

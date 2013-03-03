@@ -20,6 +20,7 @@ def create_calibre_lvs_task(self):
 		Logs.error('Please name a cell for which to run LVS for feature \'calibre_lvs\'')
 
 	try:
+		assert isinstance(self.cellname,list) 
 		self.path_cellname = self.cellname[0]
 		self.layout_cellname = self.cellname[0]
 		self.source_cellname = self.cellname[1]
