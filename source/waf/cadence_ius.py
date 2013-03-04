@@ -21,6 +21,8 @@ def configure(conf):
 		conf.env.NCVLOG_SV_OPTIONS = ['-64bit','-use5x']
 	if not conf.env.NCVLOG_VAMS_OPTIONS:
 		conf.env.NCVLOG_VAMS_OPTIONS = ['-64bit','-use5x']
+	if not conf.env.NCSDFC_OPTIONS:
+		conf.env.NCSDFC_OPTIONS = []
 
 TaskGen.declare_chain(
         rule         = 'ncvlog -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
@@ -75,8 +77,16 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -logfile ${NCSDFC_LOGFILE}_${TGT[0]} ${NCSDFC_OPTIONS} ${SRC}',
-        ext_in       = ['.sdf','.sdf.gz'],
+        rule         = 'ncsdfc -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        ext_in       = ['.sdf'],
+        ext_out       = ['.sdf.compiled'],
+        reentrant    = False,
+)
+
+TaskGen.declare_chain(
+        rule         = 'ncsdfc -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        ext_in       = ['.sdf.gz'],
+        ext_out       = ['.sdf.compiled'],
         reentrant    = False,
 )
 
