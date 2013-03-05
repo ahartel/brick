@@ -4,8 +4,9 @@ sh_lock = threading.Lock()
 dt_lock = threading.Lock()
 
 threads_running = 0
-max_threads = 9
+max_threads = 8
 
+caps = {}
 setups = {}
 holds = {}
 delays = {}
@@ -118,21 +119,19 @@ def do_characterization(
         output_timing_signals,
         constraint_template,
         delay_template,
-        only_rewrite_lib_file,
-        skip_setup_hold,
-        skip_delays):
+        only_rewrite_lib_file=False,
+        skip_setup_hold=False,
+        skip_delays=False,
+        skip_extract_capacitance=False,
+        additional_probes={}):
 
     import logging
     import datetime
 
     logging.basicConfig(filename='./logfiles/brick_characterize_'+cell_name+'_'+str(datetime.datetime.now())+'.log',level=logging.DEBUG,format='%(asctime)s %(message)s')
 
-    #
-    # extract input capacitances
-    #
-    from brick_characterizer.extract_capacitance import extract_capacitance
-    caps = extract_capacitance('build/results/'+cell_name+'.pex.report',inputs,inouts)
 
+    global caps
     global delays
     global transitions
     global setups
@@ -140,6 +139,18 @@ def do_characterization(
 
 
     if not only_rewrite_lib_file:
+        #
+        # extract input capacitances
+        #
+        if not skip_extract_capacitance:
+            from brick_characterizer.extract_capacitance import extract_capacitance
+            caps = extract_capacitance('build/results/'+cell_name+'.pex.report',inputs,inouts)
+        else:
+            import pickle,os
+            if os.path.exists(lib_name+'_'+cell_name+'_input_capacitance.dat'):
+                print "Loading "+lib_name+'_'+cell_name+'_input_capacitance.dat'
+                with open(lib_name+'_'+cell_name+'_input_capacitance.dat') as input:
+                    caps = pickle.load(input)
 
         if not input_timing_signals or len(input_timing_signals) == 0:
             skip_setup_hold = True
@@ -158,10 +169,12 @@ def do_characterization(
         if skip_setup_hold:
             import pickle,os
             if os.path.exists(lib_name+'_'+cell_name+'_setups.dat'):
+                print "Loading "+lib_name+'_'+cell_name+'_setups.dat'
                 with open(lib_name+'_'+cell_name+'_setups.dat') as input:
                     setups = pickle.load(input)
 
             if os.path.exists(lib_name+'_'+cell_name+'_holds.dat'):
+                print "Loading "+lib_name+'_'+cell_name+'_holds.dat'
                 with open(lib_name+'_'+cell_name+'_holds.dat') as input:
                     holds = pickle.load(input)
 
@@ -178,10 +191,7 @@ def do_characterization(
                     transitions = pickle.load(input)
 
         # characterize setup & hold timing
-        if skip_setup_hold:
-            setups = {}
-            holds = {}
-        else:
+        if not skip_setup_hold:
             from brick_characterizer.SetupHold_Char import SetupHold_Char
 
             setups = {}
@@ -196,6 +206,7 @@ def do_characterization(
                         setup_hold_runs[len(setup_hold_runs)-1].add_include_netlist(netlist)
                     setup_hold_runs[len(setup_hold_runs)-1].add_static_signals(static_signals)
                     setup_hold_runs[len(setup_hold_runs)-1].add_timing_signals(clocks,input_timing_signals)
+                    setup_hold_runs[len(setup_hold_runs)-1].add_additional_probes(additional_probes)
 
                     setup_hold_runs[len(setup_hold_runs)-1].set_clock_rise_time(constraint_template[0][i])
                     setup_hold_runs[len(setup_hold_runs)-1].set_signal_rise_time(constraint_template[1][j])
@@ -218,10 +229,7 @@ def do_characterization(
                     thread.join()
 
 
-        if skip_delays:
-            delays = {}
-            transitions = {}
-        else:
+        if not skip_delays:
             from brick_characterizer.CellRiseFall_Char import CellRiseFall_Char
 
             delay_runs = []
@@ -258,33 +266,38 @@ def do_characterization(
                 if thread.is_alive():
                     thread.join()
 
-        # save setup and hold results for later re-writing of lib files
         import pickle
+        # save setup and hold results for later re-writing of lib files
         with open(lib_name+'_'+cell_name+'_setups.dat', 'w') as output:
             pickle.dump(setups,output,pickle.HIGHEST_PROTOCOL)
         with open(lib_name+'_'+cell_name+'_holds.dat', 'w') as output:
             pickle.dump(holds,output,pickle.HIGHEST_PROTOCOL)
 
         # save setup and hold results for later re-writing of lib files
-        import pickle
         with open(lib_name+'_'+cell_name+'_delays.dat', 'w') as output:
             pickle.dump(delays,output,pickle.HIGHEST_PROTOCOL)
         with open(lib_name+'_'+cell_name+'_output_transitions.dat', 'w') as output:
             pickle.dump(transitions,output,pickle.HIGHEST_PROTOCOL)
+
+        with open(lib_name+'_'+cell_name+'_input_capacitance.dat', 'w') as output:
+            pickle.dump(caps,output,pickle.HIGHEST_PROTOCOL)
+
     else:
-        # load setup and hold results for re-writing of lib files
         import pickle
+        # load setup and hold results for re-writing of lib files
         with open(lib_name+'_'+cell_name+'_setups.dat') as input:
             setups = pickle.load(input)
         with open(lib_name+'_'+cell_name+'_holds.dat') as input:
             holds = pickle.load(input)
 
         # save setup and hold results for later re-writing of lib files
-        import pickle
         with open(lib_name+'_'+cell_name+'_delays.dat') as input:
             delays = pickle.load(input)
         with open(lib_name+'_'+cell_name+'_output_transitions.dat') as input:
             transitions = pickle.load(input)
+
+        with open(lib_name+'_'+cell_name+'_input_capacitance.dat') as input:
+            caps = pickle.load(input)
 
     #
     # Write lib file

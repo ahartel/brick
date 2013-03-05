@@ -21,8 +21,8 @@ class SetupHold_Char(CharBase):
         self.setups = { }
         self.holds = { }
 
-        self.initial_delay = 0.4 #ns
-        self.initial_stepsize = 0.2 #ns
+        self.initial_delay = 0.5 #ns
+        self.initial_stepsize = 0.25 #ns
         self.current_delay = {}
         self.current_stepsize = {}
         self.lower_th = {}
@@ -82,18 +82,18 @@ class SetupHold_Char(CharBase):
             second_value = self.low_value
 
             self.append_out('+ 0.0000000e+00 '+str(second_value)+'e+00')
-            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 - 0.1)+'e-09 '+str(second_value)+'e+00')
-            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 + 0.1)+'e-09 '+str(first_value)+'e+00')
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 - self.clock_period*0.1)+'e-09 '+str(second_value)+'e+00')
+            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 + self.clock_period*0.1)+'e-09 '+str(first_value)+'e+00')
 
             self.append_out('+ '+str(start_time-transition_time*0.5)+'e-9 '+str(first_value)+'e+00')
             self.append_out('+ '+str(start_time+transition_time*0.5)+'e-09 '+str(second_value)+'e+00')
 
             if mid_time > 0 and mid_time_2 > 0:
-                self.append_out('+ '+str(mid_time-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
-                self.append_out('+ '+str(mid_time+transition_time*0.5)+'e-09 '+str(first_value)+'e+00')
+                self.append_out('+ '+str(mid_time - self.clock_period*0.1)+'e-9 '+str(second_value)+'e+00')
+                self.append_out('+ '+str(mid_time + self.clock_period*0.1)+'e-09 '+str(first_value)+'e+00')
 
-                self.append_out('+ '+str(mid_time_2-transition_time*0.5)+'e-9 '+str(first_value)+'e+00')
-                self.append_out('+ '+str(mid_time_2+transition_time*0.5)+'e-09 '+str(second_value)+'e+00')
+                self.append_out('+ '+str(mid_time_2 - self.clock_period*0.1)+'e-9 '+str(first_value)+'e+00')
+                self.append_out('+ '+str(mid_time_2 + self.clock_period*0.1)+'e-09 '+str(second_value)+'e+00')
 
             self.append_out('+ '+str(start_time_2-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
             self.append_out('+ '+str(start_time_2+transition_time*0.5)+'e-09 '+str(first_value)+'e+00)')
@@ -102,7 +102,7 @@ class SetupHold_Char(CharBase):
     def set_initial_condition(self,signal):
         if self.probe_signal_directions[signal] == 'positive_unate':
             self.append_out('.NODESET V('+signal+')='+str(self.low_value))
-        elif self.probe_signal_directiobs[signal] == 'negative_unate':
+        elif self.probe_signal_directions[signal] == 'negative_unate':
             self.append_out('.NODESET V('+signal+')='+str(self.high_value))
         else:
             raise Exception('Probe signal '+signal+' has unknown unate-ness. Please specify \'positive_unate\' or \'negative_unate\'')

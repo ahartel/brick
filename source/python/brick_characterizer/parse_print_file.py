@@ -44,6 +44,8 @@ def parse_print_file(filename,rise_th,fall_th):
     rise_check_time = 10.0e-9
     fall_check_time = 10.0e-9
     check_wait_time = 0.7e-9
+    epsilon = 0.01
+    last_voltage = 0
 
     for line in f:
         if found_start > 0:
@@ -89,15 +91,23 @@ def parse_print_file(filename,rise_th,fall_th):
                             signal_value = 'F'
                     elif signal_value == 'R':
                         if voltage > rise_th:
+                            # found a threshold crossing
+                            # register a rising edge and go
+                            # to check state
                             if not rising_edges.has_key(current_signal_name):
                                 rising_edges[current_signal_name] = []
                             rising_edges[current_signal_name].append(time)
                             # go to check state
                             signal_value = 'R_check'
                             rise_check_time = time
+                            last_voltage = voltage
                     elif signal_value == 'R_check':
+                        # if max. check state time has been reached
+                        # check again if the signal has settled high
                         if time > (rise_check_time + check_wait_time):
                             if voltage < rise_th:
+                                # drop last rising edge if signal hasn't
+                                # settled high
                                 del rising_edges[current_signal_name][-1]
                                 print "Dropping rising edge for "+current_signal_name
                                 # since last rising edge was a failure, look again for a rising edge
@@ -105,15 +115,39 @@ def parse_print_file(filename,rise_th,fall_th):
                             else:
                                 # go look for a falling edge
                                 signal_value = 'F'
+                        # if max. check state time has not been reached
+                        # check for monotony
+                        else:
+                            if last_voltage > voltage and (last_voltage - voltage) > epsilon:
+                                del rising_edges[current_signal_name][-1]
+                                print "Dropping rising edge for "+current_signal_name
+                                signal_value = 'R_wait'
+                            else:
+                                last_voltage = voltage
+
+                    elif signal_value == 'R_wait':
+                        if time > (rise_check_time + check_wait_time):
+                            if voltage < fall_th:
+                                signal_value = 'R'
+                            elif voltage > rise_th:
+                                signal_value = 'F'
+
                     elif signal_value == 'F':
                         if voltage < fall_th:
+                            # found a threshold crossing
+                            # register a falling edge and go
+                            # to check state
                             if not falling_edges.has_key(current_signal_name):
                                 falling_edges[current_signal_name] = []
                             falling_edges[current_signal_name].append(time)
                             # go to check state
                             signal_value = 'F_check'
                             fall_check_time = time
+                            last_voltage = voltage
+
                     elif signal_value == 'F_check':
+                        # if max. check state time has been reached
+                        # check again if the signal has settled low
                         if time > (fall_check_time + check_wait_time):
                             if voltage > fall_th:
                                 del falling_edges[current_signal_name][-1]
@@ -121,6 +155,22 @@ def parse_print_file(filename,rise_th,fall_th):
                                 # since last falling edge was a failure, look again for a falling edge
                                 signal_value = 'F'
                             else:
+                                signal_value = 'R'
+                        # if max. check state time has not been reached
+                        # check for monotony
+                        else:
+                            if last_voltage < voltage and (voltage - last_voltage) > epsilon:
+                                del falling_edges[current_signal_name][-1]
+                                print "Dropping falling edge for "+current_signal_name
+                                signal_value = 'F_wait'
+                            else:
+                                last_voltage = voltage
+
+                    elif signal_value == 'F_wait':
+                        if time > (fall_check_time + check_wait_time):
+                            if voltage < fall_th:
+                                signal_value = 'F'
+                            elif voltage > rise_th:
                                 signal_value = 'R'
 
     f.close()

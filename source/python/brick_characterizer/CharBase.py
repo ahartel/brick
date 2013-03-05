@@ -24,6 +24,8 @@ class CharBase(object):
         self.timing_signals = {}
         self.source_signals = {}
 
+        self.additional_probes = []
+
         self.state = 'init'
 
     # logger bleiben
@@ -52,6 +54,9 @@ class CharBase(object):
 
     def append_out(self,line):
         self.spice_output.append(line)
+
+    def add_additional_probes(self,probes):
+        self.additional_probes = probes
 
     def add_include_netlist(self,netlist):
         import os
@@ -91,6 +96,14 @@ class CharBase(object):
 
         self.added_static_signals = True
 
+    def generate_additional_probes(self):
+        for probe,probe_type in self.additional_probes.iteritems():
+            if probe_type == 'v' or probe_type == 'V':
+                self.add_probe(probe,with_print=False)
+            elif probe_type == 'i' or probe_type == 'I':
+                self.add_current_probe(probe,with_print=False)
+            elif probe_type == 'p' or probe_type == 'P':
+                self.add_power_probe(probe,with_print=False)
 
     def generate_single_stat_signal_source(self,signal,value):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
@@ -106,14 +119,26 @@ class CharBase(object):
     def generate_static_signals(self):
         import re
         for power_name,power_value in self.powers.iteritems():
-            self.append_out('V'+power_name+' '+power_name+' 0 '+str(power_value))
+            self.append_out('V'+power_name+' '+power_name+'_ideal 0 '+str(power_value))
+            self.append_out('R'+power_name+' '+power_name+'_ideal '+power_name+' 0.1')
 
         for (signal,value) in self.static_signals.iteritems():
             #single net
             self.generate_single_stat_signal_source(signal,value)
 
-    def add_probe(self,signal):
-        self.append_out('.print v('+signal+')')
+    def add_power_probe(self,signal,with_print=True):
+        if with_print:
+            self.append_out('.print p('+signal+')')
+        self.append_out('.probe p('+signal+')')
+
+    def add_current_probe(self,signal,with_print=True):
+        if with_print:
+            self.append_out('.print i('+signal+')')
+        self.append_out('.probe i('+signal+')')
+
+    def add_probe(self,signal,with_print=True):
+        if with_print:
+            self.append_out('.print v('+signal+')')
         self.append_out('.probe v('+signal+')')
 
     def write_header(self):
@@ -122,7 +147,7 @@ class CharBase(object):
         self.append_out('')
         self.append_out('simulator lang=spectre')
         self.append_out('simulatorOptions options temp=27 tnom=27 scale=1.0 scalem=1.0')
-        self.append_out('usim_opt sim_mode=s')
+        #self.append_out('usim_opt sim_mode=ms')
         self.append_out('simulator lang=spice')
 
 
@@ -180,6 +205,7 @@ class CharBase(object):
         self.write_header()
         self.generate_static_signals()
         self.generate_timing_signals()
+        self.generate_additional_probes()
 
         self.logger_debug("Writing to filename "+self.get_current_filename())
 

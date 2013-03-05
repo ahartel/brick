@@ -10,6 +10,7 @@ class LibBackend:
         self.bus_reg = re.compile(r"([\w_]+)\[(\d+):(\d+)\]")
         self.signal_to_bus = {}
         self.buses = {}
+        self.clocks = []
 
         self.max_voltage = None
         self.time_base_unit = 1.0e-9 # i.e. ns
@@ -43,7 +44,7 @@ class LibBackend:
         width = abs(from_bit-to_bit)+1
 
         # let's try to create a bus with the following name
-        bus_name = 'bus'+str(width)+'_'+str(from_bit)+'_'+str(to_bit)+'_'+str(downto)
+        bus_name = 'bus'+str(width)+'_'+str(from_bit)+'_'+str(to_bit)+'_'+str('true' if downto else 'false')
         # if there is no bus by this name yet, we'll create one
         if not self.buses.has_key(bus_name):
             output = ['type ('+bus_name+') {']
@@ -52,6 +53,7 @@ class LibBackend:
             output += ['\tbit_width : '+str(width)+';']
             output += ['\tbit_from : '+str(from_bit)+';']
             output += ['\tbit_to : '+str(to_bit)+';']
+            output += ['\tdownto : '+('true' if downto else 'false')+';']
             output.append('}')
 
             self.buses[bus_name] = [from_bit,to_bit,downto]
@@ -86,8 +88,10 @@ class LibBackend:
                 for i in range(smaller,larger+1):
                     signal_name = m.group(1)+'['+str(i)+']'
                     new_signals[signal_name] = timing_signals[bus][0]
+                    self.clocks.append(timing_signals[bus][0])
             else:
                 new_signals[bus] = timing_signals[bus][0]
+                self.clocks.append(timing_signals[bus][0])
 
         return new_signals
 
@@ -364,7 +368,10 @@ class LibBackend:
                     output += self.indent(['pin ('+signal_name+') {'])
                     self.indentation +=1
                     # here
-                    output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+                    try:
+                        output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+                    except:
+                        pass
 
                     # end of pin block
                     self.indentation -= 1
@@ -380,7 +387,10 @@ class LibBackend:
                 self.indentation +=1
                 output += self.indent(['direction : inout;'])
                 # here
-                output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
+                try:
+                    output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
+                except:
+                    pass
 
                 # end of pin block
                 self.indentation -= 1
@@ -495,7 +505,16 @@ class LibBackend:
                     output += self.indent(['pin ('+signal_name+') {'])
                     self.indentation +=1
                     # here
-                    output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+                    try:
+                        output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+                    except:
+                        pass
+
+                    try:
+                        self.clocks.index(signal_name)
+                        output += self.indent(['clock : true;'])
+                    except:
+                        pass
 
                     output += self.write_setup_timing(timing_signals,setups,signal_name)
                     output += self.write_hold_timing(timing_signals,holds,signal_name)
@@ -512,7 +531,16 @@ class LibBackend:
                 output += self.indent(['pin ('+signal+') {'])
                 self.indentation +=1
                 output += self.indent(['direction : input;'])
-                output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
+                try:
+                    output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
+                except:
+                    pass
+
+                try:
+                    self.clocks.index(signal)
+                    output += self.indent(['clock : true;'])
+                except:
+                    pass
 
                 output += self.write_setup_timing(timing_signals,setups,signal)
                 output += self.write_hold_timing(timing_signals,holds,signal)
@@ -538,6 +566,18 @@ class LibBackend:
         'time_unit : "1ns" ;',
         'pulling_resistance_unit : "1kohm";',
         'default_max_transition : 0.2;',
+        'nom_process : 1 ; /* TT TT_25 */',
+        'nom_temperature : 25;',
+        'nom_voltage : 1.2;',
+        'slew_lower_threshold_pct_rise :  30.00;',
+        'slew_upper_threshold_pct_rise :  70.00;',
+        'slew_derate_from_library :  1.00;',
+        'input_threshold_pct_fall :  50.00;',
+        'output_threshold_pct_fall :  50.00;',
+        'input_threshold_pct_rise :  50.00;',
+        'output_threshold_pct_rise :  50.00;',
+        'slew_lower_threshold_pct_fall :  30.00;',
+        'slew_upper_threshold_pct_fall :  70.00;',
         ])
 
         tmp_output = self.indent(self.create_power_names(powers))
@@ -559,8 +599,8 @@ class LibBackend:
         for bus in inputs+outputs+inouts:
             m = self.bus_reg.search(bus)
             if m:
-                left = int(m.group(3))
-                right = int(m.group(2))
+                right = int(m.group(3))
+                left = int(m.group(2))
                 downto = True
                 if left <= right:
                     downto = False
