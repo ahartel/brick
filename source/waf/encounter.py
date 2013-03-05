@@ -344,7 +344,7 @@ class EncounterTSMCConfig(EncounterConfig):
 			'enable_ocv' : False,
 			}
 
-		self.opconds = ['WCCOM','NCCOM','BCCOM']
+		self.opconds = ['WCCOM','BCCOM','NCCOM']
 		self.opcond_library['WCCOM'] = 'tcbn65lpwc'
 		self.opcond_library['NCCOM'] = 'tcbn65lptc'
 		self.opcond_library['BCCOM'] = 'tcbn65lpbc'
