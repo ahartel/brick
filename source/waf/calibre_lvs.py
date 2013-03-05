@@ -95,7 +95,7 @@ DRC ICSTATION YES
 
 	if len(getattr(self,'hcells',[])) > 0:
 		f = open(self.hcells_file.abspath(),"w")
-		f.write("\n".join(getattr(self,'hcells',[])))
+		f.write("\n".join(self.hcells))
 		f.close()
 
 	output = self.svdb.make_node(self.layout_cellname+'.sp')
@@ -107,7 +107,7 @@ class calibreLvsTask(Task.Task):
 	vars = ['CALIBRE_LVS','CALIBRE_LVS_OPTIONS','CALIBRE_LVS_RULES']
 	def run(self):
 		conditional_options = ""
-		if len(getattr(self,'hcells',[])) > 0:
+		if len(getattr(self.generator,'hcells',[])) > 0:
 			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
 
 		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_lvs_'+self.generator.path_cellname+'.log'))

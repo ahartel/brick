@@ -137,6 +137,7 @@ DRC ICSTATION YES
 		f.write("\n".join(getattr(self,'xcells',[])))
 		f.close()
 
+	if len(getattr(self,'hcells',[])) > 0:
 		f = open(self.hcells_file.abspath(),"w")
 		f.write("\n".join(getattr(self,'hcells',[])))
 		f.close()

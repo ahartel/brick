@@ -32,7 +32,7 @@ class v2lvsTask(Task.Task):
 	def run(self):
 		import os
 
-		run_str = '%s -v %s -log %s -o %s' % (self.env.V2LVS, self.inputs[0].abspath(),os.environ['BRICK_LOGFILES']+'/'+os.path.basename(self.generator.verilog_netlist.abspath())+'_v2lvs.log',self.generator.target_netlist.abspath())
+		run_str = '%s %s -v %s -log %s -o %s' % (self.env.V2LVS, ' '.join(self.env.V2LVS_OPTIONS), self.inputs[0].abspath(),os.environ['BRICK_LOGFILES']+'/'+os.path.basename(self.generator.verilog_netlist.abspath())+'_v2lvs.log',self.generator.target_netlist.abspath())
 
 		if hasattr(self.generator,'include_netlists'):
 			for filename in self.generator.include_netlists:
