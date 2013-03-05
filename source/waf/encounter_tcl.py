@@ -100,7 +100,7 @@ corner_def_tcl = """
 
 create_library_set \\
 	-name WORST_LIBSET \\
-	-timing [list $max_timing_lib ]
+	-timing $max_timing_lib
 
 create_rc_corner \\
 	-name RCWORST \\
@@ -119,7 +119,7 @@ create_delay_corner \\
 
 create_library_set \\
 	-name BEST_LIBSET \\
-	-timing  [list $min_timing_lib ]
+	-timing  $min_timing_lib
 
 create_rc_corner \\
 	-name RCBEST \\
@@ -138,7 +138,7 @@ create_delay_corner \\
 
 create_library_set \\
 	-name TYP_LIBSET \\
-        -timing [list $typ_timing_lib]
+        -timing $typ_timing_lib
 
 create_rc_corner \\
 	-name RCTYP \\
