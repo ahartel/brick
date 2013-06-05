@@ -62,8 +62,6 @@ def verilog_scanner(self,node):
 @TaskGen.taskgen_method
 def scan_verilog_file(self,node,stack):
     debug = False
-    if debug:
-        print "Processing "+node.abspath()+" with stack "+stack
     if node.abspath() in stack:
         raise RuntimeError("You have an include loop in your files, you should fix that. Package and include order detection? Not gonna happen!\nFile "+node.abspath()+" included by\n\t"+"\n\t".join(stack))
     stack.append(node.abspath())
@@ -80,13 +78,15 @@ def scan_verilog_file(self,node,stack):
                 continue
             m0 = re.search('package\s+(\w+);', line)
             m1 = re.search('import\s+(\w+)[\s:]+', line)
-            m2 = re.search('[\s\[](\w+)::', line)
+            m2 = re.search('[\s\[\-+*\/](\w+)::', line)
             m3 = re.search('`include\s+"([\w\.]+)"', line)
             if (m0 is not None):
                 packages_defined.add(m0.group(1))
             if (m1 is not None):
                 packages_used.add(m1.group(1))
             if (m2 is not None):
+                if debug:
+                    print '#########'+m2.group(1)
                 packages_used.add(m2.group(1))
             if (m3 is not None):
                 includes_used.add(m3.group(1))
