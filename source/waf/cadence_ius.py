@@ -143,6 +143,9 @@ def cds_ius_prepare(self):
 	if len(vid) > 0:
 		self.env.VERILOG_INC_DIRS = vid
 
+#
+# Elaboration and Simulation tasks
+#
 
 @Task.always_run
 class ncelabTask(Task.Task):
