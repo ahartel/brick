@@ -36,7 +36,7 @@ def gen_cds_config_task(self):
 	for lib in libs:
 		# check if the library was defined in conf.env.CDS_LIBS
 		if not self.env.CDS_LIBS_FLAT.has_key(lib):
-			Logs.error('Cadence library '+lib+' was not defined in conf.env.CDS_LIBS_FLAT')
+			Logs.error('Cadence library '+lib+' was not defined in conf.env.CDS_LIBS_FLAT. Please specify a library path for this library in conf.env[\'CSD_LIBS\'].')
 			return
 		# add it to the string
 		self.liblist += lib+', '

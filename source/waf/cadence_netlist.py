@@ -57,7 +57,11 @@ def add_cds_netlist_target(self):
 		(self.libname,rest) = cellview.split(".")
 		(self.cellname,self.viewname) = rest.split(":")
 
-		config_file = self.path.find_dir(self.env['CDS_LIBS_FLAT'][self.libname])
+		try:
+			config_file = self.path.find_dir(self.env['CDS_LIBS_FLAT'][self.libname])
+		except KeyError:
+			raise Errors.ConfigurationError('Please specify a library path for library '+self.libname+' in conf.env[\'CDS_LIBS\'], No library path found.')
+
 		if not config_file:
 			raise Errors.ConfigurationError('Library '+lib+' in '+selv.env['CDS_LIBS_FLAT'][self.libname]+' not found')
 		config_file = config_file.make_node(self.cellname+'/'+self.viewname+'/expand.cfg')
