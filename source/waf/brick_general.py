@@ -41,8 +41,14 @@ def convert_string_paths(self,list_of_paths):
 			else:
 				SOURCES.append(self.path.make_node(src))
 		if os.path.isabs(src):
+			if not self.root.find_node(src):
+				self.fatal('Source file not found: '+src)
 			SOURCES.append(self.root.find_node(src))
 		else:
+			if not self.path.find_node(src):
+				self.fatal('Source file not found: '+src)
 			SOURCES.append(self.path.find_node(src))
 
 	return SOURCES
+
+# vim: noexpandtab
