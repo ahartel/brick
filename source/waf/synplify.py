@@ -16,13 +16,19 @@ def scan_synplify_project_file(self):
 	self.project_file_node = self.path.find_node(getattr(self,'project_file',None))
 	if not self.project_file_node:
 		raise Errors.ConfigurationError('Project file for synplify not found: '+getattr(self,'project_file',''))
-
+	# open the project file template
 	input = open(self.project_file_node.abspath(),'r')
-	logfile = ''
-	variables = {}
 	inputs = [self.project_file_node]
+	# split the filename into parts
+	project_file_split = Node.split_path(self.project_file_node.abspath())
+	# create the target project file
+	self.project_file_node = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),project_file_split[len(project_file_split)-1]))
+	output = open(self.project_file_node.abspath(),'w')
+	variables = {}
 	outputs = []
 	for line in input:
+		# copy file line by line
+		output.write(line)
 		# skip comments
 		if re.match('\s*#',line):
 			continue
@@ -45,7 +51,7 @@ def scan_synplify_project_file(self):
 				try:
 					result_file = re.sub('\$(\w+)',variables[m0_1.group(1)],m0.group(1))
 				except KeyError:
-					print "Variable "+m0_1.group(1)+" not found in "+self.project_file_node.abspath()
+					print "Variable "+m0_1.group(1)+" not found in "+self.project_file
 
 				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),result_file)))
 			else:
@@ -54,26 +60,6 @@ def scan_synplify_project_file(self):
 				# not relative to the path where the program is executed in
 				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),m0.group(1))))
 
-		# look for the verilog/vhdl input files
-		m1 = re.search('add_file.+"(.+)"',line)
-		if m1:
-			# check if the line contains a reference to a variable
-			m1_1 = re.search('\$(\w+)',m1.group(1))
-			if m1_1:
-				try:
-					result_file = re.sub('\$(\w+)',variables[m1_1.group(1)],m1.group(1))
-				except KeyError:
-					print "Variable "+m1_1.group(1)+" not found in "+self.project_file_node.abspath()
-
-				input_node = self.project_file_node.parent.find_node(result_file)
-				if not input_node:
-					raise Errors.ConfigurationError('File '+m1.group(1)+' not found in synplify project file '+self.project_file_node.abspath())
-				inputs.append(input_node)
-			else:
-				input_node = self.project_file_node.parent.find_node(m1.group(1))
-				if not input_node:
-					raise Errors.ConfigurationError('File '+m1.group(1)+' not found in synplify project file '+self.project_file_node.abspath())
-				inputs.append(input_node)
 
 		# look for variables
 		m3 = re.search('set\s+(.+?)\s+(.+)',line)
@@ -86,7 +72,32 @@ def scan_synplify_project_file(self):
 
 	input.close()
 
-	outputs.append(outputs[0].change_ext('.srr'))
+	for file in getattr(self,'source_files',[]):
+		node = self.path.find_node(file)
+		if not node:
+			raise Errors.ConfigurationError('File '+file+' not found in task ' + self.name)
+
+		if node.suffix() == '.v':
+			output.write('add_file -verilog "'+node.abspath()+'"\n')
+		elif node.suffix() == '.sv' or node.suffix() == '.svh':
+			output.write('add_file -verilog -vlog_std sysv "'+node.abspath()+'"\n')
+		elif node.suffix() == '.sdc':
+			output.write('add_file -constraint "'+node.abspath()+'"\n')
+		else:
+			raise Errors.ConfigurationError('Extension of file '+node.abspath()+' unknown.')
+
+		inputs.append(node)
+
+	for directory in getattr(self,'include_paths',[]):
+		node = self.path.find_dir(directory)
+		if not node:
+			raise Errors.ConfigurationError('Include directory '+directory+' not found in synplify task.')
+
+		output.write('set_option -include_path "'+node.abspath()+'"\n')
+
+	output.close()
+
+	self.logfile = outputs[0].change_ext('.srr')
 	outputs.append(outputs[0].change_ext('.ncf'))
 	outputs.append(outputs[0].parent.make_node('synplicity.ucf'))
 
@@ -100,28 +111,46 @@ class synplifyTask(Task.Task):
 	def run(self):
 		"""Checking logfile for critical warnings line by line"""
 
-		run_str = '${SYNPLIFY} -batch ${SRC[0].abspath()}'
+		logfile = self.env.BRICK_LOGFILES+'/'+Node.split_path(self.generator.project_file_node.abspath())[-1]
 
-		(f, dvars) = Task.compile_fun(run_str, False)
-		return_value = f(self)
+		run_str = '%s -batch %s -log %s' % (self.env.SYNPLIFY,self.generator.project_file_node.abspath(),logfile)
 
-		found_error = return_value
-		with open(self.outputs[1].abspath(),'r') as logfile:
-			for line in logfile:
+		out = ""
+		try:
+			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
+		except Exception as e:
+			out = e.stdout + e.stderr
+
+		#(f, dvars) = Task.compile_fun(run_str, False)
+		#return_value = f(self)
+
+		#found_error = return_value
+		found_error = 0
+		errors = []
+		with open(self.generator.logfile.abspath(),'r') as logfile_handle:
+			for line in logfile_handle:
 				# always_ff does not infer sequential logic
-				if re.match('@W: CL216',line):
-					print line
+				if re.match("@W: CL216",line):
+					errors.append(line)
 					found_error = 1
 				# always_comb does not infer combinatorial logic
-				elif re.match('@W: CL217',line):
-					print line
+				elif re.match("@W: CL217",line):
+					errors.append(line)
 					found_error = 1
 				# always_latch does not infer latch logic
-				elif re.match('@W: CL218',line):
-					print line
+				elif re.match("@W: CL218",line):
+					errors.append(line)
+					found_error = 1
+				# error
+				elif re.match("@E:",line):
+					errors.append(line)
 					found_error = 1
 
-		return found_error
+		#if len(errors) > 0:
+			#raise Errors.WafError("Found critical warning in logfile:\n"+"\n".join(errors))
+
+		#return found_error
+		return 0
 
 
 # for convenience
@@ -130,4 +159,4 @@ def synplify(bld,*k,**kw):
 	set_features(kw,'synplify')
 	return bld(*k,**kw)
 
-
+# vim: noexpandtab
