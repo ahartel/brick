@@ -346,7 +346,6 @@ check_design > $REPORTS_DIR/$DESIGN_NAME.check_design
 #########################################################
 
 # Prevent assignment statements in the Verilog netlist.
-set_fix_multiple_port_nets -all -buffer_constants
 set verilogout_no_tri true
 
 # Uniquify design
