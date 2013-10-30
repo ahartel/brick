@@ -1,0 +1,148 @@
+\documentclass[twoside]{scrbook}
+\KOMAoptions{fontsize=12pt}
+\KOMAoptions{paper=a4}
+\KOMAoptions{draft=true}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,filecolor=black,urlcolor=black,plainpages=false,pdfpagelabels,breaklinks=true]{hyperref}
+\usepackage{todonotes}
+\usepackage{tikz-timing}
+\usepackage{listings}
+\usepackage{makeidx}                              % index of key words
+\makeindex
+\title{Multi-user mixed-signal ASIC workflow}
+\subtitle{Stuff I learned about making ASICs}
+\author{Andreas Hartel}
+%\institution{Heidelberg University}
+\lstdefinestyle{BashInputStyle}{
+  language=bash,
+  basicstyle=\small\sffamily,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=3pt,
+  frame=tb,
+  columns=fullflexible,
+  backgroundcolor=\color{yellow!20},
+  linewidth=0.9\linewidth,
+  xleftmargin=0.1\linewidth
+}
+\begin{document}
+\maketitle
+\tableofcontents
+\chapter{timing}
+\def \degr {${}^\circ $}
+\begin{tikztimingtable}
+Clock 128\ , MHz 0\degr & H 2C N(A1) 8{2C} N(A5) 3{2C} G \\
+Clock 128\ , MHz 90\degr & [C] 2{2C} N(A2) 8{2C} N(A6) 2{2C} C \\
+Clock 128\ , MHz 180\degr & C 2{2C} N(A3) 8{2C} N(A7) 2{2C} G \\
+Clock 128\ , MHz 270\degr & 3{2C} N(A4) 8{2C} N(A8) 2C C \\
+Coarse Pulse & 3L 16H 6L \\
+Coarse Pulse - Delayed 1 & 4L N(B2) 16H N(B6) 5L \\
+Coarse Pulse - Delayed 2 & 5L N(B3) 16H N(B7) 4L \\
+Coarse Pulse - Delayed 3 & 6L 16H 3L \\
+\\
+Final Pulse Set & 3L 16H N(B5) 6L \\
+Final Pulse $\overline{Reset}$ & 6L N(B4) 16H 3L \\
+Final Pulse & 3L N(B1) 19H N(B8) 3L \\
+\extracode
+\tablerules
+\begin {pgfonlayer}{background}
+\foreach \n in {1,...,8}
+\draw [ help lines ] (A\n) -- (B\n) ;
+\end {pgfonlayer}
+\end{tikztimingtable}
+
+\begin{tikzpicture}[ timing , thick ,
+timing/inline node/.style={coordinate ,
+shift={(0.05,-.5)}}]
+\timing(0,2) { hH N (A) LHLHL };
+\timing(0,0) { HLH N (B) LHLl };
+\draw [ orange , semithick ]
+(A) ellipse (.2 and .6) +(0 , -0.6) coordinate (Ax)
+(B) ellipse (.2 and .6) +(0 ,+0.6) coordinate (Bx) ;
+\draw [ orange , semithick , ->]
+(Ax) parabola [ bend pos =0.5] (Bx) ;
+\end{tikzpicture}
+
+\definecolor{bgblue}{rgb}{0.41961,0.80784,0.80784}
+\definecolor{bgred}{rgb}{1,0.61569,0.61569}
+\definecolor{fgblue}{rgb}{0,0,0.6}
+\definecolor{fgred}{rgb}{0.6,0,0}
+\begin{tikztimingtable}[timing/slope=0,
+timing/coldist=2pt,xscale=2,yscale=1.1,semithick]
+\scriptsize clock&7{C}\\
+S&.75L h 2.25L H LLl[fgblue]\\
+R&1.8L .8H 2.2L 1.4H 0.8L[fgblue]\\
+Q&L .8H 1.7L 1.5H LL\\
+$\overline{\mbox{Q}}$&H .8L 1.7H 1.5L HH\\
+Q&LHHHHLL[fgred]\\
+$\overline{\mbox{Q}}$&HLLLLHH[fgred]\\
+\extracode
+\begin{pgfonlayer}{background}
+\shade[right color=bgblue,left color=white]
+(7,-8.45)rectangle(-2,-4.6);
+\shade[right color=bgred,left color=white]
+(7,-12.8)rectangle(-2,-8.6);
+\begin{scope}[gray,semitransparent,semithick]
+\horlines{}
+\foreach \x in{1,...,6}
+\draw(\x,1)--(\x,-12.8);
+%similar:\vertlines{1,...,6}
+\end{scope}
+\node[anchor=south east,inner sep=0pt]
+at(7,-8.45){\tiny clocked};
+\node[anchor=south east,inner sep=0pt,fgred]
+at(7,-12.8){\tiny positiveedgetriggered};
+\end{pgfonlayer}
+\end{tikztimingtable}
+
+
+\chapter{Version control with git}
+\section{Basic tasks}
+\todo{Make a cake}\missingfigure{Hallo}
+\section{Managing multiple repositories}
+To get a copy of the repository you want to work with and enter it, type the following code. 
+\begin{lstlisting}[style=BashInputStyle]
+git clone URL/of/your/repository
+cd repository
+\end{lstlisting}
+
+The feature that git offers to mangage multiple repositories with one top-level repository, is called submodules\index{submodule}.
+Submodules are therefore other git repositories and git allows you to specify which state of the submodule(s) belong to a certain commit of your main repository.
+To be able to work with multiple repositories you need to initialize git's submodule feature.
+This has to be done every time someone has changed the .gitmodules file by adding a submodule with \lstinline[style=BashInputStyle]'git submodule add' and you have just pulled the supermodule and want to work with the new submodule(s).
+\begin{lstlisting}[style=BashInputStyle]
+git submodule init
+\end{lstlisting}
+
+If you want to add another submodule to a repository type the following code.
+This can only be done after you've initialized the submodule feature.
+Git will automatically clone the submodule into your repository.
+Afterwards you'll have to commit your submodule's current state (HEAD commit) to your supermodule.
+\begin{lstlisting}[style=BashInputStyle]
+git submodule add URL/of/your/submodule optional/path
+git commit -m ``added submodule''
+\end{lstlisting}
+
+Any time you want to want to update your submodules your can just type the following.
+This will bring your submodules to the state that has most recently been committed to your supermodule.
+\begin{lstlisting}[style=BashInputStyle]
+git submodule update
+\end{lstlisting}
+
+If you want to commit the current state of a submodule to your supermodule, you can just added the directory name of your submodule as if it were a normal file.
+\begin{lstlisting}[style=BashInputStyle]
+git add path/to/your/submodule
+git commit -m ``changed submodule''
+\end{lstlisting}
+If multiple users commit different states of a submodule to the supermodule and a submodule's state has to be merged, then git will choose the submodule state of the later commit.
+
+If you want to ignore a submodule completely (i.e. \lstinline[style=BashInputStyle]'git submodule update' should not try to update it) you have to de-initialize the repository. This will not remove the submodule's directory or stage changes to be commited.
+It is useful when you don't have access to the submodules URL.
+\begin{lstlisting}[style=BashInputStyle]
+git submodule deinit path/to/your/submodule
+\end{lstlisting}
+\backmatter
+\printindex
+\end{document}
+
