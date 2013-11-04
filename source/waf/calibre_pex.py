@@ -132,12 +132,11 @@ DRC ICSTATION YES
 	f.write('\n}')
 	f.close()
 
-	if len(getattr(self,'xcells',[])) > 0:
+	if hasattr(self,'xcells'):
 		f = open(self.xcells_file.abspath(),"w")
 		f.write("\n".join(getattr(self,'xcells',[])))
 		f.close()
 
-	if len(getattr(self,'hcells',[])) > 0:
 		f = open(self.hcells_file.abspath(),"w")
 		f.write("\n".join(getattr(self,'hcells',[])))
 		f.close()
@@ -146,9 +145,9 @@ DRC ICSTATION YES
 	inputs = [self.layout_gds]
 	if hasattr(self,'source_netlist'):
 		layout_spice_node = self.svdb.make_node(self.cellname+'.sp')
-		#if not os.path.exists(layout_spice_node.abspath()):
-		#	from waflib.Errors import WafError
-		#	raise WafError('File '+self.cellname+'.sp not found in '+self.svdb.abspath()+' (tool calibre_pex). Probably, you forgot to run LVS first.')
+		if not os.path.exists(layout_spice_node.abspath()):
+			from waflib.Errors import WafError
+			raise WafError('File '+self.cellname+'.sp not found in '+self.svdb.abspath()+' (tool calibre_pex). Probably, you forgot to run LVS first.')
 
 		inputs.append(layout_spice_node)
 		inputs.append(self.source_netlist)
@@ -163,7 +162,7 @@ class calibrePexTask(Task.Task):
 		conditional_options = ""
 		#if hasattr(self.generator,'only_extract_nets'): 
 		#	conditional_options += ' -select'
-		if len(getattr(self.generator,'xcells',[])) > 0:
+		if hasattr(self.generator,'xcells'):
 			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
 
 		run_str = '%s -xrc -phdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PHDB']), self.generator.rule_file.abspath())
@@ -184,7 +183,7 @@ class calibrePexTask(Task.Task):
 		conditional_options = ""
 		if hasattr(self.generator,'only_extract_nets') and len(self.generator.only_extract_nets) > 0:
 			conditional_options += ' -select'
-		if len(getattr(self.generator,'xcells',[])) > 0:
+		if hasattr(self.generator,'xcells'):
 			conditional_options += ' -full -xcell '+self.generator.xcells_file.abspath()
 
 		run_str = '%s -xrc -pdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PDB']), self.generator.rule_file.abspath())
@@ -204,7 +203,7 @@ class calibrePexTask(Task.Task):
 
 	def run_fmt(self):
 		conditional_options = ""
-		if len(getattr(self.generator,'xcells',[])) > 0:
+		if hasattr(self.generator,'xcells'):
 			conditional_options = ' -full'
 		run_str = '%s -xrc -fmt %s %s %s' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_FMT']), self.generator.rule_file.abspath())
 

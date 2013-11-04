@@ -24,7 +24,7 @@ class CharBase(object):
         self.timing_signals = {}
         self.source_signals = {}
 
-        self.additional_probes = []
+        self.additional_probes = {}
 
         self.state = 'init'
 
