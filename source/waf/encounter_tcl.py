@@ -663,7 +663,7 @@ if {{$enable_usefulskew}} {{
 
 setCTSMode -reset
 setCTSMode -routeClkNet false
-ckSynthesis -report $BRICK_RESULTS/enc_$toplevel\_reports/$toplevel.ctsrpt
+ckSynthesis -report $BRICK_RESULTS/enc_$toplevel\_reports/$toplevel.ctsrpt {4}
 
 # make the tool use propagated clock timing
 # -> (ag) for some strange reason this is not automatically done in MMMC mode

@@ -157,14 +157,16 @@ class EncounterConfig:
 					setup_tcl.abspath(),
 					'1',
 					cts_script.abspath(),
-					cts_spec.abspath()
+					cts_spec.abspath(),
+					'-forceReconvergent',
 					)
 		except:
 			return steps_tcl['cts'].format(
 					setup_tcl.abspath(),
 					'0',
 					'',
-					cts_spec.abspath()
+					cts_spec.abspath(),
+					'-forceReconvergent',
 					)
 
 	def insert_postcts(self,setup_tcl,postcts_script,rc_factors):
@@ -382,11 +384,10 @@ class EncounterTSMCConfig(EncounterConfig):
 		self.lef_files = [
 				"/cad/libs/tsmc/digital/Back_End/lef/tcbn65lp_200a/lef/tcbn65lp_9lmT2.lef",
 #				"/cad/libs/tsmc/digital/Back_End/lef/tpdn65lpnv2_140b/mt_2/9lm/lef/tpdn65lpnv2_9lm.lef",
-				"/cad/libs/tsmc/digital/Back_End/lef/tpdn65lpnv2_140b/mt_2/9lm/lef/antenna_9lm.lef",
-				"/cad/libs/tsmc/digital/Back_End/lef/tpan65lpnv2_140b/mt_2/9lm/lef/antenna_9lm.lef",
 				"/cad/libs/tsmc/asic_lab/lef4soc/tpan65lpnv2_9lm.mod.lef",
 				"/cad/libs/tsmc/asic_lab/lef4soc/tpdn65lpnv2_9lm.mod.lef",
-
+				"/cad/libs/tsmc/digital/Back_End/lef/tpdn65lpnv2_140b/mt_2/9lm/lef/antenna_9lm.lef",
+				"/cad/libs/tsmc/digital/Back_End/lef/tpan65lpnv2_140b/mt_2/9lm/lef/antenna_9lm.lef",
 #				"/cad/libs/tsmc/digital/Back_End/lef/tpan65lpnv2_140b/mt/9lm/lef/tpan65lpnv2_9lm.lef",
 			]
 
