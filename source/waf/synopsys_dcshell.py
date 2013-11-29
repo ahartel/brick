@@ -24,9 +24,15 @@ def create_synopsys_dcshell_task(self):
 	except AttributeError:
 		Logs.error('You have to specify a the attribute \'tcl_script\' for feature "synopsys_dcshell".')
 		return 1
+	try:
+		self.main_tcl_script.abspath()
+	except AttributeError:
+		Logs.error('In synopsys_dcshell: TCL script '+self.tcl_script+' not found.')
+		return 1
 
 	self.sourcelist = getattr(self,'sourcelist',[])
 
+	# generate the path for the sourcelist TCL script
 	self.sourcelist_tcl_script = self.path.get_bld()
 	self.sourcelist_tcl_script.mkdir()
 	self.sourcelist_tcl_script = self.sourcelist_tcl_script.make_node('dc_shell_'+getattr(self,'name','noname')+'source.tcl')
@@ -41,15 +47,9 @@ def create_synopsys_dcshell_task(self):
 	if not getattr(self,'other_sources',None):
 		self.other_sources = []
 
+	# divide sources into groups
 	for f in self.sourcelist:
 		fn = self.to_nodes(f)[0]
-		#if not type(f) == type(self.path):
-		#	fn = self.path.make_node(f)
-		#else:
-		#	fn = f
-		#if not fn:
-		#	Logs.error('File '+f+' not found in feature "synopsys_dcshell".')
-		#	return 1
 
 		if fn.suffix() == '.sv' or fn.suffix() == '.svh':
 			self.systemverilog_sources.append(fn)
@@ -60,6 +60,7 @@ def create_synopsys_dcshell_task(self):
 		else:
 			self.other_source.append(fn)
 
+	# write read statements for every source file into the source list TCL script
 	f = open(self.sourcelist_tcl_script.abspath(),"w")
 	for sourcefile in self.verilog_sources:
 		f.write('analyze -format verilog '+sourcefile.abspath()+'\n')
@@ -155,13 +156,25 @@ def create_synopsys_dcshell_task(self):
 	#inputs.extend(self.verilog_sources)
 	#inputs.extend(self.additional_library_files)
 
-	outputs = self.outputs
+	self.results_dir = self.path.get_bld()
+	if not self.results_dir.find_node('dc_shell_'+self.name):
+		self.results_dir = self.results_dir.make_node('dc_shell_'+self.name)
+		self.results_dir.mkdir()
+	else:
+		self.results_dir = self.results_dir.find_node('dc_shell_'+self.name)
+
+	if not self.results_dir.find_dir('results'):
+		self.results_dir.make_node('results').mkdir()
+	if not self.results_dir.find_dir('reports'):
+		self.results_dir.make_node('reports').mkdir()
+
+	outputs = getattr(self,'outputs',[self.results_dir.find_dir('results').make_node(self.name+'.v')])
 
 	p = TclParser()
 	p.input_file(self.main_tcl_script.abspath())
-	for cmd in p.parse():
-		print cmd
-		pass
+	#for cmd in p.parse():
+	#	print cmd
+	#	pass
 
 	t = self.create_task('synopsysDcshellTask', inputs, outputs)
 
