@@ -35,19 +35,20 @@ def convert_string_paths(self,list_of_paths):
 		self.fatal('You must give a list of strings as parameter to convert_string_paths')
 
 	for src in list_of_paths:
-		if not os.path.exists(src):
-			if os.path.isabs(src):
-				SOURCES.append(self.root.make_node(src))
-			else:
-				SOURCES.append(self.path.make_node(src))
 		if os.path.isabs(src):
-			if not self.root.find_node(src):
-				self.fatal('Source file not found: '+src)
-			SOURCES.append(self.root.find_node(src))
+			node = self.root.find_node(src)
+			if not node:
+				node = self.root.make_node(src).get_bld()
+				if not node:
+					self.fatal('Source file not found: '+src)
+			SOURCES.append(node)
 		else:
-			if not self.path.find_node(src):
-				self.fatal('Source file not found: '+src)
-			SOURCES.append(self.path.find_node(src))
+			node = self.path.find_node(src)
+			if not node:
+				node = self.path.make_node(src).get_bld()
+				if not node:
+					self.fatal('Source file not found: '+src)
+			SOURCES.append(node)
 
 	return SOURCES
 

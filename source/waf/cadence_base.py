@@ -48,13 +48,15 @@ def configure(conf):
 
 	if not conf.env.CDS_WORKLIB:
 		conf.env.CDS_WORKLIB = 'worklib'
-		worklib = conf.path.get_bld().make_node(os.path.join(conf.path.bld_dir(),'worklib'))
+		worklib = conf.path.get_bld().make_node('worklib')
 		if not os.path.isdir(worklib.abspath()):
 			worklib.mkdir()
 
 		if not conf.env['CDS_LIBS_FLAT'].has_key('worklib'):
 			conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
 			conf.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(conf.path)
+
+	conf.env['CDS_LIB_PATH'] = conf.path.get_bld().make_node('cds.lib').abspath()
 
 @TaskGen.taskgen_method
 def get_cellview_path(self,libcellview,create_if_not_exists=False):
@@ -128,14 +130,12 @@ class cdsWriteCdsLibs(Task.Task):
 @TaskGen.feature("cds_write_libs")
 def write_cds_lib(self):
 	# write cds.lib file to toplevel directory
-	cds_lib_path = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'cds.lib'))
-	lib_defs_path = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'lib.defs'))
-	hdl_var_path = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'hdl.var'))
+	cds_lib_path = self.path.get_bld().make_node('cds.lib')
+	lib_defs_path = self.path.get_bld().make_node('lib.defs')
+	hdl_var_path = self.path.get_bld().make_node('hdl.var')
 
 	# create a copy task
 	t = self.create_task('cdsWriteCdsLibs', None, [cds_lib_path, lib_defs_path, hdl_var_path])
-	# export cds.lib path
-	#self.env['CDS_LIB_PATH'] = self.target.abspath()
 
 @Configure.conf
 def check_cds_libs(self,*k,**kw):

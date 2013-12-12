@@ -12,7 +12,7 @@ def get_sv_files_from_include_dir(rootnode,dir):
     return content
 
 
-def check_files(files,packages,includes_used):
+def check_files(files,packages,includes_used,debug=False):
     dependencies = set()
     dependency_types = set()
     found_includes = set()
@@ -24,7 +24,7 @@ def check_files(files,packages,includes_used):
                 for line in input:
                     m0 = re.search('package\s+(\w+);', line)
                     if (m0 is not None):
-                        #print "Found package: "+m0.group(1)+" in file "+file.abspath()
+                        if debug: print "Found package: "+m0.group(1)+" in file "+file.abspath()
                         packages_loadable.add(m0.group(1))
             # check if the set of loadable packages and set of packages we are looking
             # for have a non-zero intersection
@@ -43,28 +43,29 @@ def check_files(files,packages,includes_used):
             found_includes.add(file)
             dependency_types.add('include')
 
-    #print "Package list after checking files:"+" ".join(packages)
+    if debug: print "Package list after checking files:"+" ".join(packages)
     return packages,dependencies,dependency_types,found_includes
 
 def verilog_scanner_task(task):
     return task.generator.verilog_scanner(task.inputs[0])
 
 @TaskGen.taskgen_method
-def verilog_scanner(self,node):
+def verilog_scanner(self,node,debug=False):
 
     stack = []
     try:
-        return self.scan_verilog_file(node,stack)
+        return self.scan_verilog_file(node,stack,debug)
     except RuntimeError as e:
         Logs.warn(e)
         return [],[]
 
 @TaskGen.taskgen_method
-def scan_verilog_file(self,node,stack):
-    debug = False
+def scan_verilog_file(self,node,stack,debug=False):
+
     if node.abspath() in stack:
         raise RuntimeError("You have an include loop in your files, you should fix that. Package and include order detection? Not gonna happen!\nFile "+node.abspath()+" included by\n\t"+"\n\t".join(stack))
     stack.append(node.abspath())
+
     with open(node.abspath(),'r') as input:
         if debug:
             print "Processing file:" + node.abspath()
@@ -104,13 +105,13 @@ def scan_verilog_file(self,node,stack):
     found_includes = set()
 
     # first look into existing source list
-    packages,dependencies,dependency_types,found_includes = check_files(getattr(self,'source',[]),packages,includes_used)
+    packages,dependencies,dependency_types,found_includes = check_files(getattr(self,'source',[]),packages,includes_used,debug)
     if len(packages) > 0:
 		Logs.warn('Package(s) '+' '.join(packages)+' could not be found in any of the given source files. You should fix that!')
 
     if debug:
         print "Package list after checking files:"+" ".join(packages)
-        print "Added files after checking source list:"+" ".join([x.abspath() for x in dependencies])
+        print "Added files after checking source list:"+"\n ".join([x.abspath() for x in dependencies])
 
     # then loop through search paths
 
@@ -135,11 +136,13 @@ def scan_verilog_file(self,node,stack):
     # now recursively scan the include files
     for inc in found_includes:
         if debug:
-            print inc
+            print "Found include:",inc
         mystack = copy.copy(stack)
-        (add_dependencies, add_dependency_types) = self.scan_verilog_file(inc,mystack)
-        dependencies |= set(add_dependencies)
-        dependency_types |= set(add_dependency_types)
+        (add_dependencies, add_dependency_types) = self.scan_verilog_file(inc,mystack,debug)
+        for f,t in zip(add_dependencies,add_dependency_types):
+            if not node.change_ext('.sv.out') == f:
+                dependencies.update([f])
+                dependency_types.update([t])
 
     return (list(dependencies),list(dependency_types))
 
