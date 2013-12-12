@@ -62,7 +62,6 @@ class TclParser():
         self.lexer = lex.lex()
 
     def input_file(self,name):
-        print name
         data = ''
         with open(name) as f:
             for line in f:

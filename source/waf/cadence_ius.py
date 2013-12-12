@@ -27,6 +27,8 @@ def configure(conf):
 		conf.env.NCVHDL_OPTIONS = ['-64bit','-use5x']
 	if not conf.env.NCELAB_OPTIONS:
 		conf.env.NCELAB_OPTIONS = ['-64bit']
+	if not conf.env.NCSIM_OPTIONS:
+		conf.env.NCSIM_OPTIONS = ['-64bit']
 
 TaskGen.declare_chain(
         rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
