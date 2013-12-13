@@ -17,8 +17,9 @@ def configure(conf):
 			else:
 				if not conf.path.find_dir(value):
 					conf.fatal('Cadence library '+key+' not found in '+value+'.')
+		conf.msg('Checking for environment variable CSD_LIBS','Found')
 	except AttributeError, e:
-		conf.fatal('Please specify the environment variable CDS_LIBS before loading module \'cadence_base\'.')
+		conf.msg('Checking for environment variable CSD_LIBS','None')
 
 	if found_absolute_path:
 		Logs.warn('Defining absolute paths in conf.env.CDS_LIBS can lead to undefined behavior, especially when doing so for your worklib!')
@@ -53,10 +54,15 @@ def configure(conf):
 			worklib.mkdir()
 
 		if not conf.env['CDS_LIBS_FLAT'].has_key('worklib'):
-			conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
+			try:
+				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
+			except TypeError:
+				conf.env['CDS_LIBS'] = {}
+				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
 			conf.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(conf.path)
 
 	conf.env['CDS_LIB_PATH'] = conf.path.get_bld().make_node('cds.lib').abspath()
+	conf.env['CDS_HDLVAR_PATH'] = conf.path.get_bld().make_node('hdl.var').abspath()
 
 @TaskGen.taskgen_method
 def get_cellview_path(self,libcellview,create_if_not_exists=False):
@@ -83,7 +89,6 @@ def get_cellview_path(self,libcellview,create_if_not_exists=False):
 				return_path = self.path.find_dir(self.env.CDS_LIBS_FLAT[lib]+'/'+cell+'/'+view+'/')
 
 			if not return_path:
-				print create_if_not_exists
 				if create_if_not_exists:
 					Logs.warn('Path for cellview \''+libcellview+'\' not found, creating it.')
 					if os.path.isabs(self.env.CDS_LIBS_FLAT[lib]):
@@ -105,6 +110,7 @@ class cdsWriteCdsLibs(Task.Task):
 	def run(self):
 		cdslib = open(self.outputs[0].abspath(),'w')
 		libdefs = open(self.outputs[1].abspath(),'w')
+
 		for key,value in self.env['CDS_LIBS'].iteritems():
 			if os.path.isabs(value):
 				cdslib.write('DEFINE '+key+' '+value+"\n")

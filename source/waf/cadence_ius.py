@@ -6,6 +6,7 @@ from waflib import Task, TaskGen, Logs, Node, Errors
 
 def configure(conf):
 	conf.load('brick_general')
+	conf.load('cadence_base')
 
 	conf.env.NCVLOG_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog.log'
 	conf.env.NCVLOG_SV_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog_sv.log'
@@ -31,7 +32,7 @@ def configure(conf):
 		conf.env.NCSIM_OPTIONS = ['-64bit']
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.v', ],
         ext_out      = ['.v.out',],
         reentrant    = False,
@@ -39,21 +40,21 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.lib.src',],
         ext_out      = [ '.lib.src.out',],
         reentrant    = False,
         scan         = verilog_scanner_task
 )
 TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.vp', ],
         ext_out      = [ '.vp.out', ],
         reentrant    = False,
         scan         = verilog_scanner_task
 )
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
         ext_out      = ['.vhd.out'],
         scan         = vhdl_scanner,
@@ -61,7 +62,7 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhdl'],
         ext_out      = ['.vhdl.out'],
         scan         = vhdl_scanner,
@@ -69,35 +70,35 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vams'],
         ext_out      = ['.vams.out'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.va'],
         ext_out      = ['.va.out'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
         ext_in       = ['.sdf'],
         ext_out       = ['.sdf.compiled'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
         ext_in       = ['.sdf.gz'],
         ext_out       = ['.sdf.compiled'],
         reentrant    = False,
 )
 
 class CadenceSvlogTask(Task.Task):
-	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -logfile ${NCVLOG_SV_LOGFILE}_${TGT[0]} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
+	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_SV_LOGFILE}_${TGT[0]} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
 
 @TaskGen.extension(".sv",".svh")
 def gen_svlog_task(self,node):
@@ -157,7 +158,7 @@ def cds_ius_prepare(self):
 @Task.always_run
 class ncelabTask(Task.Task):
 	def run(self):
-		run_str  = 'ncelab '+self.generator.simulation_toplevel+' -cdslib ${CDS_LIB_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
+		run_str  = 'ncelab '+self.generator.simulation_toplevel+' -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
 		(f, dvars) = Task.compile_fun(run_str, False)
 		return f(self)
 
@@ -173,7 +174,7 @@ def cds_ius_elaborate(self):
 
 @Task.always_run
 class ncsimTask(Task.Task):
-   run_str = 'ncsim -cdslib ${CDS_LIB_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}'
+   run_str = 'ncsim -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}'
 
 from waflib.TaskGen import feature
 @feature('ncsim')
