@@ -128,6 +128,7 @@ class vlibTask(Task.Task):
 		(f, dvars) = Task.compile_fun(run_str, False)
 		return f(self)
 
+@TaskGen.before('process_source')
 @TaskGen.feature('cds_compile_hdl')
 def cds_ius_prepare(self):
 	# save worklib to env
@@ -150,6 +151,9 @@ def cds_ius_prepare(self):
 
 	if len(vid) > 0:
 		self.env.VERILOG_INC_DIRS = vid
+
+
+	self.package_cache = {}
 
 #
 # Elaboration and Simulation tasks
