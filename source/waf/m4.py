@@ -9,7 +9,7 @@ def m4_prepare(self):
 
     for f in inputs:
         output = f.change_ext('.preproc.sv')
-        open(output.abspath(),'w').close()
+        open(output.abspath(),'a').close()
         self.create_task("m4Task",f,output)
 
 class m4Task(Task.Task):
