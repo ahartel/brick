@@ -28,9 +28,9 @@ def check_files(self,files,packages,includes_used,debug=False):
                         if debug: print "Found package: "+package_name+" in file "+file.abspath()
                         packages_loadable.add(package_name)
                         if not self.package_cache.has_key(package_name):
-                            self.package_cache[package_name] = file.change_ext('.sv.out')
+                            self.package_cache[package_name] = file.change_ext(file.suffix()+'.out')
                         else:
-                            if self.package_cache[package_name].abspath() != file.change_ext('.sv.out').abspath():
+                            if self.package_cache[package_name].abspath() != file.change_ext(file.suffix()+'.out').abspath():
                                 raise RuntimeError("Package "+package_name+" defined in "+file.abspath()+" but has already been found in "+self.package_cache[package_name].abspath()+".")
 
             # check if the set of loadable packages and set of packages we are looking
@@ -110,7 +110,7 @@ def scan_verilog_file(self,node,stack,debug=False):
     missing_packages = packages_used-packages_defined
     # cache package origins
     for package in packages_defined:
-        self.package_cache[package] = node.change_ext('.sv.out')
+        self.package_cache[package] = node.change_ext(node.suffix()+'.out')
 
     # all dependencies will be put into this list
     dependencies = []
@@ -176,7 +176,7 @@ def scan_verilog_file(self,node,stack,debug=False):
         mystack = copy.copy(stack)
         (add_dependencies, add_dependency_types) = self.scan_verilog_file(inc,mystack,debug)
         for f,t in zip(add_dependencies,add_dependency_types):
-            if not node.change_ext('.sv.out') == f:
+            if not node.change_ext(node.suffix()+'.out') == f:
                 dependencies.append(f)
                 dependency_types.append(t)
 

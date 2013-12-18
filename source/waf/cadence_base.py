@@ -17,15 +17,17 @@ def configure(conf):
 			else:
 				if not conf.path.find_dir(value):
 					conf.fatal('Cadence library '+key+' not found in '+value+'.')
-		conf.msg('Checking for environment variable CSD_LIBS','Found')
+		conf.msg('Checking for environment variable CDS_LIBS','Found '+str(len(conf.env['CDS_LIBS_FLAT']))+' libraries.')
 	except AttributeError, e:
-		conf.msg('Checking for environment variable CSD_LIBS','None')
+		conf.msg('Checking for environment variable CDS_LIBS','None')
 
 	if found_absolute_path:
 		Logs.warn('Defining absolute paths in conf.env.CDS_LIBS can lead to undefined behavior, especially when doing so for your worklib!')
 
 	try:
+		# copy cds_includes
 		my_includes = copy.copy(conf.env['CDS_LIB_INCLUDES'])
+		# start processing stack
 		include = my_includes.pop()
 		while include:
 			if not os.path.exists(os.path.expandvars(include)):
@@ -33,6 +35,8 @@ def configure(conf):
 			else:
 				with open(os.path.expandvars(include),'r') as include_file:
 					for line in include_file.readlines():
+						if re.match(r"^\s*\#",line):
+							continue
 						define = re.search('DEFINE\s+(\w+)\s+([\.\w\$\/]+)',line)
 						if define:
 							conf.env['CDS_LIBS_FLAT'][define.group(1)] = os.path.expandvars(define.group(2))
@@ -47,6 +51,10 @@ def configure(conf):
 	except IndexError:
 		pass
 
+	# if CDS_LIBS has not been defined, define it
+	if len(conf.env['CDS_LIBS']) == 0:
+		conf.env['CDS_LIBS'] = {}
+
 	if not conf.env.CDS_WORKLIB:
 		conf.env.CDS_WORKLIB = 'worklib'
 		worklib = conf.path.get_bld().make_node('worklib')
@@ -60,6 +68,12 @@ def configure(conf):
 				conf.env['CDS_LIBS'] = {}
 				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
 			conf.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(conf.path)
+		elif not conf.env['CDS_LIBS'].has_key('worklib'):
+			try:
+				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
+			except TypeError:
+				conf.env['CDS_LIBS'] = {}
+				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
 
 	conf.env['CDS_LIB_PATH'] = conf.path.get_bld().make_node('cds.lib').abspath()
 	conf.env['CDS_HDLVAR_PATH'] = conf.path.get_bld().make_node('hdl.var').abspath()
@@ -121,8 +135,13 @@ class cdsWriteCdsLibs(Task.Task):
 				libdefs.write('DEFINE '+key+' '+value.abspath()+"\n")
 
 		for value in self.env['CDS_LIB_INCLUDES']:
-			cdslib.write('INCLUDE '+value+"\n")
-			libdefs.write('INCLUDE '+value+"\n")
+			if os.path.isabs(os.path.expandvars(value)):
+				cdslib.write('INCLUDE '+value+"\n")
+				libdefs.write('INCLUDE '+value+"\n")
+			else:
+				path = self.generator.path.find_node(os.path.expandvars(value)).abspath()
+				cdslib.write('INCLUDE '+path+"\n")
+				libdefs.write('INCLUDE '+path+"\n")
 
 		cdslib.close()
 		libdefs.close()
