@@ -7,10 +7,8 @@ def configure(conf):
 	conf.env.AMSDESIGNER = 'amsdesigner'
 	if not conf.env.AMSDESIGNER_OPTIONS:
 		conf.env.AMSDESIGNER_OPTIONS = [
-				'-netlist', 'all',
-				'-compile', 'all',
 				'-rundir', '.',
-				'-ncvlogopt', '-use5x', '-64bit',
+				'-ncvlogopts', '-use5x -64bit -cdslib '+conf.env.CDS_LIB_PATH
 			]
 
 	conf.env['CADENCE_SI'] = 'si'
@@ -20,7 +18,7 @@ class cdsNetlistTask(Task.Task):
 	def run(self):
 		"""Checking logfile for critical warnings line by line"""
 
-		run_str = '${AMSDESIGNER} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -lib '+self.generator.libname+' -cell '+self.generator.cellname+' -view '+self.generator.viewname+' ${AMSDESIGNER_OPTIONS} '
+		run_str = '${AMSDESIGNER} -lib '+self.generator.libname+' -cell '+self.generator.cellname+' -view '+self.generator.viewname+' -compile all -netlist all -CDSLIB ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} ${AMSDESIGNER_OPTIONS}'
 
 		(f, dvars) = Task.compile_fun(run_str, False)
 		return f(self)
