@@ -26,7 +26,7 @@ def create_cadence_absgen_task(self):
 	(self.cellname,self.viewname) = rest.split(":")
 
 	# prepare nodes for script, layout and lef file
-	self.absgen_script = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'absgen_'+self.libname+'_'+self.cellname+'.il'))
+	self.absgen_script = self.path.get_bld().make_node('absgen_'+self.libname+'_'+self.cellname+'.il')
 	input_layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
 	export_lef_file = getattr(self,'export_lef_file',None)
 
@@ -165,7 +165,7 @@ class cdsAbsgenTask(Task.Task):
 	vars = ['CADENCE_ABSTRACT','CADENCE_ABSTRACT_OPTIONS']
 
 	def run(self):
-		run_str = 'cd build && %s %s -replay %s 2>&1' % (self.env.CADENCE_ABSTRACT, " ".join(self.env.CADENCE_ABSTRACT_OPTIONS), self.generator.absgen_script.abspath())
+		run_str = 'cd %s && %s %s -replay %s 2>&1' % (self.generator.path.get_bld().abspath(), self.env.CADENCE_ABSTRACT, " ".join(self.env.CADENCE_ABSTRACT_OPTIONS), self.generator.absgen_script.abspath())
 		out = ""
 		try:
 			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)

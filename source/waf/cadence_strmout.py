@@ -28,7 +28,12 @@ def create_cds_strmout_task(self):
 			Logs.error("Cellview '"+cellview+"' not found in path "+self.get_cellview_path(cellview))
 			return
 
-		strmfile = getattr(self,'strmfile', self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.libname+'_'+self.cellname+'.gds')))
+		results_dir = self.path.get_bld().make_node('results')
+		if not os.path.exists(results_dir.abspath()):
+			results_dir.mkdir()
+
+		strmfile = getattr(self,'strmfile', results_dir.make_node(self.libname+'_'+self.cellname+'.gds'))
+
 		t = self.create_task('cdsStrmoutTask', layout_node, strmfile)
 	except ValueError:
 		raise Errors.ConfigurationError('For feature "cds_strmout", you need to specify a parameter "view" in the form of lib.cell:view')
@@ -53,4 +58,4 @@ def cds_strmout(bld,*k,**kw):
 	set_features(kw,'cds_strmout')
 	return bld(*k,**kw)
 
-
+# vim: noexpandtab
