@@ -101,6 +101,8 @@ Every rundir has to specify it's inputs and outputs (done by waf anyway).
 
 \textbf{In the end, a recurse into a unit directory is basically an indirect recurse into one or more rundirs with fallback solutions for missing rundirs or source files!}
 
+However, this has the disadvantage that some information has to be maintained twice. I.e. the rundir has to know which files from which untis to use and the unit has to know by which rundir(s) it is used. That's not a good idea.
+
 \chapter{Version control with git}
 \section{Basic tasks}
 \todo{Make a cake}\missingfigure{Hallo}
@@ -149,7 +151,7 @@ git submodule deinit path/to/your/submodule
 
 \begin{appendix}
 \chapter{Usage of existing \brick tools}
-brick init
+\section{brick init}
 
 command line options: --users, --units, --rundirs
 
@@ -164,6 +166,17 @@ Every rundir contains an empty wscript and a link to the waf binary which is als
 Also creates the doc directory.
 
 A .gitignore file is also already created.
+
+\section{synopsys\_dc\_shell}
+
+Make use of environment variables:
+\begin{itemize}
+	\item \lstinline[style=BashInputStyle]'$BRICK_RESULTS'\\
+		You can write your results and reports to this directory.
+	\item \lstinline[style=BashInputStyle]'$DC_SHELL_SOURCE_TCL'\\
+		You should source this file to load the sources that are passed to the task generator.
+\end{itemize}
+
 
 \chapter{timing}
 \def \degr {${}^\circ $}
