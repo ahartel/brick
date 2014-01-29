@@ -27,9 +27,9 @@ def configure(conf):
 	if not conf.env.NCVHDL_OPTIONS:
 		conf.env.NCVHDL_OPTIONS = ['-64bit','-use5x']
 	if not conf.env.NCELAB_OPTIONS:
-		conf.env.NCELAB_OPTIONS = ['-64bit']
+		conf.env.NCELAB_OPTIONS = ['-64bit','-timescale','1ns/10ps','-access','+r']
 	if not conf.env.NCSIM_OPTIONS:
-		conf.env.NCSIM_OPTIONS = ['-64bit']
+		conf.env.NCSIM_OPTIONS = ['-64bit','-gui']
 
 TaskGen.declare_chain(
         rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
@@ -132,7 +132,7 @@ class vlibTask(Task.Task):
 @TaskGen.feature('cds_compile_hdl')
 def cds_ius_prepare(self):
 	# save worklib to env
-	self.env.WORKLIB = getattr(self,'worklib','work')
+	self.env.WORKLIB = getattr(self,'worklib',self.env.CDS_WORKLIB)
 	# create task to generate worklib (if necessary)
 	worklib = self.path.make_node(self.env.PROJECT_ROOT+'/'+self.env.WORKLIB+'/.oalib')
 	if not getattr(self,'worklib_task',None):

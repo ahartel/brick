@@ -15,12 +15,6 @@ def build(bld):
                 'top.sv',
             ]),
         features = 'cds_compile_hdl',
-        #verilog_search_paths = bld.convert_string_paths(
-        #    [
-        #        #search path0,
-        #        #search path1,
-        #    ]
-        #),
     )
     bld.add_group()
     bld (

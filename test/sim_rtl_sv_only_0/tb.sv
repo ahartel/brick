@@ -1,4 +1,3 @@
-`timescale 1ns/10ps
 
 module tb();
 	logic clk;
@@ -6,7 +5,9 @@ module tb();
 
 	initial begin
 		clk = 0;
-		a = 0;
+		$deposit(a,0);
+		#50;
+		$finish();
 	end
 	always begin
 		#5 clk = ~clk;
