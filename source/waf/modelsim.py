@@ -1,6 +1,7 @@
 from verilog_scanner import verilog_scanner_task
 from vhdl_scanner import vhdl_scanner
 import os
+import types
 
 def options(opt):
 	opt.add_option('--xilinxlib', action='store', help='Define the path to the xilinxlib')
@@ -13,28 +14,9 @@ def configure(conf):
 	conf.env.VCOM_LOGFILE = conf.env.BRICK_LOGFILES+'/vcom.log'
 	conf.env.VSIM_LOGFILE = conf.env.BRICK_LOGFILES+'/vsim.log'
 
-	# check xilinxlib
-	XILINXLIB = None
-	try:
-		if conf.options.xilinxlib and os.path.isdir(conf.options.xilinxlib):
-			XILINXLIB = conf.convert_string_paths([ conf.options.xilinxlib ])[0]
-		else:
-			raise AttributeError
-	except AttributeError:
-		try:
-			if os.path.isdir(os.environ['XILINXLIB']):
-				XILINXLIB = conf.convert_string_paths([ os.environ['XILINXLIB'] ])[0]
-		except KeyError:
-			conf.fatal('XILINXLIB not set. Please define a path by setting an environment variable XILINXLIB or by using the option --xilinxlib')
-
-	try:
-		conf.env.XILINXLIB = XILINXLIB.abspath()
-	except AttributeError:
-		conf.fatal('XILINXLIB not set. Please define a path by setting an environment variable XILINXLIB or by using the option --xilinxlib')
-
 	conf.env.INCLUDES_VENDOR = [
-		   os.environ['MODEL_SIM_ROOT']+'/include/',
-	   ]
+		os.environ['MODEL_SIM_ROOT']+'/include/',
+	]
 
 from waflib import TaskGen
 #TaskGen.declare_chain(
@@ -70,40 +52,57 @@ TaskGen.declare_chain(
 
 from waflib import Task
 class ModelsimSvlogTask(Task.Task):
-	run_str = 'vlog -l ${VLOG_LOGFILE} -sv ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
+	def run(self):
+		files = self.inputs[1:]
+		run_str = 'vlog -l ${VLOG_LOGFILE} -sv ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} %s && echo "${TGT}" | tee ${TGT}' % (" ".join([f.abspath() for f in files]),)
+		(f, dvars) = Task.compile_fun(run_str, False)
+		return f(self)
 
 @TaskGen.extension(".sv",".svh")
 def gen_svlog_task(self,node):
-	import types
-	input = [node]
-	output = [node.change_ext(node.suffix()+'.out')]
+	pass
+
+@TaskGen.feature('modelsim')
+@TaskGen.after('process_source')
+def bla(self):
+	sv_sources = []
+	for f in self.source:
+		if f.suffix() == '.sv' or f.suffix() == '.svh':
+			sv_sources.append(f)
+
+	input = [self.path.get_bld().make_node(getattr(self,'worklib','worklib')+'/_info')] + sv_sources
+	output = [node.change_ext(node.suffix()+'.out') for node in sv_sources]
 	sv_task = self.create_task("ModelsimSvlogTask",input,output)
 	sv_task.scan = types.MethodType(verilog_scanner_task,sv_task)
 	# <--- up to here the actual task has been created
 	# now we need to make some depencies explicit because
 	# the compiler needs those for packages --->
-	dep_files,dep_types = self.verilog_scanner(input[0])
-	additional_inputs = []
-	for dep_file, dep_type in zip(dep_files,dep_types):
-		if dep_type == 'package':
-			additional_inputs.append(dep_file)
-	sv_task.set_inputs(additional_inputs)
+	for f in input[1:]:
+		dep_files,dep_types = self.verilog_scanner(f)
+		additional_inputs = []
+		for dep_file, dep_type in zip(dep_files,dep_types):
+			if dep_type == 'package':
+				additional_inputs.append(dep_file)
+		sv_task.set_inputs(additional_inputs)
+
 
 from waflib import Task
 class vlibTask(Task.Task):
 	def run(self):
-		run_str = 'vlib ${TGT[0].parent.abspath()}'
+		run_str = 'vlib -unlocklib ${TGT[0].parent.abspath()}'
 		(f, dvars) = Task.compile_fun(run_str, False)
 		return f(self)
 
 @TaskGen.feature('modelsim')
 def modelsim_prepare(self):
 	# save worklib to env
-	self.env.WORKLIB = getattr(self,'worklib','work')
+	wlib = getattr(self,'worklib','worklib')
 	# create task to generate worklib (if necessary)
-	worklib = self.path.make_node(self.env.PROJECT_ROOT+'/'+self.env.WORKLIB+'/_info')
+	worklib = self.path.get_bld().make_node(wlib+'/_info')
 	if not getattr(self,'worklib_task',None):
-		self.worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
+		self.worklib_task = self.create_task('vlibTask',None,worklib)
+
+	self.env.WORKLIB = self.path.get_bld().make_node(wlib).abspath()
 
 	vsp = getattr(self,'verilog_search_paths',[])
 	self.env.VERILOG_SEARCH_PATHS = []
@@ -118,12 +117,15 @@ def modelsim_prepare(self):
 
 @Task.always_run
 class vsimTask(Task.Task):
-   run_str = 'vsim -l ${VSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${VSIM_OPTIONS}'
+   run_str = 'vsim -l ${VSIM_LOGFILE} -L ${WORKLIB} ${SIMULATION_TOPLEVEL} ${VSIM_OPTIONS}'
 
 from waflib.TaskGen import feature
 @feature('vsim')
 def modelsim_run(self):
 	self.env.SIMULATION_TOPLEVEL = self.toplevel
+	worklib = getattr(self,'worklib','worklib')
+	# create task to generate worklib (if necessary)
+	self.env.WORKLIB = self.path.get_bld().make_node(worklib).abspath()
 	self.create_task('vsimTask',None,None)
 
 
