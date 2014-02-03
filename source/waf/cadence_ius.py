@@ -134,7 +134,7 @@ def cds_ius_prepare(self):
 	# save worklib to env
 	self.env.WORKLIB = getattr(self,'worklib',self.env.CDS_WORKLIB)
 	# create task to generate worklib (if necessary)
-	worklib = self.path.make_node(self.env.PROJECT_ROOT+'/'+self.env.WORKLIB+'/.oalib')
+	worklib = self.path.get_bld().make_node(self.env.WORKLIB+'/.oalib')
 	if not getattr(self,'worklib_task',None):
 		self.worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
 	#
