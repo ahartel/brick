@@ -1,7 +1,7 @@
 
 module top(
-	input logic clk,a,
-	output logic b
+	input reg clk,a,
+	output reg b
 );
 	always @(posedge clk) begin
 		b <= ~a;

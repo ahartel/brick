@@ -10,7 +10,7 @@ def build(bld):
         source = bld.convert_string_paths(
             [
                 'tb.sv',
-                'top.sv',
+                'top.v',
             ])
             ,
         features = 'modelsim',
