@@ -36,10 +36,30 @@ from waflib import TaskGen
 #)
 
 TaskGen.declare_chain(
-        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC}',
-        ext_in       = ['.v', '.lib.src', '.vp', ],
+        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.v' ],
+        ext_out      = ['.v.out' ],
         reentrant    = False,
         scan         = verilog_scanner_task,
+		after        = 'vlibTask',
+)
+
+TaskGen.declare_chain(
+        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.lib.src' ],
+        ext_out      = ['.lib.src.out' ],
+        reentrant    = False,
+        scan         = verilog_scanner_task,
+		after        = 'vlibTask',
+)
+
+TaskGen.declare_chain(
+        rule         = 'vlog -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        ext_in       = ['.vp', ],
+        ext_out      = ['.vp.out', ],
+        reentrant    = False,
+        scan         = verilog_scanner_task,
+		after        = 'vlibTask',
 )
 
 TaskGen.declare_chain(
@@ -64,7 +84,7 @@ def gen_svlog_task(self,node):
 
 @TaskGen.feature('modelsim')
 @TaskGen.after('process_source')
-def bla(self):
+def modelsim_sv_taskgen(self):
 	sv_sources = []
 	for f in self.source:
 		if f.suffix() == '.sv' or f.suffix() == '.svh':
@@ -98,7 +118,10 @@ def modelsim_prepare(self):
 	# save worklib to env
 	wlib = getattr(self,'worklib','worklib')
 	# create task to generate worklib (if necessary)
-	worklib = self.path.get_bld().make_node(wlib+'/_info')
+	worklib = self.path.get_bld()
+	if not os.path.exists(worklib.abspath()):
+		worklib.mkdir()
+	worklib = worklib.make_node(wlib+'/_info')
 	if not getattr(self,'worklib_task',None):
 		self.worklib_task = self.create_task('vlibTask',None,worklib)
 
@@ -129,3 +152,4 @@ def modelsim_run(self):
 	self.create_task('vsimTask',None,None)
 
 
+# vim: noexpandtab
