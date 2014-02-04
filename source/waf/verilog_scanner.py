@@ -58,6 +58,8 @@ def verilog_scanner_task(task):
 
 @TaskGen.taskgen_method
 def verilog_scanner(self,node,debug=False):
+    if not hasattr(self,"package_cache"):
+        self.package_cache = {}
 
     stack = []
     try:
@@ -110,7 +112,7 @@ def scan_verilog_file(self,node,stack,debug=False):
     missing_packages = packages_used-packages_defined
     # cache package origins
     for package in packages_defined:
-        self.package_cache[package] = node.change_ext(node.suffix()+'.out')
+        self.package_cache[package] = node
 
     # all dependencies will be put into this list
     dependencies = []
@@ -121,8 +123,11 @@ def scan_verilog_file(self,node,stack,debug=False):
     packages_known = set()
     for package in missing_packages:
         if self.package_cache.has_key(package):
-            dependencies.append(self.package_cache[package])
-            dependency_types.append('package')
+            if self.package_cache[package] in self.source:
+                if debug: print "Found package "+package+" in cache and source list."
+            else:
+                dependencies.append(self.package_cache[package].change_ext(self.package_cache[package].suffix()+'.out'))
+                dependency_types.append('package')
             packages_known.add(package)
 
     missing_packages -= packages_known

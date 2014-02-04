@@ -153,8 +153,6 @@ def cds_ius_prepare(self):
 		self.env.VERILOG_INC_DIRS = vid
 
 
-	self.package_cache = {}
-
 #
 # Elaboration and Simulation tasks
 #
