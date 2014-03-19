@@ -1,4 +1,4 @@
-import os,re
+import os,re,subprocess
 from waflib import Task,Errors,TaskGen,Configure,Node,Logs
 from TclParser import *
 
@@ -9,16 +9,17 @@ def configure(conf):
 
 	if not conf.env.BRICK_LOGFILES:
 		conf.env.BRICK_LOGFILES = './logfiles'
-	conf.env['SYNOPSYS_DCSHELL'] = 'dc_shell'
+
+	conf.find_program('dc_shell', var='SYNOPSYS_DCSHELL')
 	conf.env['SYNOPSYS_DCSHELL_OPTIONS'] = [
 			#'-topo',
 		]
 
 
-
 @TaskGen.feature('synopsys_dcshell')
+@TaskGen.before('process_source')
 def create_synopsys_dcshell_task(self):
-	# assemble file names for tcl scripts
+	# get a node object for the main tcl script
 	try:
 		self.main_tcl_script = self.path.find_node(self.tcl_script)
 	except AttributeError:
@@ -30,12 +31,21 @@ def create_synopsys_dcshell_task(self):
 		Logs.error('In synopsys_dcshell: TCL script '+self.tcl_script+' not found.')
 		return 1
 
-	self.sourcelist = getattr(self,'sourcelist',[])
+	# convert source list to nodes
+	self.sourcelist = self.to_nodes(getattr(self, 'source', []))
+	# disable the process_source function
+	self.source = []
 
-	# generate the path for the sourcelist TCL script
-	self.sourcelist_tcl_script = self.path.get_bld()
-	self.sourcelist_tcl_script.mkdir()
-	self.sourcelist_tcl_script = self.sourcelist_tcl_script.make_node('dc_shell_'+getattr(self,'name','noname')+'source.tcl')
+	# create results output directory
+	try:
+		self.results_dir = self.get_or_create_results_dir()
+	except Errors.WafError as e:
+		Logs.error(e.msg)
+		return 1
+
+	# generate the node object for the sourcelist TCL script
+	# this TCL script contains the commands to actually load the source files into dc_shell
+	self.sourcelist_tcl_script = self.path.find_or_declare(self.name+'_source.tcl')
 	os.environ['DC_SHELL_SOURCE_TCL'] = self.sourcelist_tcl_script.abspath()
 
 	if not getattr(self,'verilog_sources',None):
@@ -58,7 +68,11 @@ def create_synopsys_dcshell_task(self):
 		elif fn.suffix() == '.vhd' or fn.suffix() == '.vhdl':
 			self.vhdl_source.append(fn)
 		else:
-			self.other_source.append(fn)
+			self.other_sources.append(fn)
+
+	if len(self.other_sources) > 0:
+		Logs.error('In synopsys_dcshell: There are unknown source files (at least there extensions indicate that).')
+		return 1
 
 	# write read statements for every source file into the source list TCL script
 	f = open(self.sourcelist_tcl_script.abspath(),"w")
@@ -75,100 +89,13 @@ def create_synopsys_dcshell_task(self):
 	inputs.extend(self.systemverilog_sources)
 	inputs.extend(self.verilog_sources)
 	inputs.extend(self.vhdl_sources)
-	inputs.extend(self.other_sources)
 
-	# check for existance of results dir
-	# the actual results dir is a subdirectory of BRICK_RESULTS
-	# called dc_shell_$DESIGN_NAME
-	#self.results_dir = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS))
-	#if not self.results_dir.find_dir('dc_shell_'+self.name):
-	#	self.results_dir = self.results_dir.make_node('dc_shell_'+self.name)
-	#	self.results_dir.mkdir()
-	#else:
-	#	self.results_dir = self.results_dir.make_node('dc_shell_'+self.name)
-	#if not self.results_dir.find_dir('results'):
-	#	self.results_dir.make_node('results').mkdir()
-	#if not self.results_dir.find_dir('reports'):
-	#	self.results_dir.make_node('reports').mkdir()
 
-	#output_netlist = self.results_dir.find_node('results').make_node(self.toplevel+'.v')
-	#output_sdc_file = self.results_dir.find_node('results').make_node(self.toplevel+'.sdc')
-
-	#constraints_file = '0'
-	#if hasattr(self,'constraints_file'):
-	#	try:
-	#		constraints_file = '"'+getattr(self,'constraints_file','').abspath()+'"'
-	#		inputs.append(self.constraints_file)
-	#	except AttributeError:
-	#		Logs.error('You have given an undefined node object as constraints_file for feature "synopsys_dcshell".')
-
-	## compile_ultra options
-	#compile_ultra_options = ['-gate_clock']
-	#if hasattr(self,'compile_high_effort') and self.compile_high_effort == True:
-	#	compile_ultra_options.append('-timing_high_effort_script')
-
-	## load extra package with tcl templates
-	#from synopsys_dcshell_tcl import dc_shell_setup_tcl, dc_shell_main_tcl
-	## write main tcl script
-	#f = open(self.main_tcl_script.abspath(),"w")
-	#f.write(dc_shell_main_tcl % (
-	#			self.sourcelist_tcl_script.abspath(),
-	#			self.setup_tcl_script.abspath(),
-	#			'{'+' '.join([x.abspath() for x in getattr(self,'search_paths',[])])+'}',
-	#			getattr(self,'max_cores','4'),
-	#			constraints_file,
-	#			'0', # compile_ultra -scan
-	#			' '.join(compile_ultra_options)))
-	#f.close()
-
-	## Additional libraries
-	#self.lib_search_paths = ''
-	##if hasattr(self,'library_search_paths'):
-	##	self.lib_search_paths = '"' + '" \\\n'.join([x.abspath() for x in getattr(self,'library_search_paths',[])]) + '" \\'
-
-	#self.additional_libs = ''
-	#if hasattr(self,'additional_library_files'):
-	#	for lib_file in self.additional_library_files:
-	#		(trunk,filename) = os.path.split(lib_file.abspath())
-
-	#		self.additional_libs += '"'+filename+'" \\\n'
-	#		self.lib_search_paths += '"'+trunk+'" \\\n'
-
-	## write setup tcl script (containing mostly process specific data)
-	## the only variable input here is the DESIGN_NAME a.k.a. self.toplevel
-	#f = open(self.setup_tcl_script.abspath(),"w")
-	#f.write(dc_shell_setup_tcl[getattr(self,'process','default')] % (self.toplevel,self.lib_search_paths,self.additional_libs))
-	#f.close()
-
-	## write out the source list
-	#f = open(self.sourcelist_tcl_script.abspath(),"w")
-	#try:
-	#	sourcelist_string = "set systemverilog_source_list [list \\\n"+" \\\n".join([x.abspath() for x in self.systemverilog_sources])+" \\\n]\n\n"
-	#	sourcelist_string += "set verilog_source_list [list \\\n"+" \\\n".join([x.abspath() for x in self.verilog_sources])+" \\\n]\n\n"
-	#	sourcelist_string += "set vhdl_source_list [list \\\n"+" \\\n".join([x.abspath() for x in self.vhdl_sources])+" \\\n]\n\n"
-	#except AttributeError:
-	#	Logs.error('You have given an undefined node object as netlist for feature "synopsys_dcshell".')
-
-	#f.write(sourcelist_string)
-	#f.close()
-
-	#inputs.extend(self.systemverilog_sources)
-	#inputs.extend(self.verilog_sources)
-	#inputs.extend(self.additional_library_files)
-
-	self.results_dir = self.path.get_bld()
-	if not self.results_dir.find_node('dc_shell_'+self.name):
-		self.results_dir = self.results_dir.make_node('dc_shell_'+self.name)
-		self.results_dir.mkdir()
-	else:
-		self.results_dir = self.results_dir.find_node('dc_shell_'+self.name)
-
-	if not self.results_dir.find_dir('results'):
-		self.results_dir.make_node('results').mkdir()
-	if not self.results_dir.find_dir('reports'):
-		self.results_dir.make_node('reports').mkdir()
-
-	outputs = getattr(self,'outputs',[self.results_dir.find_dir('results').make_node(self.name+'.v')])
+	try:
+		outputs = [self.get_synthesized_netlist_node()]
+	except Errors.WafError as e:
+		Logs.error(e.msg)
+		return 1
 
 	p = TclParser()
 	p.input_file(self.main_tcl_script.abspath())
@@ -178,19 +105,47 @@ def create_synopsys_dcshell_task(self):
 
 	t = self.create_task('synopsysDcshellTask', inputs, outputs)
 
+@TaskGen.taskgen_method
+def get_or_create_results_dir(self):
+	if not hasattr(self,'name'):
+		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'name\' for this Task generator.')
+
+	results_dir = self.bld.bldnode.make_node('results_'+self.name)
+	results_dir.mkdir()
+
+	if not results_dir.find_dir('results'):
+		results_dir.make_node('results').mkdir()
+	if not results_dir.find_dir('reports'):
+		results_dir.make_node('reports').mkdir()
+
+	return results_dir
+
+@TaskGen.taskgen_method
+def get_synthesized_netlist_node(self):
+	if not hasattr(self,'design_name'):
+		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'design_name\' for this Task generator.')
+
+	return self.get_or_create_results_dir().find_dir('results').make_node(self.design_name+'.v')
 
 class synopsysDcshellTask(Task.Task):
 	vars = ['SYNOPSYS_DCSHELL','SYNOPSYS_DCSHELL_OPTIONS']
 
 	def run(self):
-		logfile = self.generator.path.get_bld().make_node('dc_shell_'+self.generator.name+'.log')
+		logfile = self.generator.get_logdir_node().make_node('dc_shell_'+self.generator.name+'.log')
 
-		run_str = 'BRICK_RESULTS=%s %s %s -f %s -output_log_file %s' % (self.generator.path.get_bld().abspath(), self.env.SYNOPSYS_DCSHELL, " ".join(self.env.SYNOPSYS_DCSHELL_OPTIONS), self.generator.main_tcl_script.abspath(),logfile.abspath())
+		run_str = 'BRICK_RESULTS=%s %s %s -f %s -output_log_file %s' % (
+				self.generator.results_dir.abspath(),
+				self.env.SYNOPSYS_DCSHELL,
+				" ".join(self.env.SYNOPSYS_DCSHELL_OPTIONS),
+				self.generator.main_tcl_script.abspath(),
+				logfile.abspath()
+			)
 		out = ""
 		try:
-			out = self.generator.bld.cmd_and_log(run_str,shell=True)#, quiet=Context.STDOUT)
+			out = self.generator.bld.cmd_and_log(run_str, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		except Exception as e:
-			out = e.stdout + e.stderr
+			#out = e.stdout + e.stderr
+			pass
 
 		#f = open(logfile.abspath(),'w')
 		#f.write(out)
