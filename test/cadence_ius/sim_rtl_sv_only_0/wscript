@@ -1,0 +1,36 @@
+def configure(conf):
+    conf.load('brick_general')
+    conf.load('cadence_base')
+    conf.load('cadence_ius')
+
+def build(bld):
+    bld.load('brick_general')
+    bld ( features = 'cds_write_libs' )
+
+    bld (
+        name = 'compile_top',
+        source = bld.convert_string_paths(
+            [
+                'tb.sv',
+                'top.sv',
+            ]),
+        features = 'cds_compile_hdl',
+    )
+    bld.add_group()
+    bld (
+        toplevel = 'worklib.tb',
+        features = 'cds_elab',
+        always = True
+    )
+
+def run(bld):
+    bld (
+        features = 'ncsim',
+        toplevel = 'worklib.tb',
+    )
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+

@@ -1,4 +1,5 @@
 import os
+from waflib import TaskGen
 
 def configure(conf):
 	# This is interpreted relative to the build path
@@ -9,11 +10,6 @@ def configure(conf):
 	if not conf.env.BRICK_RESULTS:
 		conf.env.BRICK_RESULTS = './results'
 
-	if not conf.env.PROJECT_ROOT:
-		conf.env.PROJECT_ROOT = '../../'
-	if not conf.path.find_dir(conf.env.PROJECT_ROOT):
-		conf.path.make_node(conf.env.PROJECT_ROOT).mkdir()
-	os.environ['PROJECT_ROOT'] = conf.path.make_node(conf.env.PROJECT_ROOT).abspath()
 
 def build(bld):
 	if not bld.bldnode.find_dir(bld.env.BRICK_RESULTS):
@@ -23,8 +19,12 @@ def build(bld):
 	if not bld.bldnode.find_dir(bld.env.BRICK_LOGFILES):
 		bld.bldnode.make_node(bld.env.BRICK_LOGFILES).mkdir()
 	os.environ['BRICK_LOGFILES'] = bld.bldnode.make_node(bld.env.BRICK_LOGFILES).abspath()
-	os.environ['PROJECT_ROOT'] = bld.path.make_node(bld.env.PROJECT_ROOT).abspath()
 
+@TaskGen.taskgen_method
+def get_logdir_node(self):
+	if not self.bld.bldnode.find_dir(self.bld.env.BRICK_LOGFILES):
+		self.bld.bldnode.make_node(self.bld.env.BRICK_LOGFILES).mkdir()
+	return self.bld.bldnode.make_node(self.bld.env.BRICK_LOGFILES)
 
 from waflib.Configure import conf
 from waflib.Errors import WafError

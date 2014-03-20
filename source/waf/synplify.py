@@ -35,6 +35,9 @@ def scan_synplify_project_file(self):
 		# replace env variables
 		get_env = re.search('\[\s*get_env\s+(\w+)\s*\]',line)
 		if get_env:
+			if not get_env.group(1) in self.env:
+				raise Errors.ConfigurationError('The environment variable '+get_env.group(1)+' used in synplify project file '+self.project_file_node.abspath()+' has not been defined.')
+
 			line = re.sub('\[\s*get_env\s+\w+\s*\]',self.env[get_env.group(1)],line)
 
 		# keep the rest
