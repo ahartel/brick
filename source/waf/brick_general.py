@@ -10,6 +10,8 @@ def configure(conf):
 	if not conf.env.BRICK_RESULTS:
 		conf.env.BRICK_RESULTS = './results'
 
+	conf.env['PROJECT_ROOT'] = conf.srcnode.abspath()
+	os.environ['PROJECT_ROOT'] = conf.srcnode.abspath()
 
 def build(bld):
 	if not bld.bldnode.find_dir(bld.env.BRICK_RESULTS):
@@ -19,6 +21,8 @@ def build(bld):
 	if not bld.bldnode.find_dir(bld.env.BRICK_LOGFILES):
 		bld.bldnode.make_node(bld.env.BRICK_LOGFILES).mkdir()
 	os.environ['BRICK_LOGFILES'] = bld.bldnode.make_node(bld.env.BRICK_LOGFILES).abspath()
+
+	os.environ['PROJECT_ROOT'] = bld.srcnode.abspath()
 
 @TaskGen.taskgen_method
 def get_logdir_node(self):

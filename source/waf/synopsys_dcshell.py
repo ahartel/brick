@@ -38,7 +38,7 @@ def create_synopsys_dcshell_task(self):
 
 	# create results output directory
 	try:
-		self.results_dir = self.get_or_create_results_dir()
+		self.results_dir = self.get_or_create_dc_results_dir()
 	except Errors.WafError as e:
 		Logs.error(e.msg)
 		return 1
@@ -92,7 +92,7 @@ def create_synopsys_dcshell_task(self):
 
 
 	try:
-		outputs = [self.get_synthesized_netlist_node()]
+		outputs = [self.get_synthesized_netlist_node(),self.get_synthesized_constraints_node()]
 	except Errors.WafError as e:
 		Logs.error(e.msg)
 		return 1
@@ -106,7 +106,7 @@ def create_synopsys_dcshell_task(self):
 	t = self.create_task('synopsysDcshellTask', inputs, outputs)
 
 @TaskGen.taskgen_method
-def get_or_create_results_dir(self):
+def get_or_create_dc_results_dir(self):
 	if not hasattr(self,'name'):
 		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'name\' for this Task generator.')
 
@@ -125,7 +125,14 @@ def get_synthesized_netlist_node(self):
 	if not hasattr(self,'design_name'):
 		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'design_name\' for this Task generator.')
 
-	return self.get_or_create_results_dir().find_dir('results').make_node(self.design_name+'.v')
+	return self.get_or_create_dc_results_dir().find_dir('results').make_node(self.design_name+'.v')
+
+@TaskGen.taskgen_method
+def get_synthesized_constraints_node(self):
+	if not hasattr(self,'design_name'):
+		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'design_name\' for this Task generator.')
+
+	return self.get_or_create_dc_results_dir().find_dir('results').make_node(self.design_name+'.sdc')
 
 class synopsysDcshellTask(Task.Task):
 	vars = ['SYNOPSYS_DCSHELL','SYNOPSYS_DCSHELL_OPTIONS']
