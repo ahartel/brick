@@ -59,6 +59,9 @@ def scan_planAhead_script(self):
 							inputs.append(input_node)
 						else:
 							input_node = self.path.make_node(file)
+							mroot = re.match('/',file)
+							if mroot:
+								input_node = self.bld.root.make_node(file)
 							if input_node:
 								inputs.append(input_node)
 							else:
@@ -72,6 +75,9 @@ def scan_planAhead_script(self):
 							inputs.append(input_node)
 						else:
 							input_node = self.path.make_node(file)
+							mroot = re.match('/',file)
+							if mroot:
+								input_node = self.bld.root.make_node(file)
 							if input_node:
 								inputs.append(input_node)
 							else:
@@ -103,6 +109,7 @@ def scan_planAhead_script(self):
 			if m6:
 				filename = os.path.join(self.project_dir,self.project_name+'.runs',m6.group(1),self.toplevel+'_routed.ncd')
 				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),filename)))
+
 
 	outputs.append(outputs[0].parent.make_node(self.toplevel+'.pcf'))
 	# save output file path to environment
@@ -167,4 +174,5 @@ def planAhead(bld,*k,**kw):
 	set_features(kw,'planAhead')
 	return bld(*k,**kw)
 
+# vim: noexpandtab
 
