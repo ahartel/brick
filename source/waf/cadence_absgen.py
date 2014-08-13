@@ -1,14 +1,13 @@
 import os,re
-from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
+from waflib import Task,Errors,Node,TaskGen,Configure,Context,Logs
 
 def configure(conf):
 	"""This function gets called by waf upon loading of this module in a configure method"""
 
 	conf.load('brick_general')
 
-	if not conf.env.BRICK_LOGFILES:
-		conf.env.BRICK_LOGFILES = './logfiles'
-	conf.env['CADENCE_ABSTRACT'] = 'abstract'
+
+	conf.find_program('abstract', var='CADENCE_ABSTRACT')
 	conf.env['CADENCE_ABSTRACT_OPTIONS'] = [
 			'-nogui',
 		]
@@ -18,17 +17,11 @@ def configure(conf):
 def create_cadence_absgen_task(self):
 
     # extract lib, cell and view
-	cellview = getattr(self,'cellview','')
-	if cellview.find('.') == -1 or cellview.find(':') == -1:
-		Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'cellview\' attribute with the feature \'cds_absgen\'.')
-		return
-	(self.libname,rest) = cellview.split(".")
-	(self.cellname,self.viewname) = rest.split(":")
+	libname,cellname,viewname = self.get_cadence_lib_cell_view_from_cellview()
 
 	# prepare nodes for script, layout and lef file
-	self.absgen_script = self.path.get_bld().make_node('absgen_'+self.libname+'_'+self.cellname+'.il')
-	input_layout_node = self.get_cellview_path(cellview).find_node('layout.oa')
-	export_lef_file = getattr(self,'export_lef_file',None)
+	self.absgen_script = self.bld.bldnode.make_node('absgen_'+libname+'_'+cellname+'_'+viewname+'.il')
+	input_layout_node = self.get_cellview_path(self.cellview).find_node('layout.oa')
 
 	# generate some default options if none are given by the user
 	if not hasattr(self,'abstract_options'):
@@ -57,15 +50,16 @@ def create_cadence_absgen_task(self):
 	f.write("""
 absSkillMode()
 absSetOption("DefaultBin" "Block")
-absSetLibrary("{0}")
+absSetOption("ViewLayout" "{0}")
+absSetLibrary("{1}")
 absSelectAllBins()
 absSelectCells()
 absMoveSelectedCellsToBin("Ignore")
 absDeselectCells()
 absDeselectAllBins()
 absSelectBin("Ignore")
-absSelectCell("{1}")
-""".format(self.libname,self.cellname))
+absSelectCell("{2}")
+""".format(viewname,libname,cellname))
 
 	f.write("""
 ;        absMoveSelectedCellsToBin("")

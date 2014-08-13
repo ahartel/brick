@@ -119,7 +119,23 @@ def get_cellview_path(self,libcellview,create_if_not_exists=False):
 		except TypeError:
 			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
 
+@TaskGen.taskgen_method
+def get_cadence_lib_cell_view_from_cellview(self):
+	lib = None
+	cell = None
+	view = None
+	try:
+		if self.cellview.find('.') == -1 or self.cellview.find(':') == -1:
+			Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_strmout\'.')
+			return
+		(lib,rest) = self.cellview.split(".")
+		(cell,view) = rest.split(":")
 
+	except ValueError:
+		Logs.Error('For feature "cds_strmout", you need to specify a parameter "cellview" in the form of lib.cell:view')
+		return 1
+
+	return (lib,cell,view)
 class cdsWriteCdsLibs(Task.Task):
 	def run(self):
 		cdslib = open(self.outputs[0].abspath(),'w')
