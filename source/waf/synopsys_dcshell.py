@@ -1,5 +1,6 @@
 import os,re,subprocess
 from waflib import Task,Errors,TaskGen,Configure,Node,Logs
+from brick_general import ChattyBrickTask
 from TclParser import *
 
 def configure(conf):
@@ -134,30 +135,21 @@ def get_synthesized_constraints_node(self):
 
 	return self.get_or_create_dc_results_dir().find_dir('results').make_node(self.design_name+'.sdc')
 
-class synopsysDcshellTask(Task.Task):
+@TaskGen.taskgen_method
+def get_synopsys_dcshell_logfile(self):
+	return self.get_logdir_node().make_node('dc_shell_'+self.name+'.log')
+
+class synopsysDcshellTask(ChattyBrickTask):
 	vars = ['SYNOPSYS_DCSHELL','SYNOPSYS_DCSHELL_OPTIONS']
+	shell = True
+	run_str = 'BRICK_RESULTS=${gen.results_dir.abspath()} ${SYNOPSYS_DCSHELL} ${SYNOPSYS_DCSHELL_OPTIONS} -f ${gen.main_tcl_script.abspath()} -output_log_file ${gen.get_synopsys_dcshell_logfile().abspath()}'
 
-	def run(self):
-		logfile = self.generator.get_logdir_node().make_node('dc_shell_'+self.generator.name+'.log')
+	def check_output(self,ret,out):
+		for num,line in enumerate(out.split('\n')):
+			if line.find('Error:') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[6:]))
+				ret = 1
 
-		run_str = 'BRICK_RESULTS=%s %s %s -f %s -output_log_file %s' % (
-				self.generator.results_dir.abspath(),
-				self.env.SYNOPSYS_DCSHELL,
-				" ".join(self.env.SYNOPSYS_DCSHELL_OPTIONS),
-				self.generator.main_tcl_script.abspath(),
-				logfile.abspath()
-			)
-		out = ""
-		try:
-			out = self.generator.bld.cmd_and_log(run_str, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		except Exception as e:
-			#out = e.stdout + e.stderr
-			pass
-
-		#f = open(logfile.abspath(),'w')
-		#f.write(out)
-		#f.close()
-
-		return 0
+		return ret
 
 # vim: noexpandtab:

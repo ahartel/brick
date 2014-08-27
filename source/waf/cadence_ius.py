@@ -1,8 +1,9 @@
 from verilog_scanner import verilog_scanner_task
 from vhdl_scanner import vhdl_scanner
-import os
+import os,subprocess, sys
+from brick_general import ChattyBrickTask
 
-from waflib import Task, TaskGen, Logs, Node, Errors
+from waflib import Task, TaskGen, Logs, Errors, Utils
 
 def configure(conf):
 	conf.load('brick_general')
@@ -158,11 +159,8 @@ def cds_ius_prepare(self):
 #
 
 @Task.always_run
-class ncelabTask(Task.Task):
-	def run(self):
-		run_str  = 'ncelab '+self.generator.simulation_toplevel+' -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
-		(f, dvars) = Task.compile_fun(run_str, False)
-		return f(self)
+class ncelabTask(ChattyBrickTask):
+	run_str  = 'ncelab ${gen.simulation_toplevel} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
 
 @TaskGen.feature('cds_elab')
 def cds_ius_elaborate(self):
@@ -174,9 +172,13 @@ def cds_ius_elaborate(self):
 
 	self.create_task("ncelabTask")
 
+
+
 @Task.always_run
-class ncsimTask(Task.Task):
-   run_str = 'ncsim -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}'
+class ncsimTask(ChattyBrickTask):
+	shell = True
+	run_str = 'ncsim -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}'
+
 
 from waflib.TaskGen import feature
 @feature('ncsim')
