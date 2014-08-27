@@ -87,8 +87,6 @@ class ChattyBrickTask(Task.Task):
 		kw['stdout'] = subprocess.PIPE
 		kw['stderr'] = subprocess.STDOUT
 
-		print cmd
-		print kw['shell']
 		try:
 			if kw['stdout'] or kw['stderr']:
 				p = subprocess.Popen(cmd, **kw)
