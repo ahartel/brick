@@ -1,6 +1,7 @@
 import os,re,subprocess
 from waflib import Task,Errors,TaskGen,Configure,Node,Logs
 from TclParser import *
+from brick_general import ChattyBrickTask
 
 def configure(conf):
 	"""This function gets called by waf upon loading of this module in a configure method"""
@@ -20,10 +21,12 @@ def configure(conf):
 	# encounter options
 	conf.env['ENCOUNTER_OPTIONS'] = ['-nowin','-overwrite']
 
-def read_additional_files(input_list):
+@TaskGen.taskgen_method
+def read_additional_enc_files(self,attr):
+	input_list = getattr(self,attr,[])
 	return_string = '" '
 	for item in input_list:
-		return_string += item+' '
+		return_string += self.path.find_node(item).abspath()+' '
 	return_string += '"'
 
 	return return_string
@@ -54,9 +57,9 @@ def create_encounter_task(self):
 		return 1
 
 	# read additional lef/gds/lib
-	self.encounter_additional_lef = read_additional_files(getattr(self,'additional_physical_libraries',[]))
-	self.encounter_additional_gds = read_additional_files(getattr(self,'additional_gds_files',[]))
-	self.encounter_additional_lib = read_additional_files(getattr(self,'additional_timing_libraries',[]))
+	self.encounter_additional_lef = self.read_additional_enc_files('additional_physical_libraries')
+	self.encounter_additional_gds = self.read_additional_enc_files('additional_gds_files')
+	self.encounter_additional_lib = self.read_additional_enc_files('additional_timing_libraries')
 
 	# define input list
 	inputs = [self.main_tcl_script]
@@ -82,6 +85,11 @@ def create_encounter_task(self):
 
 	t = self.create_task('encounterTask', inputs, outputs)
 
+
+@TaskGen.taskgen_method
+def get_encounter_logfile_node(self):
+	return self.get_logdir_node().make_node(self.design_name+'_'+self.get_encounter_step_name()+'.log')
+
 @TaskGen.taskgen_method
 def get_encounter_main_tcl_script(self):
 	main_tcl_script = None
@@ -103,7 +111,7 @@ def get_or_create_enc_results_dir(self):
 	if not hasattr(self,'name'):
 		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'name\' for this Task generator.')
 
-	results_dir = self.bld.bldnode.make_node('results_'+self.name)
+	results_dir = self.bld.bldnode.make_node('results_'+self.design_name)
 	results_dir.mkdir()
 
 	if not results_dir.find_dir(self.design_name+'_enc'):
@@ -119,36 +127,23 @@ def get_encounter_state(self):
 	tcl_basename = self.get_encounter_step_name()
 	return self.get_or_create_enc_results_dir().find_dir(self.design_name+'_enc').make_node(self.design_name+'_'+tcl_basename+'.enc')
 
-#@Task.always_run
-class encounterTask(Task.Task):
+@TaskGen.taskgen_method
+def get_encounter_flat_options(self):
+	return " ".join(self.env.ENCOUNTER_OPTIONS)
+
+@Task.always_run
+class encounterTask(ChattyBrickTask):
 	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
+	shell = True
+	run_str = 'BRICK_RESULTS=${gen.results_dir.abspath()} ENCOUNTER_NETLIST=${gen.netlist.abspath()} ENCOUNTER_CONSTRAINTS=${gen.constraints.abspath()} ENCOUNTER_ADDITIONAL_LEF=${gen.encounter_additional_lef} ENCOUNTER_ADDITIONAL_GDS=${gen.encounter_additional_gds} ENCOUNTER_ADDITIONAL_LIB=${gen.encounter_additional_lib} ${env.ENCOUNTER} ${gen.get_encounter_flat_options()} -init ${gen.main_tcl_script.abspath()} -log ${gen.get_encounter_logfile_node().abspath()}'
 
-	def run(self):
-		logfile = self.generator.get_logdir_node().make_node(self.generator.name+'_'+self.generator.get_encounter_step_name()+'.log')
+	def check_output(self,ret,out):
+		for num,line in enumerate(out.split('\n')):
+			if line.find('**Error:') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[8:]))
+				ret = 1
 
-		run_str = 'BRICK_RESULTS=%s ENCOUNTER_NETLIST=%s ENCOUNTER_CONSTRAINTS=%s ENCOUNTER_ADDITIONAL_LEF=%s ENCOUNTER_ADDITIONAL_GDS=%s ENCOUNTER_ADDITIONAL_LIB=%s %s %s -init %s -log %s' % (
-				self.generator.results_dir.abspath(),
-				(self.generator.netlist.abspath() if hasattr(self.generator,'netlist') else '""'),
-				(self.generator.constraints.abspath() if hasattr(self.generator,'constraints') else '""'),
-				self.generator.encounter_additional_lef,
-				self.generator.encounter_additional_gds,
-				self.generator.encounter_additional_lib,
-				self.env.ENCOUNTER,
-				" ".join(self.env.ENCOUNTER_OPTIONS),
-				self.generator.main_tcl_script.abspath(),
-				logfile.abspath()
-			)
-		out = ""
-		try:
-			out = self.generator.bld.cmd_and_log(run_str, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		except Exception as e:
-			#out = e.stdout + e.stderr
-			pass
+		return ret
 
-		#f = open(logfile.abspath(),'w')
-		#f.write(out)
-		#f.close()
-
-		return 0
 
 # vim: noexpandtab:
