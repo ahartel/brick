@@ -1,5 +1,6 @@
 import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
+from brick_general import ChattyBrickTask
 
 def configure(conf):
 	conf.load('cadence_base')
@@ -36,17 +37,10 @@ def get_cadence_strmout_gds_node(self):
 def get_cadence_strmout_results_dir(self):
 	return self.bld.bldnode.find_node('results')
 
-class cdsStrmoutTask(Task.Task):
+class cdsStrmoutTask(ChattyBrickTask):
 	vars = ['CDS_STRMOUT']
+	run_str = '${CDS_STRMOUT} -library ${gen.get_cadence_lib_cell_view_from_cellview()[0]} -topcell ${gen.get_cadence_lib_cell_view_from_cellview()[1]} -view ${gen.get_cadence_lib_cell_view_from_cellview()[2]} ${CDS_STRMOUT_OPTIONS} -strmfile ${TGT[0].abspath()}'
 
-	def run(self):
-		"""Checking logfile for critical warnings line by line"""
-		libname, cellname, viewname = self.generator.get_cadence_lib_cell_view_from_cellview()
-
-		run_str = '${CDS_STRMOUT} -library '+libname+' -topcell '+cellname+' -view '+viewname+' ${CDS_STRMOUT_OPTIONS} -strmfile ${TGT[0].abspath()}'
-
-		(f, dvars) = Task.compile_fun(run_str, False)
-		return f(self)
 
 # for convenience
 @Configure.conf
