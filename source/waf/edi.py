@@ -19,7 +19,7 @@ def configure(conf):
 	os.environ['ENCOUNTER'] = stash
 
 	# encounter options
-	conf.env['ENCOUNTER_OPTIONS'] = ['-nowin','-overwrite']
+	conf.env['ENCOUNTER_OPTIONS'] = ['-nowin','-overwrite','-exitOnError']
 
 @TaskGen.taskgen_method
 def read_additional_enc_files(self,attr):
@@ -41,10 +41,7 @@ def create_encounter_task(self):
 	# get a node object for the main tcl script
 	self.main_tcl_script = self.get_encounter_main_tcl_script()
 
-	# store netlist in an environment variable
-	#self.netlist = getattr(self,'netlist',self.path)
-	# store constraints file in an evironment variable
-	#self.constraints = getattr(self,'constraints',self.path)
+	self.do_run = getattr(self,'do_run',True)
 
 	# disable the process_source function
 	self.source = []
@@ -83,7 +80,8 @@ def create_encounter_task(self):
 	#	print cmd
 	#	pass
 
-	t = self.create_task('encounterTask', inputs, outputs)
+	if self.do_run:
+		t = self.create_task('encounterTask', inputs, outputs)
 
 
 @TaskGen.taskgen_method
@@ -128,6 +126,21 @@ def get_encounter_state(self):
 	return self.get_or_create_enc_results_dir().find_dir(self.design_name+'_enc').make_node(self.design_name+'_'+tcl_basename+'.enc')
 
 @TaskGen.taskgen_method
+def get_encounter_environment_string(self):
+	ret_string = ''
+	if hasattr(self,'netlist'):
+		ret_string += ' ENCOUNTER_NETLIST='+self.netlist.abspath()
+	if hasattr(self,'constraints'):
+		ret_string += ' ENCOUNTER_CONSTRAINTS='+self.constraints.abspath()
+	if hasattr(self,'encounter_additional_lef'):
+		ret_string += ' ENCOUNTER_ADDITIONAL_LEF='+self.encounter_additional_lef
+	if hasattr(self,'encounter_additional_gds'):
+		ret_string += ' ENCOUNTER_ADDITIONAL_GDS='+self.encounter_additional_gds
+	if hasattr(self,'encounter_additional_lib'):
+		ret_string += ' ENCOUNTER_ADDITIONAL_LIB='+self.encounter_additional_lib
+	return ret_string
+
+@TaskGen.taskgen_method
 def get_encounter_flat_options(self):
 	return " ".join(self.env.ENCOUNTER_OPTIONS)
 
@@ -135,11 +148,11 @@ def get_encounter_flat_options(self):
 class encounterTask(ChattyBrickTask):
 	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
 	shell = True
-	run_str = 'BRICK_RESULTS=${gen.results_dir.abspath()} ENCOUNTER_NETLIST=${gen.netlist.abspath()} ENCOUNTER_CONSTRAINTS=${gen.constraints.abspath()} ENCOUNTER_ADDITIONAL_LEF=${gen.encounter_additional_lef} ENCOUNTER_ADDITIONAL_GDS=${gen.encounter_additional_gds} ENCOUNTER_ADDITIONAL_LIB=${gen.encounter_additional_lib} ${env.ENCOUNTER} ${gen.get_encounter_flat_options()} -init ${gen.main_tcl_script.abspath()} -log ${gen.get_encounter_logfile_node().abspath()}'
+	run_str = 'BRICK_RESULTS=${gen.results_dir.abspath()} ${gen.get_encounter_environment_string()} ${env.ENCOUNTER} ${gen.get_encounter_flat_options()} -init ${gen.main_tcl_script.abspath()} -log ${gen.get_encounter_logfile_node().abspath()}'
 
 	def check_output(self,ret,out):
 		for num,line in enumerate(out.split('\n')):
-			if line.find('**Error:') == 0:
+			if line.find('**ERROR:') == 0:
 				Logs.error("Error in line %d: %s" % (num,line[8:]))
 				ret = 1
 
