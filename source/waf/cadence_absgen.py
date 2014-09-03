@@ -51,16 +51,15 @@ def create_cadence_absgen_task(self):
 	f.write("""
 absSkillMode()
 absSetOption("DefaultBin" "Block")
-absSetOption("ViewLayout" "{0}")
-absSetLibrary("{1}")
+absSetLibrary("{0}")
 absSelectAllBins()
 absSelectCells()
 absMoveSelectedCellsToBin("Ignore")
 absDeselectCells()
 absDeselectAllBins()
 absSelectBin("Ignore")
-absSelectCell("{2}")
-""".format(viewname,libname,cellname))
+absSelectCell("{1}")
+""".format(libname,cellname))
 
 	f.write("""
 ;        absMoveSelectedCellsToBin("")
@@ -68,9 +67,9 @@ absMoveSelectedCellsToBin("Block")
 
 absDeselectAllBins()
 
-;        absSelectBin("")
 absSelectBin("Block")
-""")
+absSelectCell("{0}")
+""".format(cellname))
 
 	f.write("""
 ;       absSetBinOption("Block" "PinsBoundaryCreate" "as needed")
@@ -131,12 +130,13 @@ absSetOption("ExportLEFFile" 		"{0}")
 """.format(self.get_cadence_absgen_result_node().abspath()))
 
 	f.write("""
+absSetOption("ViewLayout" "{0}")
 absPins()
 absExtract()
 absAbstract()
 
-absSetCellProp("{0}" "symmetry" "X Y R90")
-""".format(cellname))
+absSetCellProp("{1}" "symmetry" "X Y R90")
+""".format(viewname,cellname))
 
 	if not getattr(self,'dont_export_lef_file',False):
 		f.write("""
