@@ -161,6 +161,14 @@ def cds_ius_prepare(self):
 @Task.always_run
 class ncelabTask(ChattyBrickTask):
 	run_str  = 'ncelab ${gen.simulation_toplevel} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
+	def check_output(self,ret,out):
+		for num,line in enumerate(out.split('\n')):
+			if line.find('ncelab: *E') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[10:]))
+				ret = 1
+
+		return ret
+
 
 @TaskGen.feature('cds_elab')
 def cds_ius_elaborate(self):
