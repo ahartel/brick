@@ -119,16 +119,17 @@ def do_characterization(
         output_timing_signals,
         constraint_template,
         delay_template,
+        logfile,
+        parasitics_report=None,
         only_rewrite_lib_file=False,
         skip_setup_hold=False,
         skip_delays=False,
-        skip_extract_capacitance=False,
         additional_probes={}):
 
     import logging
     import datetime
 
-    logging.basicConfig(filename='./logfiles/brick_characterize_'+cell_name+'_'+str(datetime.datetime.now())+'.log',level=logging.DEBUG,format='%(asctime)s %(message)s')
+    logging.basicConfig(filename=logfile,level=logging.DEBUG,format='%(asctime)s %(message)s')
 
 
     global caps
@@ -142,9 +143,9 @@ def do_characterization(
         #
         # extract input capacitances
         #
-        if not skip_extract_capacitance:
+        if parasitics_report:
             from brick_characterizer.extract_capacitance import extract_capacitance
-            caps = extract_capacitance('build/results/'+cell_name+'.pex.report',inputs,inouts)
+            caps = extract_capacitance(parasitics_report,inputs,inouts)
         else:
             import pickle,os
             if os.path.exists(lib_name+'_'+cell_name+'_input_capacitance.dat'):
