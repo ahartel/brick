@@ -1,5 +1,6 @@
 import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
+from brick_general import ChattyBrickTask
 
 def configure(conf):
 	conf.load('brick_general')
@@ -31,7 +32,6 @@ def create_calibre_pex_task(self):
 	self.xcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_xcells_'+self.cellname))
 	self.hcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_hcells_'+self.cellname))
 
-	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
 	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
 
 	which_names = 'LAYOUTNAMES'
@@ -80,7 +80,7 @@ MASK SVDB DIRECTORY "{1}" QUERY XRC CCI NOPINLOC IXF NXF SLPH
 
 PEX NETLIST "{0}.pex.netlist" HSPICE 1 {2} GROUND "gnd" SEPARATOR "_" LOCATION RCNAMED RLOCATION RWIDTH RLENGTH RLAYER RTHICKNESS
 PEX NETLIST SIMPLE "{0}.pex.netlist" HSPICE 1 {2} LOCATION RCNAMED
-PEX REPORT "{0}.pex.report" {2}""".format(self.output_file_base.abspath(),self.svdb.abspath(),which_names))
+PEX REPORT "{0}.pex.report" {2}""".format(self.get_calibre_pex_output_file_node().abspath(),self.svdb.abspath(),which_names))
 
 		f.write("""
 
@@ -152,101 +152,91 @@ DRC ICSTATION YES
 		inputs.append(layout_spice_node)
 		inputs.append(self.source_netlist)
 
-	t = self.create_task('calibrePexTask', inputs, self.output_file_base.change_ext(".pex.netlist"))
+	pdb = self.create_task('calibrePexPDBTask', inputs)
+	if not hasattr(self,'source_netlist'):
+		phdb = self.create_task('calibrePexPHDBTask', inputs)
+		pdb.set_run_after(phdb)
+	fmt = self.create_task('calibrePexFMTTask', inputs, [self.get_calibre_pex_output_file_node(".pex.netlist"),self.get_calibre_pex_output_file_node(".pex.report")])
+	fmt.set_run_after(pdb)
 
+@TaskGen.taskgen_method
+def get_calibre_pex_output_file_node(self,ext=''):
+	output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
+	return output_file_base.change_ext(ext)
 
-class calibrePexTask(Task.Task):
+@TaskGen.taskgen_method
+def get_calibre_pex_logfile_node(self,sub_program):
+    return self.get_logdir_node().make_node(self.cellname+'_'+sub_program+'_pex.log')
+
+@TaskGen.taskgen_method
+def get_phdb_options(self):
+	conditional_options = ""
+	#if hasattr(self.generator,'only_extract_nets'): 
+	#	conditional_options += ' -select'
+	if hasattr(self,'xcells'):
+		conditional_options += ' -hcell '+self.hcells_file.abspath()
+
+	return conditional_options
+
+@TaskGen.taskgen_method
+def get_pdb_options(self):
+	conditional_options = ""
+	if hasattr(self,'only_extract_nets') and len(self.only_extract_nets) > 0:
+		conditional_options += ' -select'
+	if hasattr(self,'xcells'):
+		conditional_options += ' -full -xcell '+self.xcells_file.abspath()
+
+	return conditional_options
+
+@TaskGen.taskgen_method
+def get_fmt_options(self):
+	conditional_options = ""
+	if hasattr(self,'xcells'):
+		conditional_options = ' -full'
+
+	return conditional_options
+
+class calibrePexPHDBTask(ChattyBrickTask):
 	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
+	run_str = '${CALIBRE_PEX} -xrc -phdb ${gen.get_phdb_options()} ${CALIBRE_PEX_OPT_PHDB} ${gen.rule_file.abspath()}'
 
-	def run_phdb(self):
-		conditional_options = ""
-		#if hasattr(self.generator,'only_extract_nets'): 
-		#	conditional_options += ' -select'
-		if hasattr(self.generator,'xcells'):
-			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
+	def check_output(self,ret,out):
+		with open(self.generator.get_calibre_pex_logfile_node('phdb').abspath(),'w') as f:
+			f.write(out)
+		#for num,line in enumerate(out.split('\n')):
+			#if line.find('**ERROR:') == 0:
+			#	Logs.error("Error in line %d: %s" % (num,line[8:]))
+			#	ret = 1
 
-		run_str = '%s -xrc -phdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PHDB']), self.generator.rule_file.abspath())
+		return ret
 
-		out = ""
+class calibrePexPDBTask(ChattyBrickTask):
+	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
+	run_str = '${CALIBRE_PEX} -xrc -pdb ${gen.get_pdb_options()} ${CALIBRE_PEX_OPT_PDB} ${gen.rule_file.abspath()}'
 
-		try:
-			out = self.generator.bld.cmd_and_log(run_str)
-		except Exception as e:
-			out = e.stdout + e.stderr
+	def check_output(self,ret,out):
+		with open(self.generator.get_calibre_pex_logfile_node('pdb').abspath(),'w') as f:
+			f.write(out)
+		#for num,line in enumerate(out.split('\n')):
+			#if line.find('**ERROR:') == 0:
+			#	Logs.error("Error in line %d: %s" % (num,line[8:]))
+			#	ret = 1
 
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_pex_phdb_'+self.generator.cellname+'.log'))
-		f = open(logfile.abspath(),'w')
-		f.write(out)
-		f.close()
+		return ret
 
-	def run_pdb(self):
-		conditional_options = ""
-		if hasattr(self.generator,'only_extract_nets') and len(self.generator.only_extract_nets) > 0:
-			conditional_options += ' -select'
-		if hasattr(self.generator,'xcells'):
-			conditional_options += ' -full -xcell '+self.generator.xcells_file.abspath()
+class calibrePexFMTTask(ChattyBrickTask):
+	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
+	run_str = '${CALIBRE_PEX} -xrc -fmt ${gen.get_fmt_options()} ${CALIBRE_PEX_OPT_FMT} ${gen.rule_file.abspath()}'
 
-		run_str = '%s -xrc -pdb %s %s %s 2>&1' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_PDB']), self.generator.rule_file.abspath())
+	def check_output(self,ret,out):
+		with open(self.generator.get_calibre_pex_logfile_node('fmt').abspath(),'w') as f:
+			f.write(out)
+		#for num,line in enumerate(out.split('\n')):
+			#if line.find('**ERROR:') == 0:
+			#	Logs.error("Error in line %d: %s" % (num,line[8:]))
+			#	ret = 1
 
-		out = ""
-
-		try:
-			out = self.generator.bld.cmd_and_log(run_str)
-		except Exception as e:
-			out = e.stdout + e.stderr
-
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_pex_pdb_'+self.generator.cellname+'.log'))
-		f = open(logfile.abspath(),'w')
-		f.write(out)
-		f.close()
-
-
-	def run_fmt(self):
-		conditional_options = ""
-		if hasattr(self.generator,'xcells'):
-			conditional_options = ' -full'
-		run_str = '%s -xrc -fmt %s %s %s' % (self.env.CALIBRE_PEX, conditional_options," ".join(self.env['CALIBRE_PEX_OPT_FMT']), self.generator.rule_file.abspath())
-
-		out = ""
-
-		try:
-			out = self.generator.bld.cmd_and_log(run_str)
-		except Exception as e:
-			out = e.stdout + e.stderr
-
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_pex_fmt_'+self.generator.cellname+'.log'))
-		f = open(logfile.abspath(),'w')
-		f.write(out)
-		f.close()
-
-	def run_lvs(self):
-		conditional_options = ""
-		if hasattr(self.generator,'hcells'):
-			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
-		run_str = '%s -lvs -hier %s -spice %s %s %s' % (self.env.CALIBRE_PEX, conditional_options ,self.generator.svdb.make_node(self.generator.cellname+'.sp').abspath(), " ".join(self.env['CALIBRE_PEX_OPT_LVS']), self.generator.rule_file.abspath())
-		out = ""
-		try:
-			out = self.generator.bld.cmd_and_log(run_str)
-		except Exception as e:
-			out = e.stdout + e.stderr
-
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_pex_lvs_'+self.generator.cellname+'.log'))
-		f = open(logfile.abspath(),'w')
-		f.write(out)
-		f.close()
-
-	def run(self):
-		# phdb
-		if not hasattr(self.generator,'source_netlist'):
-			self.run_phdb()
-		#self.run_lvs()
-		# pdb
-		self.run_pdb()
-		# fmt
-		self.run_fmt()
-
-		return 0
-
+		return ret
 
 # for convenience
 @Configure.conf
@@ -254,4 +244,4 @@ def calibre_pex(bld,*k,**kw):
 	set_features(kw,'calibre_pex')
 	return bld(*k,**kw)
 
-
+# vim: noet:
