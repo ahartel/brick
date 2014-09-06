@@ -107,7 +107,7 @@ def get_encounter_main_tcl_script(self):
 @TaskGen.taskgen_method
 def get_or_create_enc_results_dir(self):
 	if not hasattr(self,'name'):
-		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'name\' for this Task generator.')
+		raise Errors.WafError('In edi: Please define the attribute \'name\' for this Task generator.')
 
 	results_dir = self.bld.bldnode.make_node('results_'+self.design_name)
 	results_dir.mkdir()
@@ -120,7 +120,7 @@ def get_or_create_enc_results_dir(self):
 @TaskGen.taskgen_method
 def get_encounter_state(self):
 	if not hasattr(self,'design_name'):
-		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'design_name\' for this Task generator.')
+		raise Errors.WafError('In edi: Please define the attribute \'design_name\' for this Task generator.')
 
 	tcl_basename = self.get_encounter_step_name()
 	return self.get_or_create_enc_results_dir().find_dir(self.design_name+'_enc').make_node(self.design_name+'_'+tcl_basename+'.enc')
