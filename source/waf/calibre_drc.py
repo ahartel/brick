@@ -1,5 +1,6 @@
 import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs,Context
+from brick_general import ChattyBrickTask
 
 def configure(conf):
 	conf.load('brick_general')
@@ -65,38 +66,33 @@ DRC ICSTATION YES
 
 	t = self.create_task('calibreDrcTask', input, output)
 
-class calibreDrcTask(Task.Task):
+@TaskGen.taskgen_method
+def get_calibre_drc_logfile_node(self):
+	return self.bld.bldnode.find_node(self.env.BRICK_LOGFILES).make_node('calibre_drc_'+self.cellname+'.log')
+
+@TaskGen.taskgen_method
+def get_calibre_drc_options(self):
+	conditional_options = ""
+	if hasattr(self,'hcells'):
+		conditional_options += ' -hcell '+self.hcells_file.abspath()
+	return conditional_options
+
+
+class calibreDrcTask(ChattyBrickTask):
 	vars = ['CALIBRE_DRC','CALIBRE_DRC_OPTIONS']
-	def run(self):
-		conditional_options = ""
-		if hasattr(self.generator,'hcells'):
-			conditional_options += ' -hcell '+self.generator.hcells_file.abspath()
+	run_str = '${CALIBRE_DRC} -drc ${gen.get_calibre_drc_options()} ${CALIBRE_DRC_OPTIONS} ${gen.rule_file.abspath()}'
 
-		logfile = self.generator.path.get_bld().make_node(os.path.join(self.generator.path.bld_dir(),self.env.BRICK_LOGFILES,'calibre_drc_'+self.generator.cellname+'.log'))
+	def check_output(self,ret,out):
+		for num,line in enumerate(out.split('\n')):
+			if line.find('ERROR:') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[6:]))
+				ret = 1
 
-		run_str = '%s -drc %s %s %s > %s 2>&1' % (self.env.CALIBRE_DRC, conditional_options, " ".join(self.env.CALIBRE_DRC_OPTIONS), self.generator.rule_file.abspath(),logfile.abspath())
-		out = ""
-		try:
-			out = self.generator.bld.cmd_and_log(run_str, quiet=Context.STDOUT)
-		except Exception as e:
-			out = e.stderr
+		with open(self.generator.get_calibre_drc_logfile_node().abspath(),'w') as f:
+			f.write(out)
 
-		found_error = 0
-		with open(logfile.abspath(),'r') as lgf:
-			for line in lgf:
-				#if re.match('LVS completed. INCORRECT',line):
-				#	print line
-				#	found_error = 1
-				if re.match('ERROR:',line):
-					print line
-					found_error = 1
-				#elif re.match('@W: CL218',line):
-				#	print line
-				#	found_error = 1
+		return ret
 
-		return found_error
-
-		return 0
 
 @TaskGen.feature('calibre_rve_drc')
 def create_calibre_rve_drc_task(self):
