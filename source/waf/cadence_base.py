@@ -75,8 +75,8 @@ def configure(conf):
 				conf.env['CDS_LIBS'] = {}
 				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
 
-	conf.env['CDS_LIB_PATH'] = conf.path.get_bld().make_node('cds.lib').abspath()
-	conf.env['CDS_HDLVAR_PATH'] = conf.path.get_bld().make_node('hdl.var').abspath()
+	conf.env['CDS_LIB_PATH'] = conf.bldnode.make_node('cds.lib').abspath()
+	conf.env['CDS_HDLVAR_PATH'] = conf.bldnode.make_node('hdl.var').abspath()
 
 @TaskGen.taskgen_method
 def get_cellview_path(self,libcellview,create_if_not_exists=False):
@@ -168,12 +168,16 @@ class cdsWriteCdsLibs(Task.Task):
 
 		return 0
 
+@TaskGen.taskgen_method
+def cadence_get_cdslib_base(self):
+	return self.bld.bldnode
+
 @TaskGen.feature("cds_write_libs")
 def write_cds_lib(self):
 	# write cds.lib file to toplevel directory
-	cds_lib_path = self.path.get_bld().make_node('cds.lib')
-	lib_defs_path = self.path.get_bld().make_node('lib.defs')
-	hdl_var_path = self.path.get_bld().make_node('hdl.var')
+	cds_lib_path = self.cadence_get_cdslib_base().make_node('cds.lib')
+	lib_defs_path = self.cadence_get_cdslib_base().make_node('lib.defs')
+	hdl_var_path = self.cadence_get_cdslib_base().make_node('hdl.var')
 
 	# create a copy task
 	t = self.create_task('cdsWriteCdsLibs', None, [cds_lib_path, lib_defs_path, hdl_var_path])

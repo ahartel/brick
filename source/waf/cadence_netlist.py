@@ -8,17 +8,18 @@ def configure(conf):
 	if not conf.env.AMSDESIGNER_OPTIONS:
 		conf.env.AMSDESIGNER_OPTIONS = [
 				'-rundir', '.',
+				'-netlisttorundir',
 				'-ncvlogopts', '-use5x -64bit'
 			]
 
-	conf.env['CADENCE_SI'] = 'si'
+	conf.find_program('si', var='CADENCE_SI')
 
 class cdsNetlistTask(Task.Task):
 
 	def run(self):
 		"""Checking logfile for critical warnings line by line"""
 
-		run_str = 'cd '+self.generator.path.get_bld().abspath()+' && ${AMSDESIGNER} -lib '+self.generator.libname+' -cell '+self.generator.cellname+' -view '+self.generator.viewname+' -compile all -netlist all -CDSLIB ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} ${AMSDESIGNER_OPTIONS}'
+		run_str = '${AMSDESIGNER} -lib '+self.generator.libname+' -cell '+self.generator.cellname+' -view '+self.generator.viewname+' -compile all -netlist all -CDSLIB ${env.CDS_LIB_PATH} -hdlvar ${env.CDS_HDLVAR_PATH} ${AMSDESIGNER_OPTIONS}'
 
 		(f, dvars) = Task.compile_fun(run_str, False)
 		return f(self)
@@ -72,23 +73,36 @@ def add_cds_netlist_target(self):
 	except ValueError:
 		raise Errors.ConfigurationError('For feature "cds_netlist", you need to specify a parameter "toplevel" in the form of lib.cell:view')
 
+@TaskGen.taskgen_method
+def get_cds_netlist_lvs_node(self):
+	lib,cell,view = self.get_cadence_lib_cell_view_from_cellview()
+	lvs_netlist_filename = lib+'_'+cell+'.src.net'
+	return self.bld.bldnode.find_node(self.env.BRICK_RESULTS).make_node(lvs_netlist_filename)
+
 @TaskGen.feature('cds_netlist_lvs')
 def add_cds_netlist_lvs_target(self):
 	m0 = re.search('(\w+).(\w+):(\w+)', self.cellview)
-	if m0:
-		# the input file of the netlist task
-		try:
-			source_netlist = self.get_cellview_path(self.cellview).find_node('sch.oa')
-		except AttributeError:
-			Logs.error('Could not find cellview "'+self.cellview+'" in cds_netlist_lvs.')
-			return
-		# the configuration file for the netlister
-		self.si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env_'+m0.group(1)+'_'+m0.group(2)+'_'+m0.group(3)))
-		# the output netlist
-		lvs_netlist_filename = m0.group(1)+'_'+m0.group(2)+'.src.net'
-		lvs_netlist = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,lvs_netlist_filename))
-		f1 = open(self.si_env.abspath(),"w")
-		si_env_content = """
+	if not m0:
+		Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_netlist_lvs\'.')
+		return
+
+	self.libname = m0.group(1)
+	self.cellname = m0.group(2)
+	self.viewname = m0.group(3)
+	lvs_netlist_filename = self.libname+'_'+self.cellname+'.src.net'
+
+	# the input file of the netlist task
+	try:
+		source_netlist = self.get_cellview_path(self.cellview).find_node('sch.oa')
+	except AttributeError:
+		Logs.error('Could not find cellview "'+self.cellview+'" in cds_netlist_lvs.')
+		return
+	# the configuration file for the netlister
+	self.si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env_'+self.libname+'_'+self.cellname+'_'+self.viewname))
+	# the output netlist
+	lvs_netlist = self.get_cds_netlist_lvs_node()
+	f1 = open(self.si_env.abspath(),"w")
+	si_env_content = """
 simLibName = "{0}"
 simCellName = "{1}"
 simViewName = "{2}"
@@ -115,13 +129,11 @@ displayPININFO = 'nil
 preserveALL = 'nil
 incFILE = "{5}"
 setEQUIV = ""
-		""".format(m0.group(1),m0.group(2),m0.group(3),lvs_netlist_filename,self.env.BRICK_RESULTS,getattr(self,'include',''))#'/afs/kip.uni-heidelberg.de/cad/libs/tsmc/cdb/models/hspice/hspice.mdl')#/superfast/home/ahartel/chip-route65/env/include_all_models.scs')
-		f1.write(si_env_content)
-		f1.close()
+	""".format(m0.group(1),m0.group(2),m0.group(3),lvs_netlist_filename,self.env.BRICK_RESULTS,getattr(self,'include',''))#'/afs/kip.uni-heidelberg.de/cad/libs/tsmc/cdb/models/hspice/hspice.mdl')#/superfast/home/ahartel/chip-route65/env/include_all_models.scs')
+	f1.write(si_env_content)
+	f1.close()
 
-		aucdl_task = self.create_task('auCdlTask',[source_netlist],lvs_netlist)
-	else:
-		Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_netlist_lvs\'.')
+	aucdl_task = self.create_task('auCdlTask',[source_netlist],lvs_netlist)
 
 
 
