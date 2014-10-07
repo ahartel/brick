@@ -26,7 +26,11 @@ def read_additional_enc_files(self,attr):
 	input_list = getattr(self,attr,[])
 	return_string = '" '
 	for item in input_list:
-		return_string += self.path.find_node(item).abspath()+' '
+		try:
+			return_string += self.path.find_node(item).abspath()+' '
+		except AttributeError:
+			self.bld.fatal("edi.py: "+attr+" "+item+" not found.")
+
 	return_string += '"'
 
 	return return_string
