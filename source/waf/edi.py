@@ -26,10 +26,7 @@ def read_additional_enc_files(self,attr):
 	input_list = getattr(self,attr,[])
 	return_string = '" '
 	for item in input_list:
-		try:
-			return_string += self.path.find_node(item).abspath()+' '
-		except AttributeError:
-			self.bld.fatal("edi.py: "+attr+" "+item+" not found.")
+		return_string += self.path.make_node(item).abspath()+' '
 
 	return_string += '"'
 
@@ -71,18 +68,25 @@ def create_encounter_task(self):
 	if hasattr(self,'previous_state'):
 		inputs.extend(self.to_nodes(self.previous_state))
 
-	# define output list
+	# declare output list
+	outputs = []
 	try:
-		outputs = [self.get_encounter_state()]
+		outputs.append(self.get_encounter_state())
 	except Errors.WafError as e:
 		Logs.error(e.msg)
-		return 1
 
-	p = TclParser()
-	p.input_file(self.main_tcl_script.abspath())
+	#p = TclParser()
+	#p.input_file(self.main_tcl_script.abspath())
 	#for cmd in p.parse():
-	#	print cmd
-	#	pass
+	#	if cmd[0] == 'streamOut':
+	#		pass
+	#	if cmd[0] == 'saveDesign':
+	#		try:
+	#			outputs.append(self.get_encounter_state())
+	#		except Errors.WafError as e:
+	#			Logs.error(e.msg)
+	#			return 1
+	#		break
 
 	if self.do_run:
 		t = self.create_task('encounterTask', inputs, outputs)
