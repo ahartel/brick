@@ -71,6 +71,17 @@ absSelectBin("Block")
 absSelectCell("{0}")
 """.format(cellname))
 
+	# LEF export options
+	if not getattr(self,'dont_export_lef_file',False):
+		f.write("""
+absSetOption("ExportLEFVersion" 	"5.5")
+absSetOption("ExportGeometryLefData" 	"true")
+absSetOption("ExportTechLefData" 	"false")
+absSetOption("ExportLEFBin" 		"Block")
+absSetOption("ExportLEFFile" 		"{0}")
+""".format(self.get_cadence_absgen_result_node().abspath()))
+
+	# Block bin options
 	f.write("""
 ;       absSetBinOption("Block" "PinsBoundaryCreate" "as needed")
 absSetBinOption("Block" "PinsBoundaryCreate" "always")
@@ -111,23 +122,10 @@ absSetBinOption("Block" "AbstractSiteName" "")
 absSetBinOption("Block" "AbstractSiteNameDefine" "")
 """)
 
+	# user-defined options
 	for bin_name,opts in self.abstract_options.iteritems():
 		for key,value in opts.iteritems():
 			f.write('absSetBinOption( "'+bin_name+'" "'+key+'" "'+value+'")\n')
-
-	if hasattr(self,'termprops'):
-		for cell, opts in self.termprops.iteritems():
-			for pin, props in opts.iteritems():
-				f.write('absSetTerminalProp( "'+cell+'" "'+pin+'" "'+('" "'.join(props))+'")\n')
-
-	if not getattr(self,'dont_export_lef_file',False):
-		f.write("""
-absSetOption("ExportLEFVersion" 	"5.5")
-absSetOption("ExportGeometryLefData" 	"true")
-absSetOption("ExportTechLefData" 	"false")
-absSetOption("ExportLEFBin" 		"Block")
-absSetOption("ExportLEFFile" 		"{0}")
-""".format(self.get_cadence_absgen_result_node().abspath()))
 
 	f.write("""
 absSetOption("ViewLayout" "{0}")
@@ -137,6 +135,10 @@ absAbstract()
 
 absSetCellProp("{1}" "symmetry" "X Y R90")
 """.format(viewname,cellname))
+
+	if hasattr(self,'termprops'):
+		for pin, props in self.termprops.iteritems():
+			f.write('absSetTerminalProp( "'+cellname+'" "'+pin+'" "'+('" "'.join(props))+'")\n')
 
 	if not getattr(self,'dont_export_lef_file',False):
 		f.write("""
@@ -173,16 +175,19 @@ def get_cadence_absgen_result_node(self):
 		lib,cell,view = self.get_cadence_lib_cell_view_from_cellview()
 		return results_dir.make_node(lib+'_'+cell+'.lef')
 
+
 class cdsAbsgenTask(ChattyBrickTask):
 	vars = ['CADENCE_ABSTRACT','CADENCE_ABSTRACT_OPTIONS']
 	run_str = '${env.CADENCE_ABSTRACT} ${env.CADENCE_ABSTRACT_OPTIONS} -replay ${gen.absgen_script.abspath()} -log ${gen.get_cadence_absgen_logfile_node().abspath()}'
 
 
 	def check_output(self,ret,out):
-		if '*Error*' in out or 'ERROR' in out:
-			return 1
-		else:
-			return ret
+		for num,line in enumerate(out.split('\n')):
+			if line.find('*Error*')>=0 or line.find('ERROR')==0:
+				Logs.error("Error in line %d: %s" % (num,line))
+				ret = 1
+
+		return ret
 
 
 
