@@ -95,8 +95,11 @@ def add_cds_netlist_lvs_target(self):
 	try:
 		source_netlist = self.get_cellview_path(self.cellview).find_node('sch.oa')
 	except AttributeError:
-		Logs.error('Could not find cellview "'+self.cellview+'" in cds_netlist_lvs.')
-		return
+		raise Errors.WafError('Could not find schematic in cellview "'+self.cellview+'" in cds_netlist_lvs.')
+		return 1
+	if not source_netlist:
+		raise Errors.WafError('Could not find schematic in cellview "'+self.cellview+'" in cds_netlist_lvs.')
+		return 1
 	# the configuration file for the netlister
 	self.si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env_'+self.libname+'_'+self.cellname+'_'+self.viewname))
 	# the output netlist
@@ -129,7 +132,7 @@ displayPININFO = 'nil
 preserveALL = 'nil
 incFILE = "{5}"
 setEQUIV = ""
-	""".format(m0.group(1),m0.group(2),m0.group(3),lvs_netlist_filename,self.env.BRICK_RESULTS,getattr(self,'include',''))#'/afs/kip.uni-heidelberg.de/cad/libs/tsmc/cdb/models/hspice/hspice.mdl')#/superfast/home/ahartel/chip-route65/env/include_all_models.scs')
+	""".format(m0.group(1),m0.group(2),m0.group(3),lvs_netlist_filename,self.env.BRICK_RESULTS,getattr(self,'include',''))
 	f1.write(si_env_content)
 	f1.close()
 
