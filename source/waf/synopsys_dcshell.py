@@ -55,6 +55,8 @@ def create_synopsys_dcshell_task(self):
 		self.systemverilog_sources = []
 	if not getattr(self,'vhdl_sources',None):
 		self.vhdl_sources = []
+	if not getattr(self,'ddc_sources',None):
+		self.ddc_sources = []
 	if not getattr(self,'other_sources',None):
 		self.other_sources = []
 
@@ -67,7 +69,9 @@ def create_synopsys_dcshell_task(self):
 		elif fn.suffix() == '.v' or fn.suffix() == '.v':
 			self.verilog_sources.append(fn)
 		elif fn.suffix() == '.vhd' or fn.suffix() == '.vhdl':
-			self.vhdl_source.append(fn)
+			self.vhdl_sources.append(fn)
+		elif fn.suffix() == '.ddc' or fn.suffix() == '.ddc':
+			self.ddc_sources.append(fn)
 		else:
 			self.other_sources.append(fn)
 
@@ -83,6 +87,8 @@ def create_synopsys_dcshell_task(self):
 		f.write('analyze -format vhdl '+sourcefile.abspath()+'\n')
 	for sourcefile in self.systemverilog_sources:
 		f.write('analyze -format sverilog '+sourcefile.abspath()+'\n')
+	for sourcefile in self.ddc_sources:
+		f.write('read_file -format ddc '+sourcefile.abspath()+'\n')
 	f.close()
 
 	# declare input list
@@ -90,7 +96,7 @@ def create_synopsys_dcshell_task(self):
 	inputs.extend(self.systemverilog_sources)
 	inputs.extend(self.verilog_sources)
 	inputs.extend(self.vhdl_sources)
-
+	inputs.extend(self.ddc_sources)
 
 	try:
 		outputs = [self.get_synthesized_netlist_node(),self.get_synthesized_constraints_node()]
@@ -98,8 +104,8 @@ def create_synopsys_dcshell_task(self):
 		Logs.error(e.msg)
 		return 1
 
-	p = TclParser()
-	p.input_file(self.main_tcl_script.abspath())
+	#p = TclParser()
+	#p.input_file(self.main_tcl_script.abspath())
 	#for cmd in p.parse():
 	#	print cmd
 	#	pass
