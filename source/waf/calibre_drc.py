@@ -77,7 +77,7 @@ def get_calibre_drc_options(self):
 		conditional_options += ' -hcell '+self.hcells_file.abspath()
 	return conditional_options
 
-
+@Task.always_run
 class calibreDrcTask(ChattyBrickTask):
 	vars = ['CALIBRE_DRC','CALIBRE_DRC_OPTIONS']
 	run_str = '${CALIBRE_DRC} -drc ${gen.get_calibre_drc_options()} ${CALIBRE_DRC_OPTIONS} ${gen.rule_file.abspath()}'
