@@ -1,5 +1,6 @@
 import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
+from brick_general import ChattyBrickTask
 
 def configure(conf):
 	conf.load('brick_general')
@@ -37,24 +38,31 @@ def create_cds_strmin_task(self):
 		for lib in getattr(self,'reflibs',[]):
 			f.write(lib+'\n')
 
+	self.cellmap_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.libname+'_'+self.cellname+'_streamin_cellmap'))
+
+	with open(self.cellmap_file.abspath(),'w') as f:
+		for lib in getattr(self,'cellmap',[]):
+			f.write(lib+'\n')
+
+
 	t = self.create_task('cdsStrminTask', self.strmfile, layout_node)
 
 
-class cdsStrminTask(Task.Task):
+@TaskGen.taskgen_method
+def get_cds_strmin_logfile_node(self):
+	return self.bld.bldnode.find_node(self.env.BRICK_LOGFILES).make_node(self.libname+'_'+self.cellname+'_strmin.log')
+
+class cdsStrminTask(ChattyBrickTask):
 	vars = ['CDS_STRMIN']
+	run_str = '${CDS_STRMIN} -library ${gen.libname} -topCell ${gen.cellname} -view ${gen.viewname} ${CDS_STRMIN_OPTIONS} -strmfile ${SRC[0].abspath()} -refLibList ${gen.reflib_file.abspath()} -logfile ${gen.get_cds_strmin_logfile_node().abspath()} -cellMap ${gen.cellmap_file.abspath()}'
 
-	def run(self):
-		"""Checking logfile for critical warnings line by line"""
+	def check_output(self,ret,out):
+		for num,line in enumerate(out.split('\n')):
+			if line.find('strmin:   ERROR:') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[16:]))
+				ret = 1
 
-		run_str = '${CDS_STRMIN} -library '+self.generator.libname+' -topCell '+self.generator.cellname+' -view '+self.generator.viewname+' ${CDS_STRMIN_OPTIONS} -strmfile ${SRC[0].abspath()} -refLibList '+self.generator.reflib_file.abspath()
-		run_str += ' -logFile '+self.env.BRICK_LOGFILES+'/'+self.generator.libname+'_'+self.generator.cellname+'_strmin.log'
-
-		if hasattr(self.generator,'attach_tech_lib'):
-			run_str += ' -attachTechFileOfLib '+self.generator.attach_tech_lib
-
-		(f, dvars) = Task.compile_fun(run_str, False)
-		return f(self)
-
+		return ret
 
 
 # for convenience
