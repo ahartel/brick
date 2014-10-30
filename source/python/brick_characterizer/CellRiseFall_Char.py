@@ -3,7 +3,6 @@ from brick_characterizer.CharBase import CharBase
 class CellRiseFall_Char(CharBase):
 
     def __init__(self,toplevel,output_filename):
-        super(CellRiseFall_Char,self).__init__()
 
         self.toplevel = toplevel
         self.output_filename = output_filename
@@ -26,6 +25,8 @@ class CellRiseFall_Char(CharBase):
 
         self.delays = {}
         self.transitions = {}
+
+        super(CellRiseFall_Char,self).__init__()
 
     def get_delays(self):
         return self.delays
@@ -88,7 +89,7 @@ class CellRiseFall_Char(CharBase):
                     cur_probe = related[1]
                     tests = []
                     tests.append(re.compile(r"=(index)="))
-                    tests.append(re.compile(r"=(index[\*\d\%\+\/\-]+)="))
+                    tests.append(re.compile(r"=([\*\d\%\+\/\-]*index[\*\d\%\+\/\-]*)="))
 
                     match = None
                     for test in tests:
@@ -210,14 +211,14 @@ class CellRiseFall_Char(CharBase):
                 clock_edges[clock_name] = []
             if (clock_dir == 'R'):
                 cnt = 0
-                for edge in self.rising_edges[clock_name]:
+                for edge in self.get_rising_edges(clock_name):
                     if cnt == 1:
                         clock_edges[clock_name].append(edge)
                     cnt = cnt + 1 if cnt < 2 else 0
                 self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
             else:
                 cnt = 0
-                for edge in self.falling_edges[clock_name]:
+                for edge in self.get_falling_edges(clock_name):
                     if cnt == 1:
                         clock_edges[clock_name].append(edge)
                     cnt = cnt + 1 if cnt < 2 else 0
@@ -231,49 +232,53 @@ class CellRiseFall_Char(CharBase):
             probe_lc = probe.lower()
 
             if self.probe_signal_directions[source] == 'positive_unate':
-                if self.rising_edges.has_key(probe_lc) and len(self.rising_edges[probe_lc]) > 0:
+                r_edges_probe = self.get_rising_edges(probe_lc)
+                if r_edges_probe and len(r_edges_probe) > 0:
                     # get threshold time for rising transition lower
-                    tran[0] = self.rising_edges[probe_lc].pop(0)
+                    tran[0] = r_edges_probe.pop(0)
                     # get threshold time for switching point
-                    delta_t[0] = self.rising_edges[probe_lc].pop(0)
+                    delta_t[0] = r_edges_probe.pop(0)
                     delta_t[0] -= clock_edges[self.signal_to_clock[probe]][0]
                     # get threshold time for rising transition upper
-                    tran[0] = self.rising_edges[probe_lc].pop(0) - tran[0]
+                    tran[0] = r_edges_probe.pop(0) - tran[0]
                 else:
                     self.logger_debug("Rising edge for signal "+probe_lc+" not found but expected.")
 
-                if self.falling_edges.has_key(probe_lc) and len(self.falling_edges[probe_lc]) > 0:
+                f_edges_probe = self.get_falling_edges(probe_lc)
+                if f_edges_probe and len(f_edges_probe) > 0:
                     # get threshold time for rising transition lower
-                    tran[1] = self.falling_edges[probe_lc].pop(0)
+                    tran[1] = f_edges_probe.pop(0)
                     # get threshold time for switching point
-                    delta_t[1] = self.falling_edges[probe_lc].pop(0)
+                    delta_t[1] = f_edges_probe.pop(0)
                     delta_t[1] -= clock_edges[self.signal_to_clock[probe]][1]
                     # get threshold time for falling transition upper
-                    tran[1] = self.falling_edges[probe_lc].pop(0) - tran[1]
+                    tran[1] = f_edges_probe.pop(0) - tran[1]
                 else:
                     self.logger_debug("Falling edge for signal "+probe_lc+" not found but expected.")
 
 
             elif self.probe_signal_directions[source] == 'negative_unate':
-                if self.falling_edges.has_key(probe_lc) and len(self.falling_edges[probe_lc]) > 0:
+                f_edges_probe = self.get_falling_edges(probe_lc)
+                if f_edges_probe and len(f_edges_probe) > 0:
                     # get threshold time for falling transition lower
-                    tran[1] = self.rising_edges[probe_lc].pop(0)
+                    tran[1] = f_edges_probe.pop(0)
                     # get threshold time for switching point
-                    delta_t[1] = self.rising_edges[probe_lc].pop(0)
+                    delta_t[1] = f_edges_probe.pop(0)
                     delta_t[1] -= clock_edges[self.signal_to_clock[probe]][0]
                     # get threshold time for rising transition upper
-                    tran[1] = self.rising_edges[probe_lc].pop(0) - tran[1]
+                    tran[1] = f_edges_probe.pop(0) - tran[1]
                 else:
                     self.logger_debug("Falling edge for signal "+probe_lc+" not found but expected.")
 
-                if self.rising_edges.has_key(probe_lc) and len(self.rising_edges[probe_lc]) > 0:
+                r_edges_probe = self.get_rising_edges(probe_lc)
+                if r_edges_probe and len(r_edges_probe) > 0:
                     # get threshold time for rising transition lower
-                    tran[0] = self.rising_edges[probe_lc].pop(0)
+                    tran[0] = r_edges_probe.pop(0)
                     # get threshold time for switching point
-                    delta_t[0] = self.rising_edges[probe_lc].pop(0)
+                    delta_t[0] = r_edges_probe.pop(0)
                     delta_t[0] -= clock_edges[self.signal_to_clock[probe]][1]
                     # get threshold time for rising transition upper
-                    tran[0] = self.rising_edges[probe_lc].pop(0) - tran[0]
+                    tran[0] = r_edges_probe.pop(0) - tran[0]
                 else:
                     self.logger_debug("Rising edge for signal "+probe_lc+" not found but expected.")
 

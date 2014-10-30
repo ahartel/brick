@@ -2,7 +2,7 @@ import re
 
 class LibBackend:
 
-    def __init__(self,constr_templ,del_templ):
+    def __init__(self,constr_templ,del_templ,default_max_transition=0.2):
         self.indentation = 0
         self.constraint_template = constr_templ
         self.delay_template = del_templ
@@ -14,6 +14,7 @@ class LibBackend:
 
         self.max_voltage = None
         self.time_base_unit = 1.0e-9 # i.e. ns
+        self.default_max_transition = default_max_transition
 
     def write_templates(self):
         dim1 = len(self.constraint_template[0])
@@ -88,10 +89,10 @@ class LibBackend:
                 for i in range(smaller,larger+1):
                     signal_name = m.group(1)+'['+str(i)+']'
                     new_signals[signal_name] = timing_signals[bus][0]
-                    self.clocks.append(timing_signals[bus][0])
+                    #self.clocks.append(timing_signals[bus][0])
             else:
                 new_signals[bus] = timing_signals[bus][0]
-                self.clocks.append(timing_signals[bus][0])
+                #self.clocks.append(timing_signals[bus][0])
 
         return new_signals
 
@@ -102,10 +103,15 @@ class LibBackend:
             self.indentation += 1
             try:
                 output += self.indent(['related_pin : "'+timing_signals[signal]+'";'])
+                if self.clocks[timing_signals[signal]] == 'R':
+                    output += self.indent(['timing_type : rising_edge;'])
+                else:
+                    output += self.indent(['timing_type : falling_edge;'])
             except KeyError:
                 print "Error in Library generation. Pin "+signal+" is not in timing_signals list. Unable to determine related_pin. Please change this and re-run. Omitting timing block for cell delay for this pin."
                 return []
 
+            output += self.indent(['timing_sense : non_unate;'])
             # rising table
             output += self.indent(['cell_rise ('+self.delay_template_name+') {'])
             self.indentation += 1
@@ -511,8 +517,8 @@ class LibBackend:
                         pass
 
                     try:
-                        self.clocks.index(signal_name)
-                        output += self.indent(['clock : true;'])
+                        if self.clocks.has_key(signal_name):
+                            output += self.indent(['clock : true;'])
                     except:
                         pass
 
@@ -537,8 +543,8 @@ class LibBackend:
                     pass
 
                 try:
-                    self.clocks.index(signal)
-                    output += self.indent(['clock : true;'])
+                    if self.clocks.has_key(signal):
+                        output += self.indent(['clock : true;'])
                 except:
                     pass
 
@@ -550,9 +556,10 @@ class LibBackend:
 
         return output
 
-    def write(self,library,cell,filename,inputs,outputs,inouts,powers,caps,input_timing_signals,output_timing_signals,setups,holds,delays,transitions):
+    def write(self,library,cell,filename,inputs,outputs,inouts,powers,caps,clocks,input_timing_signals,output_timing_signals,setups,holds,delays,transitions):
         output = []
 
+        self.clocks = clocks
         input_timing_signals = self.transform_timing_signals(input_timing_signals)
         output_timing_signals = self.transform_timing_signals(output_timing_signals)
 
@@ -565,7 +572,7 @@ class LibBackend:
         'current_unit : "1mA" ;',
         'time_unit : "1ns" ;',
         'pulling_resistance_unit : "1kohm";',
-        'default_max_transition : 0.2;',
+        'default_max_transition : '+str(self.default_max_transition)+';',
         'nom_process : 1 ; /* TT TT_25 */',
         'nom_temperature : 25;',
         'nom_voltage : 1.2;',

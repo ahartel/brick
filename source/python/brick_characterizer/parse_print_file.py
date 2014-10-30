@@ -31,8 +31,8 @@ def parse_print_file(filename,rise_th,fall_th):
     comment = re.compile(r"^\*")
     start_value = re.compile(r"^x")
     stop_value = re.compile(r"^y")
-    signal_name = re.compile(r"\s+([\w\[\]]+)\s+$")
-    signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]]+)")
+    signal_name = re.compile(r"\s+([\w\[\]\(\)]+)\s+$")
+    signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]\(\)]+)")
     numbers = re.compile(r"([\d\.]+)([TGMkmunpfazy]?)\s+([\d\.]+)([TGMkmunpfazy]?)")
     found_start = 0
     current_signal_name = ''
@@ -109,7 +109,7 @@ def parse_print_file(filename,rise_th,fall_th):
                                 # drop last rising edge if signal hasn't
                                 # settled high
                                 del rising_edges[current_signal_name][-1]
-                                print "Dropping rising edge for "+current_signal_name
+                                #print "Dropping rising edge for "+current_signal_name
                                 # since last rising edge was a failure, look again for a rising edge
                                 signal_value = 'R'
                             else:
@@ -120,7 +120,7 @@ def parse_print_file(filename,rise_th,fall_th):
                         else:
                             if last_voltage > voltage and (last_voltage - voltage) > epsilon:
                                 del rising_edges[current_signal_name][-1]
-                                print "Dropping rising edge for "+current_signal_name
+                                #print "Dropping rising edge for "+current_signal_name
                                 signal_value = 'R_wait'
                             else:
                                 last_voltage = voltage
@@ -151,7 +151,7 @@ def parse_print_file(filename,rise_th,fall_th):
                         if time > (fall_check_time + check_wait_time):
                             if voltage > fall_th:
                                 del falling_edges[current_signal_name][-1]
-                                print "Dropping falling edge for "+current_signal_name
+                                #print "Dropping falling edge for "+current_signal_name
                                 # since last falling edge was a failure, look again for a falling edge
                                 signal_value = 'F'
                             else:
@@ -161,7 +161,7 @@ def parse_print_file(filename,rise_th,fall_th):
                         else:
                             if last_voltage < voltage and (voltage - last_voltage) > epsilon:
                                 del falling_edges[current_signal_name][-1]
-                                print "Dropping falling edge for "+current_signal_name
+                                #print "Dropping falling edge for "+current_signal_name
                                 signal_value = 'F_wait'
                             else:
                                 last_voltage = voltage
@@ -184,8 +184,8 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
     comment = re.compile(r"^\*")
     start_value = re.compile(r"^x")
     stop_value = re.compile(r"^y")
-    signal_name = re.compile(r"\s+([\w\[\]]+)\s+$")
-    signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]]+)")
+    signal_name = re.compile(r"\s+([\w\[\]\(\)]+)\s+$")
+    signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]\(\)]+)")
     numbers = re.compile(r"([\d\.]+)([TGMkmunpfazy]?)\s+([\d\.]+)([TGMkmunpfazy]?)")
     found_start = 0
     current_signal_name = ''

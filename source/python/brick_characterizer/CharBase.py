@@ -1,4 +1,4 @@
-import logging
+import os, logging
 
 class CharBase(object):
 
@@ -28,6 +28,17 @@ class CharBase(object):
 
         self.state = 'init'
 
+        self.check_output_dir_exists()
+
+    def check_output_dir_exists(self):
+        if not os.path.isdir(self.output_dir):
+            self.logger_info('Output directory '+self.output_dir+' not existing. Creating it.')
+            os.makedirs(self.output_dir)
+
+        if not os.path.isdir(os.path.dirname(self.output_filename)):
+            self.logger_info('Output directory '+os.path.dirname(self.output_filename)+' not existing. Creating it.')
+            os.makedirs(os.path.dirname(self.output_filename))
+
     # logger bleiben
     def logger_debug(self,text):
         logging.debug(self.whats_my_name()+' '+text)
@@ -37,6 +48,9 @@ class CharBase(object):
 
     def logger_error(self,text):
         logging.error(self.whats_my_name()+' '+text)
+
+    def logger_info(self,text):
+        logging.info(self.whats_my_name()+' '+text)
 
     def set_rise_threshold(self,value):
         if value > 1:
@@ -64,6 +78,31 @@ class CharBase(object):
             raise Exception('include-netlist not found')
 
         self.include_netlists.append(netlist)
+
+    def get_rising_edges(self,signal_name):
+        edges = None
+        try:
+            edges = self.rising_edges[signal_name]
+        except KeyError:
+            try:
+                edges = self.rising_edges['v('+signal_name+')']
+
+            except KeyError:
+                pass
+
+        return edges
+
+    def get_falling_edges(self,signal_name):
+        edges = None
+        try:
+            edges = self.falling_edges[signal_name]
+        except KeyError:
+            try:
+                edges = self.falling_edges['v('+signal_name+')']
+            except KeyError:
+                pass
+
+        return edges
 
     def write_include_netlists(self):
         for netlist in self.include_netlists:
@@ -147,7 +186,8 @@ class CharBase(object):
         self.append_out('')
         self.append_out('simulator lang=spectre')
         self.append_out('simulatorOptions options temp=27 tnom=27 scale=1.0 scalem=1.0')
-        #self.append_out('usim_opt sim_mode=ms')
+        #self.append_out('usim_opt sim_mode=a subckt=synapse')
+        #self.append_out('usim_opt sim_mode=s')
         self.append_out('simulator lang=spice')
 
 

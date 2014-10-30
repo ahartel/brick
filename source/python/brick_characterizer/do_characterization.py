@@ -1,10 +1,10 @@
-import threading
+import threading, logging
 inc_lock = threading.Lock()
 sh_lock = threading.Lock()
 dt_lock = threading.Lock()
 
 threads_running = 0
-max_threads = 8
+max_threads = 9
 
 caps = {}
 setups = {}
@@ -31,6 +31,7 @@ def start_setup_hold_thread(run,constraint_template):
     while run.has_steps():
         run.next_step()
     print "thread "+run.whats_my_name()+' done'
+    logging.debug("Getting rise time values from thread "+run.whats_my_name()+": "+str(run.get_clock_rise_time())+", "+str(run.get_signal_rise_time()))
 
     this_setups = run.get_setups()
     this_holds = run.get_holds()
@@ -51,11 +52,14 @@ def start_setup_hold_thread(run,constraint_template):
 
         holds[signal][run.get_clock_rise_time()][run.get_signal_rise_time()] = values
 
+    #logging.debug("Setups for thread "+run.whats_my_name()+": "+str(setups)+", holds: "+str(holds))
     sh_lock.release()
+    logging.debug("Setup/Hold time merging lock for thread "+run.whats_my_name()+" released.")
 
     inc_lock.acquire()
     threads_running -= 1
     inc_lock.release()
+    logging.debug("Thread counter decremented for Setup/Hold thread "+run.whats_my_name()+".")
 
 def start_delay_thread(run,delay_template):
     global threads_running
@@ -124,13 +128,24 @@ def do_characterization(
         only_rewrite_lib_file=False,
         skip_setup_hold=False,
         skip_delays=False,
-        additional_probes={}):
+        additional_probes={},
+        default_max_transition=0.2):
 
+    import os
     import logging
     import datetime
 
-    logging.basicConfig(filename=logfile,level=logging.DEBUG,format='%(asctime)s %(message)s')
-
+    logging.basicConfig(filename=logfile,level=logging.DEBUG,format='%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    logging.info("####################################")
+    logging.info("BrickCharacterizer")
+    logging.info("####################################")
+    logging.info("Logging to "+logfile)
+    logging.info("Working directory is "+os.getcwd())
+    logging.info("Invoked with the following parameters:")
+    logging.info(" only_rewrite_lib_file = "+str(only_rewrite_lib_file))
+    logging.info(" skip_setup_hold       = "+str(skip_setup_hold))
+    logging.info(" skip_delays           = "+str(skip_delays))
+    logging.info("####################################")
 
     global caps
     global delays
@@ -146,12 +161,15 @@ def do_characterization(
         if parasitics_report:
             from brick_characterizer.extract_capacitance import extract_capacitance
             caps = extract_capacitance(parasitics_report,inputs,inouts)
+            logging.info("Using parasitics report in "+parasitics_report)
         else:
             import pickle,os
             if os.path.exists(lib_name+'_'+cell_name+'_input_capacitance.dat'):
-                print "Loading "+lib_name+'_'+cell_name+'_input_capacitance.dat'
+                logging.info("Loading previously stored parasitics data from "+lib_name+'_'+cell_name+'_input_capacitance.dat')
                 with open(lib_name+'_'+cell_name+'_input_capacitance.dat') as input:
                     caps = pickle.load(input)
+            else:
+                logging.info("Not using parasitics data!")
 
         if not input_timing_signals or len(input_timing_signals) == 0:
             skip_setup_hold = True
@@ -305,7 +323,7 @@ def do_characterization(
     #
 
     from brick_characterizer.LibBackend import LibBackend
-    be = LibBackend(constraint_template,delay_template)
-    be.write(lib_name,cell_name,output_lib_file,inputs,outputs,inouts,powers,caps,input_timing_signals,output_timing_signals,setups,holds,delays,transitions)
+    be = LibBackend(constraint_template,delay_template,default_max_transition)
+    be.write(lib_name,cell_name,output_lib_file,inputs,outputs,inouts,powers,caps,clocks,input_timing_signals,output_timing_signals,setups,holds,delays,transitions)
 
 

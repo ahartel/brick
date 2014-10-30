@@ -5,6 +5,8 @@ from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
 def configure(conf):
 	conf.load('brick_general')
 
+	conf.find_program('ultrasim', var='CDS_ULTRASIM')
+
 @TaskGen.feature('brick_characterize')
 def create_brick_characterize_task(self):
     self.create_task('brickCharacterizerTask',self.parasitics_report,self.output_lib_file)
@@ -21,7 +23,7 @@ class brickCharacterizerTask(Task.Task):
             self.generator.output_lib_file.abspath(),
             self.generator.output_netlist_file,
             # netlists
-            [self.generator.circuit_netlist_path,self.generator.model_netlist_path],
+            [self.generator.model_netlist_path,self.generator.circuit_netlist_path],
             # ports
             self.generator.inputs,
             self.generator.outputs,
@@ -41,6 +43,9 @@ class brickCharacterizerTask(Task.Task):
             # flow settings
             self.generator.only_rewrite_lib_file,
             self.generator.skip_setup_hold,
-            self.generator.skip_delays
+            self.generator.skip_delays,
+            # other stuff
+            getattr(self.generator,'additional_probes',{}),
+            getattr(self.generator,'default_max_transition',0.2)
         )
         return 0
