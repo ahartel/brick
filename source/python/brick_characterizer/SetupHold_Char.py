@@ -1,7 +1,7 @@
 from brick_characterizer.CharBase import CharBase
 
 class SetupHold_Char(CharBase):
-    def __init__(self,toplevel,output_filename):
+    def __init__(self,toplevel,output_filename,use_spectre=False):
         self.toplevel = toplevel
         self.output_filename = output_filename
         # store probe signals and their related inputs
@@ -35,7 +35,7 @@ class SetupHold_Char(CharBase):
         self.max_setup_steps = 9
         self.max_hold_steps = 9
 
-        super(SetupHold_Char,self).__init__()
+        super(SetupHold_Char,self).__init__(use_spectre)
 
     def whats_my_name(self):
         return 'SetupHold_Char_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)
@@ -362,9 +362,8 @@ class SetupHold_Char(CharBase):
 
         for signal,related in self.probe_signals.iteritems():
             delta_t = [0,0]
-            signal_lc = signal.lower()
             if self.probe_signal_directions[signal] == 'positive_unate':
-                r_edges_signal = self.get_rising_edges(signal_lc)
+                r_edges_signal = self.get_rising_edges(signal)
                 if r_edges_signal and len(r_edges_signal) > 0:
                     delta_t[0] = r_edges_signal.pop(0)
                     self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
@@ -378,7 +377,7 @@ class SetupHold_Char(CharBase):
                     self.logger_debug("Rising edge for signal "+signal+" not found but expected")
                     delta_t[0] = self.infinity
 
-                f_edges_signal = self.get_falling_edges(signal_lc)
+                f_edges_signal = self.get_falling_edges(signal)
                 if f_edges_signal and len(f_edges_signal) > 0:
                     delta_t[1] = f_edges_signal.pop(0)
                     self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
@@ -392,7 +391,7 @@ class SetupHold_Char(CharBase):
                     self.logger_debug("Falling edge for signal "+signal+" not found but expected")
                     delta_t[1] = self.infinity
             elif self.probe_signal_directions[signal] == 'negative_unate':
-                f_edges_signal = self.get_falling_edges(signal_lc)
+                f_edges_signal = self.get_falling_edges(signal)
                 if f_edges_signal and len(f_edges_signal) > 0:
                     delta_t[1] = f_edges_signal.pop(0)
                     self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
@@ -406,7 +405,7 @@ class SetupHold_Char(CharBase):
                     self.logger_debug("Falling edge for signal "+signal+" not found but expected")
                     delta_t[1] = self.infinity
 
-                r_edges_signal = self.get_rising_edges(signal_lc)
+                r_edges_signal = self.get_rising_edges(signal)
                 if r_edges_signal and len(r_edges_signal) > 0:
                     delta_t[0] = r_edges_signal.pop(0)
                     self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
@@ -539,7 +538,11 @@ class SetupHold_Char(CharBase):
 
     def parse_print_file(self):
         import subprocess,os
-        call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
+        call = ''
+        if self.use_spectre:
+            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file_spectre.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
+        else:
+            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
         self.logger_debug(" ".join(call))
         process = subprocess.Popen(call,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         process.wait()
@@ -560,7 +563,7 @@ class SetupHold_Char(CharBase):
         with open(self.get_printfile_name()+'_falling') as input:
             self.falling_edges = pickle.load(input)
 
-        self.logger_debug(str(self.falling_edges))
+        #self.logger_debug(str(self.rising_edges))
 
         return
 

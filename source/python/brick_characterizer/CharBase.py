@@ -2,7 +2,7 @@ import os, logging
 
 class CharBase(object):
 
-    def __init__(self):
+    def __init__(self,use_spectre=False):
         self.rise_threshold = 0.501
         self.fall_threshold = 0.499
         self.high_value = 1.2
@@ -23,6 +23,8 @@ class CharBase(object):
         # store timing results
         self.timing_signals = {}
         self.source_signals = {}
+        self.output_signals = {}
+        self.use_spectre = use_spectre
 
         self.additional_probes = {}
 
@@ -81,6 +83,8 @@ class CharBase(object):
 
     def get_rising_edges(self,signal_name):
         edges = None
+        if not self.use_spectre:
+            signal_name = signal_name.lower()
         try:
             edges = self.rising_edges[signal_name]
         except KeyError:
@@ -94,6 +98,8 @@ class CharBase(object):
 
     def get_falling_edges(self,signal_name):
         edges = None
+        if not self.use_spectre:
+            signal_name = signal_name.lower()
         try:
             edges = self.falling_edges[signal_name]
         except KeyError:
@@ -134,6 +140,26 @@ class CharBase(object):
                         raise Exception('Static signal '+name+' has already been defined as a timing or clock signal.')
 
         self.added_static_signals = True
+
+    def generate_instance(self):
+        if self.use_spectre:
+            self.append_out('X'+self.toplevel)
+            self.append_out('''+ vdd gnd en clk_int w_conf[7] w_conf[5] w_conf[3] w_conf[1] wen
+    + bl_w w_conf[6] w_conf[4] w_conf[2] w_conf[0] write pc_confb[3] bl_pc_out
+    + pc_confb[2] pc_confb[1] pc_confb[0] str clk bl_pc_in clk_intb pc sense
+    + write_en w_a[0] w_ab[0] w_ab[1] w_a[1] w_a[2] w_ab[2] w_ab[3] w_a[3] w_a[4]
+    + w_ab[4] w_ab[5] w_a[5] w_a[6] w_ab[6] addr[5] addr[0] addr[1] addr[3] addr[2]
+    + addr[4] addr[6]''')
+
+            #for (signal,value) in self.static_signals.iteritems():
+            #    self.append_out('+ '+signal)
+            #for signal,value in self.timing_signals.iteritems():
+            #    self.append_out('+ '+signal)
+            #for signal,value in self.output_filename.iteritems():
+            #    self.append_out('+ '+signal)
+
+            self.append_out('+ '+self.toplevel)
+
 
     def generate_additional_probes(self):
         for probe,probe_type in self.additional_probes.iteritems():
@@ -181,14 +207,17 @@ class CharBase(object):
         self.append_out('.probe v('+signal+')')
 
     def write_header(self):
-        self.append_out('.param tran_tend='+str(self.simulation_length)+'000000e-09')
-        self.append_out('.tran 1.00e-12 \'tran_tend\'')
-        self.append_out('')
+        self.append_out('* brick characterizer')
         self.append_out('simulator lang=spectre')
+        self.append_out('parameters tran_tend='+str(self.simulation_length)+'000000e-09')
+        self.append_out('tran tran step=1.00e-12 stop=tran_tend')
         self.append_out('simulatorOptions options temp=27 tnom=27 scale=1.0 scalem=1.0')
         #self.append_out('usim_opt sim_mode=a subckt=synapse')
         #self.append_out('usim_opt sim_mode=s')
+        self.append_out('')
         self.append_out('simulator lang=spice')
+        self.append_out('')
+        self.write_include_netlists()
 
 
     def oom(self,exp):
@@ -211,7 +240,11 @@ class CharBase(object):
 
     def run(self):
         import subprocess
-        call = ['ultrasim', '-f', self.get_current_filename(), '-outdir', self.output_dir, '-format', 'sst2', '-top', self.toplevel,'=log',self.get_current_logfile()]
+        call = []
+        if not self.use_spectre:
+            call = ['ultrasim', '-f', self.get_current_filename(), '-outdir', self.output_dir, '-format', 'sst2', '-top', self.toplevel,'=log',self.get_current_logfile()]
+        else:
+            call = ['spectre', '-outdir', self.output_dir, '-format', 'sst2', '=log',self.get_current_logfile(), self.get_current_filename()]
         self.logger_debug(" ".join(call))
         process = subprocess.Popen(call,stdout=subprocess.PIPE)
         process.wait()
@@ -225,12 +258,10 @@ class CharBase(object):
     def get_current_logfile(self):
         import os
         name,ext = os.path.splitext(self.get_current_filename())
-        logfile = name+'.log'
-        #cnt = 0
-        #while os.path.exists(logfile):
-        #    logfile = name+cnt+'.log'
-
-        return logfile
+        if not self.use_spectre:
+            return name+'.log'
+        else:
+            return self.output_dir+'/'+name+'.log'
 
     def has_steps(self):
         if self.state == 'done':
@@ -240,12 +271,11 @@ class CharBase(object):
 
     def write_spice_file(self):
 
-        self.append_out('* brick characterizer')
-        self.write_include_netlists()
         self.write_header()
         self.generate_static_signals()
         self.generate_timing_signals()
         self.generate_additional_probes()
+        self.generate_instance()
 
         self.logger_debug("Writing to filename "+self.get_current_filename())
 
@@ -259,4 +289,7 @@ class CharBase(object):
 
     def get_printfile_name(self):
         import os
-        return self.output_dir+'/'+os.path.splitext(os.path.basename(self.get_current_filename()))[0]+'.print0' 
+        if not self.use_spectre:
+            return self.output_dir+'/'+os.path.splitext(os.path.basename(self.get_current_filename()))[0]+'.print0'
+        else:
+            return self.output_dir+'/'+os.path.splitext(os.path.basename(self.get_current_filename()))[0]+'.print'

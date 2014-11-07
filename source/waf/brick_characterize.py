@@ -44,6 +44,7 @@ class brickCharacterizerTask(Task.Task):
             self.generator.only_rewrite_lib_file,
             self.generator.skip_setup_hold,
             self.generator.skip_delays,
+            getattr(self.generator,'use_spectre',False),
             # other stuff
             getattr(self.generator,'additional_probes',{}),
             getattr(self.generator,'default_max_transition',0.2)

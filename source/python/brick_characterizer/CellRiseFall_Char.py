@@ -2,7 +2,7 @@ from brick_characterizer.CharBase import CharBase
 
 class CellRiseFall_Char(CharBase):
 
-    def __init__(self,toplevel,output_filename):
+    def __init__(self,toplevel,output_filename,use_spectre=False):
 
         self.toplevel = toplevel
         self.output_filename = output_filename
@@ -26,7 +26,7 @@ class CellRiseFall_Char(CharBase):
         self.delays = {}
         self.transitions = {}
 
-        super(CellRiseFall_Char,self).__init__()
+        super(CellRiseFall_Char,self).__init__(use_spectre)
 
     def get_delays(self):
         return self.delays
@@ -290,7 +290,11 @@ class CellRiseFall_Char(CharBase):
 
     def parse_print_file(self):
         import subprocess,os
-        call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
+        call = ''
+        if self.use_spectre:
+            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file_spectre.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
+        else:
+            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
         self.logger_debug(" ".join(call))
         process = subprocess.Popen(call,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         process.wait()
