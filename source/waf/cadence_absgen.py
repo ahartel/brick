@@ -36,6 +36,7 @@ def create_cadence_absgen_task(self):
 			'AbstractBlockageDownPinCutWindow': "(M1 0.15) (M2 0.15) (M3 0.15) (M4 0.15) (M5 0.15) (M6 0.15) (M7 0.15) ",
 			'AbstractBlockageCutAroundPin': "M1 M2 M3 M4 M5 M6 M7",
 
+			"PinsBoundaryLayers": "M1 M2 M3 M4 M5 M6 M7 M8 M9 prBoundary",
 			"PinsTextManipulation": "",
 			'PinsPowerNames': "vdd12d",
 			'PinsGroundNames': "gnd:d",
@@ -85,7 +86,6 @@ absSetOption("ExportLEFFile" 		"{0}")
 	f.write("""
 ;       absSetBinOption("Block" "PinsBoundaryCreate" "as needed")
 absSetBinOption("Block" "PinsBoundaryCreate" "always")
-absSetBinOption("Block" "PinsBoundaryLayers" "M1 M2 M3 M4 M5 M6 M7 M8 M9 prBoundary")
 
 absSetBinOption("Block" "ExtractSig" "false")
 absSetBinOption("Block" "ExtractPwr" "false")
@@ -111,7 +111,6 @@ absSetBinOption("Block" "AbstractBlockageDetailedLayers" "")
 absSetBinOption("Block" "AbstractBlockageCoverLayersDist" "")
 absSetBinOption("Block" "AbstractBlockageFracture" "true")
 absSetBinOption("Block" "AbstractOverlapLayerAction" "off")
-absSetBinOption("Block" "AbstractOverlapLayers" "")
 absSetBinOption("Block" "AbstractOverlapLayerSize" "0")
 absSetBinOption("Block" "AbstractOverlapLayerSmoothFactor" "15")
 absSetBinOption("Block" "AbstractPinFracture" "true")

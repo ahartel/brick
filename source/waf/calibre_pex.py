@@ -63,7 +63,7 @@ LAYOUT PRIMARY "{1}"
 LAYOUT SYSTEM GDSII
 LAYOUT CASE YES
 
-//LAYOUT RENAME TEXT "/</\\[/g" "/>/\\]/g" """.format(self.layout_gds.abspath(),self.cellname))
+""".format(self.layout_gds.abspath(),self.cellname))
 
 		if hasattr(self,'source_netlist'):
 			f.write("""
@@ -137,6 +137,7 @@ DRC ICSTATION YES
 		f.write("\n".join(getattr(self,'xcells',[])))
 		f.close()
 
+	if hasattr(self,'source_netlist') and hasattr(self,'hcells'):
 		f = open(self.hcells_file.abspath(),"w")
 		f.write("\n".join(getattr(self,'hcells',[])))
 		f.close()
