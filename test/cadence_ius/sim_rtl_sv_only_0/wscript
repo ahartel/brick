@@ -11,10 +11,12 @@ def build(bld):
         name = 'compile_top',
         source = bld.convert_string_paths(
             [
+                'package.sv',
                 'tb.sv',
                 'top.sv',
             ]),
         features = 'cds_compile_hdl',
+        verilog_search_paths = bld.convert_string_paths(['./'])
     )
     bld.add_group()
     bld (

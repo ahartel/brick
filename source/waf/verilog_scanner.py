@@ -1,9 +1,55 @@
 import re,os,copy
-from waflib import TaskGen, Logs
+from waflib import TaskGen, Logs, Node
 
 # --------------------------------
 # Verilog and VHDL scanner methods
 # --------------------------------
+
+
+def check_files(files,debug=False):
+    packages_used = {}
+    packages_defined = {}
+    includes_used = {}
+    nodes = {}
+
+    for file in files:
+        leaf = Node.split_path(file.abspath())[-1]
+        nodes[leaf] = file
+        # This is the basic check, that looks in the current file for:
+        #  - packages defined
+        #  - packages used/imported
+        #  - files included
+        with open(file.abspath(),'r') as input:
+            packages_used[leaf] = set()
+            packages_defined[leaf] = set()
+            includes_used[leaf] = []
+            if debug:
+                print "Processing file:" + node.abspath()
+            # look for used packages and packages that are defined in the input file
+            for line in input:
+                # Poor man's comment detection
+                if line.find('//') == 0:
+                    continue
+                m0 = re.search('package\s+(\w+);', line)
+                m1 = re.search('import\s+(\w+)[\s:]+', line)
+                m2 = re.search('\W(\w+)::', line)
+                m3 = re.search('`include\s+"([\w\.]+)"', line)
+                if (m0 is not None):
+                    packages_defined[leaf].add(m0.group(1))
+                if (m1 is not None):
+                    packages_used[leaf].add(m1.group(1))
+                if (m2 is not None):
+                    packages_used[leaf].add(m2.group(1))
+                if (m3 is not None):
+                    includes_used[leaf].append(m3.group(1))
+
+            if debug:
+                print "Packages used:"+" ".join(packages_used[leaf])
+                print "Packages defined:"+" ".join(packages_defined[leaf])
+                print "Includes defined:"+" ".join(includes_used[leaf])
+
+    return nodes, packages_used, packages_defined, includes_used
+
 
 def get_sv_files_from_include_dir(rootnode,dir):
     content = dir.ant_glob("*.sv")
@@ -11,180 +57,104 @@ def get_sv_files_from_include_dir(rootnode,dir):
     content.extend(dir.ant_glob("*.v"))
     return content
 
-@TaskGen.taskgen_method
-def check_files(self,files,packages,includes_used,debug=False):
-    dependencies = []
-    dependency_types = []
-    found_includes = []
-
-    for file in files:
-        if packages and len(packages) > 0:
-            packages_loadable = set()
-            with open(file.abspath(),'r') as input:
-                for line in input:
-                    m0 = re.search('package\s+(\w+);', line)
-                    if (m0 is not None):
-                        package_name = m0.group(1)
-                        if debug: print "Found package: "+package_name+" in file "+file.abspath()
-                        packages_loadable.add(package_name)
-                        if not self.package_cache.has_key(package_name):
-                            self.package_cache[package_name] = file.change_ext(file.suffix()+'.out')
-                        else:
-                            if self.package_cache[package_name].abspath() != file.change_ext(file.suffix()+'.out').abspath():
-                                raise RuntimeError("Package "+package_name+" defined in "+file.abspath()+" but has already been found in "+self.package_cache[package_name].abspath()+".")
-
-            # check if the set of loadable packages and set of packages we are looking
-            # for have a non-zero intersection
-            result = packages & packages_loadable
-            if len(result)>0:
-                # append the actual source file
-                # dependencies.append(file)
-                # ... and the generated pseudo-source file
-                if debug: print "Adding file "+file.abspath()+" to dependency list as package."
-                dependencies.append(file.ctx.bldnode.make_node(file.srcpath()+'.out'))
-                dependency_types.append('package')
-
-            packages = packages - packages_loadable
-        # add the current file to the depencies if it's an included file
-        if os.path.basename(file.abspath()) in includes_used:
-            dependencies.append(file)
-            found_includes.append(file)
-            dependency_types.append('include')
-
-    return packages,dependencies,dependency_types,found_includes
-
-def verilog_scanner_task(task):
-    return task.generator.verilog_scanner(task.inputs[0])
-
-@TaskGen.taskgen_method
-def verilog_scanner(self,node,debug=False):
-    if not hasattr(self,"package_cache"):
-        self.package_cache = {}
-
-    stack = []
-    try:
-        return self.scan_verilog_file(node,stack,debug)
-    except RuntimeError as e:
-        Logs.warn(e)
-        return [],[]
-
-@TaskGen.taskgen_method
-def scan_verilog_file(self,node,stack,debug=False):
-
-    if node.abspath() in stack:
-        raise RuntimeError("You have an include loop in your files, you should fix that. Package and include order detection? Not gonna happen!\nFile "+node.abspath()+" included by\n\t"+"\n\t".join(stack))
-    stack.append(node.abspath())
-
-    # This is the basic check, that looks in the current file for:
-    #  - packages defined
-    #  - packages used/imported
-    #  - files included
-    with open(node.abspath(),'r') as input:
-        if debug:
-            print "Processing file:" + node.abspath()
-        # look for used packages and packages that are defined in the input file
-        packages_used = set()
-        packages_defined = set()
-        includes_used = set()
-        for line in input:
-            # Poor man's comment detection
-            if line.find('//') == 0:
-                continue
-            m0 = re.search('package\s+(\w+);', line)
-            m1 = re.search('import\s+(\w+)[\s:]+', line)
-            m2 = re.search('[\s\[\-+*\/](\w+)::', line)
-            m3 = re.search('`include\s+"([\w\.]+)"', line)
-            if (m0 is not None):
-                packages_defined.add(m0.group(1))
-            if (m1 is not None):
-                packages_used.add(m1.group(1))
-            if (m2 is not None):
-                packages_used.add(m2.group(1))
-            if (m3 is not None):
-                includes_used.add(m3.group(1))
-
-        if debug:
-            print "Packages used:"+" ".join(packages_used)
-            print "Packages defined:"+" ".join(packages_defined)
-            print "Includes defined:"+" ".join(includes_used)
-
-    # now make use of a very cool python feature: set difference
-    missing_packages = packages_used-packages_defined
-    # cache package origins
-    for package in packages_defined:
-        self.package_cache[package] = node
-
-    # all dependencies will be put into this list
-    dependencies = []
-    dependency_types = []
-    found_includes = []
-
-    # look if missing packages are alread in the cache dict
-    packages_known = set()
-    for package in missing_packages:
-        if self.package_cache.has_key(package):
-            if self.package_cache[package] in self.source:
-                if debug: print "Found package "+package+" in cache and source list."
-            else:
-                dependencies.append(self.package_cache[package].change_ext(self.package_cache[package].suffix()+'.out'))
-                dependency_types.append('package')
-            packages_known.add(package)
-
-    missing_packages -= packages_known
-
-    if debug: print "Missing packages after checking package cache:"+" ".join(missing_packages)
-    if debug: print "Added dependencies after checking cache:"+" ".join([x.abspath() for x in dependencies])
-
-    # first look into existing source list
-    # check the source list of the current taskgen for the
-    # existance of the necessary packages
-    if len(missing_packages) > 0:
-        missing_packages,check_deps,check_dep_types,check_found_incs = self.check_files(getattr(self,'source',[]),missing_packages,includes_used,debug)
-        if debug: print "Missing packages after checking files in self.source:"+" ".join(missing_packages)
-    #if len(packages) > 0:
-	#	Logs.warn('Package(s) '+' '.join(packages)+' could not be found in any of the given source files. You should fix that!')
-
-        dependencies.extend(check_deps)
-        dependency_types.extend(check_dep_types)
-        found_includes.extend(check_found_incs)
-
-        if debug:
-            print "Added files after checking source list:"+"\n ".join([x.abspath() for x in check_deps])
-            print "Dependencies after checking source list:"+" ".join([x.abspath() for x in dependencies])
-
-    # if the used packages could not be found in the source list of the current taskgen
-    # then loop through search paths
-
+def get_sv_files_from_include_dirs(inputs,dirs):
     # get an instance of the root node
     up = "../"
-    for i in range(node.height()-1):
+    for i in range(inputs[0].height()-1):
         up += "../"
-    rootnode = node.find_dir(up)
+    rootnode = inputs[0].find_dir(up)
+    # declare cache
+    cache = {'nodes':{},'packages_used':{},'packages_defined':{},'includes_used':{}}
     # loop through search paths to find the file that defines the package
-    for dir in getattr(self,'verilog_search_paths',[]):
+    for dir in dirs:
         # get all system verilog files
         files = get_sv_files_from_include_dir(rootnode,dir)
         # don't look for packages in search paths! Therefore packages is None here
         # rather, add all includes to dependencies
-        packages,dir_dependencies,dir_dependency_types,dir_found_includes = self.check_files(files,None,includes_used)
+        nodes,packages_used,packages_defined,includes_used = check_files(files)
 
-        dependencies.extend(dir_dependencies)
-        dependency_types.extend(dir_dependency_types)
-        found_includes.extend(dir_found_includes)
+        cache['nodes'] = dict(cache['nodes'].items() + nodes.items())
+        cache['packages_used'] = dict(cache['packages_used'].items() + packages_used.items())
+        cache['packages_defined'] = dict(cache['packages_defined'].items() + packages_defined.items())
+        cache['includes_used'] = dict(cache['includes_used'].items() + includes_used.items())
 
-    #if debug:
-    #    print "Added files after checking include directories:"+" ".join([x.abspath() for x in dependencies])
+    nodes,packages_used,packages_defined,includes_used = check_files(inputs)
 
-    # now recursively scan the include files
-    for inc in found_includes:
-        if debug: print "Found include:",inc
-        mystack = copy.copy(stack)
-        (add_dependencies, add_dependency_types) = self.scan_verilog_file(inc,mystack,debug)
-        for f,t in zip(add_dependencies,add_dependency_types):
-            if not node.change_ext(node.suffix()+'.out') == f:
-                dependencies.append(f)
-                dependency_types.append(t)
-
-    return (dependencies,dependency_types)
+    cache['nodes'] = dict(cache['nodes'].items() + nodes.items())
+    cache['packages_used'] = dict(cache['packages_used'].items() + packages_used.items())
+    cache['packages_defined'] = dict(cache['packages_defined'].items() + packages_defined.items())
+    cache['includes_used'] = dict(cache['includes_used'].items() + includes_used.items())
 
 
+    return cache
+
+def add_include_deps(cache,includes):
+    ret_deps = []
+    for inc in includes:
+        # add inc to current deps
+        try:
+            ret_deps.append(cache['nodes'][inc])
+        except KeyError:
+            Logs.warn('Included file '+inc+' not found in search paths.')
+
+        try:
+            ret_deps.extend(add_include_deps(cache,cache['includes_used'][inc]))
+        except KeyError:
+            Logs.warn('Included file '+inc+' not found in search paths.')
+
+    return ret_deps
+
+def scan_verilog_file(node,cache,debug=False):
+    leaf = Node.split_path(node.abspath())[-1]
+
+    #if node.abspath() in stack:
+    #    raise RuntimeError("You have an include loop in your files, you should fix that. Package and include order detection? Not gonna happen!\nFile "+node.abspath()+" included by\n\t"+"\n\t".join(stack))
+    #stack.append(node.abspath())
+
+    deps = []
+    asdditionals = []
+
+    # check whether external packages are referenced in this file
+    packages_missing = cache['packages_used'][leaf] - cache['packages_defined'][leaf]
+    for pak in packages_missing:
+        package_found = False
+        for f,packages in cache['packages_defined'].iteritems():
+            if pak in packages:
+                package_found = True
+                deps.append(cache['nodes'][f])
+
+        if not package_found:
+            pass
+
+    # check includes
+    deps.extend(add_include_deps(cache,cache['includes_used'][leaf]))
+
+
+    if debug:
+        print node,[x.abspath() for x in deps]
+    return (deps,[])
+
+
+def scan_verilog_task(task):
+    #print "Scanning Task "+str(task)
+    #print "Includes: "+" ".join([x.abspath() for x in getattr(task.generator,'verilog_search_paths',[])])
+	# create a database of all packages used and defined in all .sv files in all incdirs
+	# this will later be used in the scanner for the individual task sources
+    cache = get_sv_files_from_include_dirs(task.inputs,getattr(task.generator,'verilog_search_paths',[]))
+
+    ret = ([],[])
+    debug = False
+    for inp in task.inputs:
+        #DELME
+        if Node.split_path(inp.abspath())[-1] == 'tb_top_miniasic_0.sv':
+            #print inp.abspath()
+            #debug = True
+            pass
+        #END DELME
+        new_dep = scan_verilog_file(inp,cache,debug)
+        if debug:
+            print new_dep
+        ret[0].extend(new_dep[0])
+        ret[1].extend(new_dep[1])
+
+    return ret
