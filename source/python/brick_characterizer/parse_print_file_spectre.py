@@ -31,9 +31,9 @@ def parse_print_file(filename,rise_th,fall_th):
     comment = re.compile(r"^\*")
     start_value = re.compile(r"^x")
     stop_value = re.compile(r"^y")
-    signal_name = re.compile(r"\s+([\w\[\]\(\)]+)\s+$")
-    signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]\(\)]+)")
-    numbers = re.compile(r"([\d\.]+)([TGMkmunpfazy]?)\s+([\d\.]+)([TGMkmunpfazy]?)")
+    signal_name = re.compile(r"time\s*([\w\[\]\(\)\.]+)\s*$")
+    #signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]\(\)]+)")
+    numbers = re.compile(r"([\d\.]+)\s([TGMkmunpfazy]?)\s+([\d\.]+)\s([TGMkmunpfazy]?)")
     found_start = 0
     current_signal_name = ''
     signal_value = 0
@@ -49,27 +49,30 @@ def parse_print_file(filename,rise_th,fall_th):
 
     for line in f:
         if found_start > 0:
-            if found_start < 3:
-                found_start += 1
-                continue
-            elif found_start >= 3 and not read_numbers:
-                m = signal_name.match(line)
+            if found_start == 1 and not read_numbers:
+                m = signal_name.search(line)
                 if m:
                     current_signal_name = m.group(1)
                     signal_value = 0
+                    read_numbers = True
+                    print "Found signal name "+current_signal_name
                 else:
-                    m = signal_name_wrap.match(line)
-                    if m:
-                        current_signal_name += m.group(1)
-                    else:
-                        read_numbers = True
+                    print "No signal name found"
+                    print line
+                    #m = signal_name_wrap.match(line)
+                    #if m:
+                    #    current_signal_name += m.group(1)
+                    #else:
+                    #    read_numbers = True
 
                 found_start += 1
+                #return
         else:
             read_numbers = False
             if comment.match(line):
                 continue
             elif start_value.match(line):
+                print "Found start"
                 found_start = 1
 
         if read_numbers:
@@ -175,6 +178,9 @@ def parse_print_file(filename,rise_th,fall_th):
 
     f.close()
 
+    print rising_edges
+    print falling_edges
+
     return rising_edges,falling_edges
 
 
@@ -184,9 +190,9 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
     comment = re.compile(r"^\*")
     start_value = re.compile(r"^x")
     stop_value = re.compile(r"^y")
-    signal_name = re.compile(r"\s+([\w\[\]\(\)]+)\s+$")
-    signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]\(\)]+)")
-    numbers = re.compile(r"([\d\.]+)([TGMkmunpfazy]?)\s+([\d\.]+)([TGMkmunpfazy]?)")
+    signal_name = re.compile(r"time\s*([\w\[\]\(\)\.]+)\s*$")
+    #signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]\(\)]+)")
+    numbers = re.compile(r"([\d\.]+)\s([TGMkmunpfazy]?)\s+([\d\.]+)\s([TGMkmunpfazy]?)")
     found_start = 0
     current_signal_name = ''
     signal_value = 0
@@ -196,27 +202,30 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
 
     for line in f:
         if found_start > 0:
-            if found_start < 3:
-                found_start += 1
-                continue
-            elif found_start >= 3 and not read_numbers:
-                m = signal_name.match(line)
+            if found_start == 1 and not read_numbers:
+                m = signal_name.search(line)
                 if m:
                     current_signal_name = m.group(1)
                     signal_value = 0
+                    read_numbers = True
+                    print "Found signal name "+current_signal_name
                 else:
-                    m = signal_name_wrap.match(line)
-                    if m:
-                        current_signal_name += m.group(1)
-                    else:
-                        read_numbers = True
+                    print "No signal name found"
+                    print line
+                    #m = signal_name_wrap.match(line)
+                    #if m:
+                    #    current_signal_name += m.group(1)
+                    #else:
+                    #    read_numbers = True
 
                 found_start += 1
+                #return
         else:
             read_numbers = False
             if comment.match(line):
                 continue
             elif start_value.match(line):
+                print "Found start"
                 found_start = 1
 
         if read_numbers:

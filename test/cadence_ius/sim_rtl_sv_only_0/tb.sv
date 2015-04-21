@@ -1,3 +1,4 @@
+`include "wait_time.v"
 
 module tb();
 	logic clk;
@@ -6,12 +7,13 @@ module tb();
 	initial begin
 		clk = 0;
 		$deposit(a,0);
-		#50;
+		#(`WAIT_TIME);
 		$finish();
 	end
 	always begin
-		#5 clk = ~clk;
+		#clk_period::period clk = ~clk;
 	end
 
 	top top_i(clk,a,a);
+
 endmodule

@@ -1,5 +1,6 @@
 import os,re,subprocess
 from waflib import Task,Errors,TaskGen,Configure,Node,Logs
+from brick_general import ChattyBrickTask
 from TclParser import *
 
 def configure(conf):
@@ -38,7 +39,7 @@ def create_synopsys_dcshell_task(self):
 
 	# create results output directory
 	try:
-		self.results_dir = self.get_or_create_results_dir()
+		self.results_dir = self.get_or_create_dc_results_dir()
 	except Errors.WafError as e:
 		Logs.error(e.msg)
 		return 1
@@ -54,6 +55,8 @@ def create_synopsys_dcshell_task(self):
 		self.systemverilog_sources = []
 	if not getattr(self,'vhdl_sources',None):
 		self.vhdl_sources = []
+	if not getattr(self,'ddc_sources',None):
+		self.ddc_sources = []
 	if not getattr(self,'other_sources',None):
 		self.other_sources = []
 
@@ -66,7 +69,9 @@ def create_synopsys_dcshell_task(self):
 		elif fn.suffix() == '.v' or fn.suffix() == '.v':
 			self.verilog_sources.append(fn)
 		elif fn.suffix() == '.vhd' or fn.suffix() == '.vhdl':
-			self.vhdl_source.append(fn)
+			self.vhdl_sources.append(fn)
+		elif fn.suffix() == '.ddc' or fn.suffix() == '.ddc':
+			self.ddc_sources.append(fn)
 		else:
 			self.other_sources.append(fn)
 
@@ -82,6 +87,8 @@ def create_synopsys_dcshell_task(self):
 		f.write('analyze -format vhdl '+sourcefile.abspath()+'\n')
 	for sourcefile in self.systemverilog_sources:
 		f.write('analyze -format sverilog '+sourcefile.abspath()+'\n')
+	for sourcefile in self.ddc_sources:
+		f.write('read_file -format ddc '+sourcefile.abspath()+'\n')
 	f.close()
 
 	# declare input list
@@ -89,16 +96,16 @@ def create_synopsys_dcshell_task(self):
 	inputs.extend(self.systemverilog_sources)
 	inputs.extend(self.verilog_sources)
 	inputs.extend(self.vhdl_sources)
-
+	inputs.extend(self.ddc_sources)
 
 	try:
-		outputs = [self.get_synthesized_netlist_node()]
+		outputs = [self.get_synthesized_netlist_node(),self.get_synthesized_constraints_node()]
 	except Errors.WafError as e:
 		Logs.error(e.msg)
 		return 1
 
-	p = TclParser()
-	p.input_file(self.main_tcl_script.abspath())
+	#p = TclParser()
+	#p.input_file(self.main_tcl_script.abspath())
 	#for cmd in p.parse():
 	#	print cmd
 	#	pass
@@ -106,7 +113,7 @@ def create_synopsys_dcshell_task(self):
 	t = self.create_task('synopsysDcshellTask', inputs, outputs)
 
 @TaskGen.taskgen_method
-def get_or_create_results_dir(self):
+def get_or_create_dc_results_dir(self):
 	if not hasattr(self,'name'):
 		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'name\' for this Task generator.')
 
@@ -125,32 +132,30 @@ def get_synthesized_netlist_node(self):
 	if not hasattr(self,'design_name'):
 		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'design_name\' for this Task generator.')
 
-	return self.get_or_create_results_dir().find_dir('results').make_node(self.design_name+'.v')
+	return self.get_or_create_dc_results_dir().find_dir('results').make_node(self.design_name+'.v')
 
-class synopsysDcshellTask(Task.Task):
+@TaskGen.taskgen_method
+def get_synthesized_constraints_node(self):
+	if not hasattr(self,'design_name'):
+		raise Errors.WafError('In synopsys_dcshell: Please define the attribute \'design_name\' for this Task generator.')
+
+	return self.get_or_create_dc_results_dir().find_dir('results').make_node(self.design_name+'.sdc')
+
+@TaskGen.taskgen_method
+def get_synopsys_dcshell_logfile(self):
+	return self.get_logdir_node().make_node('dc_shell_'+self.name+'.log')
+
+class synopsysDcshellTask(ChattyBrickTask):
 	vars = ['SYNOPSYS_DCSHELL','SYNOPSYS_DCSHELL_OPTIONS']
+	shell = True
+	run_str = 'BRICK_RESULTS=${gen.results_dir.abspath()} ${SYNOPSYS_DCSHELL} ${SYNOPSYS_DCSHELL_OPTIONS} -f ${gen.main_tcl_script.abspath()} -output_log_file ${gen.get_synopsys_dcshell_logfile().abspath()}'
 
-	def run(self):
-		logfile = self.generator.get_logdir_node().make_node('dc_shell_'+self.generator.name+'.log')
+	def check_output(self,ret,out):
+		for num,line in enumerate(out.split('\n')):
+			if line.find('Error:') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[6:]))
+				ret = 1
 
-		run_str = 'BRICK_RESULTS=%s %s %s -f %s -output_log_file %s' % (
-				self.generator.results_dir.abspath(),
-				self.env.SYNOPSYS_DCSHELL,
-				" ".join(self.env.SYNOPSYS_DCSHELL_OPTIONS),
-				self.generator.main_tcl_script.abspath(),
-				logfile.abspath()
-			)
-		out = ""
-		try:
-			out = self.generator.bld.cmd_and_log(run_str, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		except Exception as e:
-			#out = e.stdout + e.stderr
-			pass
-
-		#f = open(logfile.abspath(),'w')
-		#f.write(out)
-		#f.close()
-
-		return 0
+		return ret
 
 # vim: noexpandtab:
