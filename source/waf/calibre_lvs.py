@@ -69,19 +69,6 @@ ERC MAXIMUM VERTEX 4096
 
 DRC ICSTATION YES
 
-LVS POWER NAME
-"vdd"
-"vdd12a"
-"vdd12d"
-"vdd25a"
-"vdd25d"
-"vdd"
-LVS GROUND NAME
-"gnd"
-"gnda"
-"gndd"
-"gnd"
-
 """.format(self.layout_gds.abspath(),self.layout_cellname,self.source_netlist.abspath(),self.source_cellname,self.output_file_base.abspath(),self.svdb.abspath(),recognize_gates))
 
 	for line in getattr(self,'mixins',[]):
