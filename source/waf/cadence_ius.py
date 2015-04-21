@@ -1,6 +1,6 @@
-from verilog_scanner import verilog_scanner_task
+from verilog_scanner import scan_verilog_task
 from vhdl_scanner import vhdl_scanner
-import os,subprocess, sys
+import os,subprocess, sys, copy
 from brick_general import ChattyBrickTask
 
 from waflib import Task, TaskGen, Logs, Errors, Utils
@@ -32,27 +32,27 @@ def configure(conf):
 	if not conf.env.NCSIM_OPTIONS:
 		conf.env.NCSIM_OPTIONS = ['-64bit','-gui']
 
-TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-        ext_in       = ['.v', ],
-        ext_out      = ['.v.out',],
-        reentrant    = False,
-        scan         = verilog_scanner_task
-)
+#TaskGen.declare_chain(
+#        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+#        ext_in       = ['.v', ],
+#        ext_out      = ['.v.out',],
+#        reentrant    = False,
+#        scan         = scan_verilog_task
+#)
 
 TaskGen.declare_chain(
         rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.lib.src',],
         ext_out      = [ '.lib.src.out',],
         reentrant    = False,
-        scan         = verilog_scanner_task
+        scan         = scan_verilog_task
 )
 TaskGen.declare_chain(
         rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.vp', ],
         ext_out      = [ '.vp.out', ],
         reentrant    = False,
-        scan         = verilog_scanner_task
+        scan         = scan_verilog_task
 )
 TaskGen.declare_chain(
         rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
@@ -70,19 +70,19 @@ TaskGen.declare_chain(
         reentrant    = False,
 )
 
-TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-        ext_in       = ['.vams'],
-        ext_out      = ['.vams.out'],
-        reentrant    = False,
-)
+#TaskGen.declare_chain(
+#        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+#        ext_in       = ['.vams'],
+#        ext_out      = ['.vams.out'],
+#        reentrant    = False,
+#)
 
-TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-        ext_in       = ['.va'],
-        ext_out      = ['.va.out'],
-        reentrant    = False,
-)
+#TaskGen.declare_chain(
+#        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+#        ext_in       = ['.va'],
+#        ext_out      = ['.va.out'],
+#        reentrant    = False,
+#)
 
 TaskGen.declare_chain(
         rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
@@ -99,28 +99,17 @@ TaskGen.declare_chain(
 )
 
 class CadenceSvlogTask(Task.Task):
-	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_SV_LOGFILE}_${TGT[0]} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC[0].abspath()} && echo "${TGT}" > ${TGT}'
+	scan = scan_verilog_task
+	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
 
-@TaskGen.extension(".sv",".svh")
-def gen_svlog_task(self,node):
-	import types
-	# create task
-	input = [node]
-	output = [node.change_ext(node.suffix()+'.out')]
-	sv_task = self.create_task("CadenceSvlogTask",input,output)
-	sv_task.scan = types.MethodType(verilog_scanner_task,sv_task)
-	# <--- up to here the actual task has been created
-	# now we need to make some depencies explicit because
-	# the compiler needs those for packages --->
-	debug=False
-	dep_files,dep_types = self.verilog_scanner(input[0],debug)
-	additional_inputs = []
+class CadenceVlogTask(Task.Task):
+	scan = scan_verilog_task
+	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
 
-	for dep_file, dep_type in zip(dep_files,dep_types):
-		if dep_type == 'package':
-			additional_inputs.append(dep_file)
+class CadenceVamslogTask(Task.Task):
+	scan = scan_verilog_task
+	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_vams}'
 
-	sv_task.set_inputs(additional_inputs)
 
 
 class vlibTask(Task.Task):
@@ -153,6 +142,44 @@ def cds_ius_prepare(self):
 	if len(vid) > 0:
 		self.env.VERILOG_INC_DIRS = vid
 
+	if not hasattr(self,'name'):
+		self.name = Node.split_path(self.source[0])[-1]
+
+	if not hasattr(self,'source'):
+		raise Errors.ConfigurationErro('Please specify the source attribute for task generator '+getattr(self,'name','?noname? (and give it a name, too!)'))
+
+	# generate the logfile name
+	self.logfile_name = self.env.NCVLOG_SV_LOGFILE+'_'+self.name
+
+	# process source here, skip default process_source
+	self.source_vams = []
+	self.source_string_vams = []
+	self.source_sv   = []
+	self.source_string_sv   = []
+	self.source_v    = []
+	self.source_string_v    = []
+	for src in getattr(self,'source',[]):
+		if src.suffix() == '.vams' or src.suffix() == '.va':
+			self.source_string_vams.append(src.abspath())
+			self.source_vams.append(src)
+		elif src.suffix() == '.v':
+			self.source_string_v.append(src.abspath())
+			self.source_v.append(src)
+		elif src.suffix() == '.sv':
+			self.source_string_sv.append(src.abspath())
+			self.source_sv.append(src)
+
+	#print self.name
+	#print len(self.source_string_vams), len(self.source_string_v), len(self.source_string_sv)
+
+	if len(self.source_string_vams) > 0:
+		task = self.create_task("CadenceVamslogTask",self.source_vams,[])
+	if len(self.source_string_v) > 0:
+		task = self.create_task("CadenceVlogTask",self.source_v,[])
+	if len(self.source_string_sv) > 0:
+		task = self.create_task("CadenceSvlogTask",self.source_sv,[])
+
+	self.source = []
 
 #
 # Elaboration and Simulation tasks
