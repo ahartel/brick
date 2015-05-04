@@ -9,6 +9,11 @@ def configure(conf):
 	conf.load('brick_general')
 	conf.load('cadence_base')
 
+	try:
+		conf.env.IUS_DIR = os.environ['IUSDIR']
+	except KeyError:
+		conf.env.IUS_DIR = os.environ['IUS_DIR']
+
 	conf.env.NCVLOG_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog.log'
 	conf.env.NCVLOG_SV_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog_sv.log'
 	conf.env.NCVHDL_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvhdl.log'

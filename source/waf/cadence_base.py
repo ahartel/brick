@@ -2,10 +2,17 @@ import os,re,copy
 from waflib import Configure, TaskGen, Task, Logs, Errors
 
 def configure(conf):
+	conf.env.CDS_DIR = os.environ['CDSDIR']
+
+	conf.env['CDS_LIB_PATH'] = conf.bldnode.make_node('cds.lib').abspath()
+	conf.env['CDS_HDLVAR_PATH'] = conf.bldnode.make_node('hdl.var').abspath()
+	conf.env['CDS_LIBS_FLAT'] = {}
+
+@Configure.conf
+def parse_cds_libs(conf):
 	# Here, we check if all the libraries given in CDS_LIBS
 	# and all the include paths defined in CDS_LIB_INCLUDES
 	# exist and merge them into CDS_LIBS_FLAT.
-	conf.env['CDS_LIBS_FLAT'] = {}
 	found_absolute_path = False
 	try:
 		for key,value in conf.env['CDS_LIBS'].iteritems():
@@ -75,8 +82,6 @@ def configure(conf):
 				conf.env['CDS_LIBS'] = {}
 				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
 
-	conf.env['CDS_LIB_PATH'] = conf.bldnode.make_node('cds.lib').abspath()
-	conf.env['CDS_HDLVAR_PATH'] = conf.bldnode.make_node('hdl.var').abspath()
 
 @TaskGen.taskgen_method
 def get_cellview_path(self,libcellview,create_if_not_exists=False):
@@ -119,45 +124,59 @@ def get_cellview_path(self,libcellview,create_if_not_exists=False):
 		except TypeError:
 			Logs.error('Please specify the environment variable CDS_LIBS and make sure to include module cadence_base.')
 
+def split_cellview(cellview):
+	if cellview.find('.') == -1 or cellview.find(':') == -1:
+		raise Errors.WafError('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute.')
+
+	lib = None
+	cell = None
+	view = None
+
+	(lib,rest) = cellview.split(".")
+	(cell,view) = rest.split(":")
+
+	return (lib,cell,view)
+
 @TaskGen.taskgen_method
 def get_cadence_lib_cell_view_from_cellview(self):
 	lib = None
 	cell = None
 	view = None
 	try:
-		if self.cellview.find('.') == -1 or self.cellview.find(':') == -1:
-			Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_strmout\'.')
-			return
-		(lib,rest) = self.cellview.split(".")
-		(cell,view) = rest.split(":")
+		(lib, cell, view) = split_cellview(self.cellview)
 
 	except ValueError:
-		Logs.Error('For feature "cds_strmout", you need to specify a parameter "cellview" in the form of lib.cell:view')
+		Logs.Error('For taskgen "'+self.name+'", you need to specify a parameter "cellview" in the form of lib.cell:view')
 		return 1
 
-	return (lib,cell,view)
+	return (lib,fix_verilog_name(cell),view)
+
 class cdsWriteCdsLibs(Task.Task):
 	def run(self):
 		cdslib = open(self.outputs[0].abspath(),'w')
 		libdefs = open(self.outputs[1].abspath(),'w')
 
-		for key,value in self.env['CDS_LIBS'].iteritems():
-			if os.path.isabs(value):
-				cdslib.write('DEFINE '+key+' '+value+"\n")
-				libdefs.write('DEFINE '+key+' '+value+"\n")
-			else:
-				value = self.generator.path.find_dir(value)
-				cdslib.write('DEFINE '+key+' '+value.abspath()+"\n")
-				libdefs.write('DEFINE '+key+' '+value.abspath()+"\n")
+		try:
+			for key,value in self.env['CDS_LIBS'].iteritems():
+				if os.path.isabs(value):
+					cdslib.write('DEFINE '+key+' '+value+"\n")
+					libdefs.write('DEFINE '+key+' '+value+"\n")
+				else:
+					value = self.generator.path.find_dir(value)
+					cdslib.write('DEFINE '+key+' '+value.abspath()+"\n")
+					libdefs.write('DEFINE '+key+' '+value.abspath()+"\n")
 
-		for value in self.env['CDS_LIB_INCLUDES']:
-			if os.path.isabs(os.path.expandvars(value)):
-				cdslib.write('INCLUDE '+value+"\n")
-				libdefs.write('INCLUDE '+value+"\n")
-			else:
-				path = self.generator.path.find_node(os.path.expandvars(value)).abspath()
-				cdslib.write('INCLUDE '+path+"\n")
-				libdefs.write('INCLUDE '+path+"\n")
+			for value in self.env['CDS_LIB_INCLUDES']:
+				if os.path.isabs(os.path.expandvars(value)):
+					cdslib.write('INCLUDE '+value+"\n")
+					libdefs.write('INCLUDE '+value+"\n")
+				else:
+					path = self.generator.path.find_node(os.path.expandvars(value)).abspath()
+					cdslib.write('INCLUDE '+path+"\n")
+					libdefs.write('INCLUDE '+path+"\n")
+		except AttributeError:
+			Logs.warn('Not writing anything to cds.lib because env[\'CDS_LIBS\'] is not defined.')
+
 
 		cdslib.close()
 		libdefs.close()
@@ -197,5 +216,14 @@ def check_cds_libs(self,*k,**kw):
 			# INCLUDE
 			# TODO: implement
 			pass
+
+
+def fix_verilog_name(name):
+	name = re.sub(r'^(\d)(.+)', r'\\\1\2 ',name)
+	return name
+
+def fix_verilog_name_cellview(cellview):
+	ret = split_cellview(cellview)
+	return ret[0]+'.'+fix_verilog_name(ret[1])+':'+ret[2]
 
 # vim: noexpandtab
