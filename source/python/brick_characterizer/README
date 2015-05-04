@@ -1,0 +1,44 @@
+Some comments on the code in function check_timing() of class SetupHold_Char:
+
+hold search
+===========
+We want to get as far as possible to low values
+
+dir < 0 and delta_t < fail:
+	continue,
+	set upper threshold,
+	same step size
+dir < 0 and delta_t > fail:
+	switch direction,
+	set lower threshold,
+	halve step size
+dir > 0 and delta_t < fail:
+	switch direction,
+	set upper threshold,
+	halve step size
+dir > 0 and delta_t > fail:
+	continue,
+	set lower threshold,
+	same step size
+
+setup search
+============
+We want to get as far as possible to high values
+
+dir < 0 and delta_t < fail:
+	continue,
+	set lower threshold,
+	same step size
+dir < 0 and delta_t > fail:
+	switch direction,
+	set upper threshold,
+	halve step size
+dir > 0 and delta_t < fail:
+	switch direction,
+	set lower threshold,
+	halve step size
+dir > 0 and delta_t > fail:
+	continue,
+	set upper threshold,
+	same step size
+
