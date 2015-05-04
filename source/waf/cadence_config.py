@@ -1,4 +1,5 @@
-from waflib import Logs
+from waflib import Logs, TaskGen
+from cadence_base import fix_verilog_name, fix_verilog_name_cellview
 
 def configure(conf):
 	pass
@@ -7,9 +8,10 @@ from waflib import Task
 class CDSconfigTask(Task.Task):
 
 	def run(self):
+		cellname = fix_verilog_name(self.generator.cellname)
 		with open(self.outputs[0].abspath(),'w') as expand_cfg:
 			expand_cfg.write('//Revision 5\n')
-			expand_cfg.write('config ' + self.generator.cellname + ';\n')
+			expand_cfg.write('config ' + cellname + ';\n')
 			expand_cfg.write('design ' + self.generator.design + ';\n')
 			expand_cfg.write('liblist ' + self.generator.liblist + ';\n')
 			expand_cfg.write('\n')
@@ -26,7 +28,6 @@ class CDSconfigTask(Task.Task):
 
 		return 0
 
-from waflib import TaskGen
 @TaskGen.feature('cds_config')
 def gen_cds_config_task(self):
 	# save libraries that are used for this configuration
@@ -41,7 +42,7 @@ def gen_cds_config_task(self):
 		# add it to the string
 		self.liblist += lib+', '
 	# remove last comma
-	self.liblist = self.liblist.rstrip(',')
+	self.liblist = self.liblist.rstrip(', ')
 	# extract lib, cell and view
 	cellview = getattr(self,'view','')
 	if cellview.find('.') == -1 or cellview.find(':') == -1:
@@ -56,7 +57,7 @@ def gen_cds_config_task(self):
 		Logs.error('Please specify the viewlist as a list with the feature \'cds_config\'.')
 		return
 	# save top-level design
-	self.design = getattr(self,'design',self.libname+'.'+self.cellname+':schematic')
+	self.design = fix_verilog_name_cellview(getattr(self,'design',self.libname+'.'+self.cellname+':schematic'))
 	# mixins
 	self.mixins = "\n".join(getattr(self,'mixins',[]))
 
