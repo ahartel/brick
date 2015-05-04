@@ -1,5 +1,5 @@
 import re,os,copy
-from waflib import TaskGen, Logs, Node
+from waflib import TaskGen, Logs, Node, Errors
 
 # --------------------------------
 # Verilog and VHDL scanner methods
@@ -88,28 +88,40 @@ def get_sv_files_from_include_dirs(inputs,dirs):
 
     return cache
 
-def add_include_deps(cache,includes):
+def add_include_deps(stack,cache,includes):
+    # add_include_deps gets as arguments:
+    # 1. A stack object for recursion checking
+    # 2. The cache object
+    # 3. The list of includes that are used by the current file
     ret_deps = []
+    # iterate over all includes that the current file has
     for inc in includes:
+        if inc in stack:
+            for f in stack:
+                Logs.warn('File '+f+' includes:')
+            Logs.warn('File '+inc)
+            raise Errors.WafError('Inclusion recursion found!')
+        stack.append(inc)
         # add inc to current deps
         try:
             ret_deps.append(cache['nodes'][inc])
         except KeyError:
             Logs.warn('Included file '+inc+' not found in search paths.')
 
+        # recursively check for the includes included by this file's includes :)
         try:
-            ret_deps.extend(add_include_deps(cache,cache['includes_used'][inc]))
+            ret_deps.extend(add_include_deps(stack,cache,cache['includes_used'][inc]))
         except KeyError:
             Logs.warn('Included file '+inc+' not found in search paths.')
+
+        stack.pop()
 
     return ret_deps
 
 def scan_verilog_file(node,cache,debug=False):
     leaf = Node.split_path(node.abspath())[-1]
 
-    #if node.abspath() in stack:
-    #    raise RuntimeError("You have an include loop in your files, you should fix that. Package and include order detection? Not gonna happen!\nFile "+node.abspath()+" included by\n\t"+"\n\t".join(stack))
-    #stack.append(node.abspath())
+    stack = [node.abspath()]
 
     deps = []
     asdditionals = []
@@ -126,8 +138,7 @@ def scan_verilog_file(node,cache,debug=False):
         if not package_found:
             pass
 
-    # check includes
-    deps.extend(add_include_deps(cache,cache['includes_used'][leaf]))
+    deps.extend(add_include_deps(stack,cache,cache['includes_used'][leaf]))
 
 
     if debug:
