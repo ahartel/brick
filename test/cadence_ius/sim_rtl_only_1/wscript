@@ -1,0 +1,39 @@
+
+def configure(conf):
+    conf.load('cadence_ius')
+    conf.env.CDS_LIBS = {'mywork':'./mywork'}
+    conf.env.CDS_WORKLIB = 'mywork'
+
+def build(bld):
+    bld.load('brick_general')
+    bld ( features = 'cds_write_libs' )
+
+    bld (
+        name = 'compile_top',
+        source = bld.convert_string_paths(
+            [
+                '../../source/verilog/package.sv',
+                '../../source/verilog/tb.sv',
+                '../../source/verilog/top.sv',
+            ]),
+        features = 'cds_compile_hdl',
+        verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
+    )
+    bld.add_group()
+    bld (
+        toplevel = 'mywork.tb',
+        features = 'cds_elab',
+        always = True
+    )
+
+def run(bld):
+    bld (
+        features = 'ncsim',
+        toplevel = 'mywork.tb',
+    )
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+
