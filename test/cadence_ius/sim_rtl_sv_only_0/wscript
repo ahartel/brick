@@ -1,6 +1,4 @@
 def configure(conf):
-    conf.load('brick_general')
-    conf.load('cadence_base')
     conf.load('cadence_ius')
 
 def build(bld):
