@@ -15,8 +15,8 @@ def parse_cds_libs(tgen):
 	# exist and merge them into CDS_LIBS_FLAT.
 	found_absolute_path = False
 	try:
-		for key,value in tgen.env['CDS_LIBS'].iteritems():
-			tgen.env['CDS_LIBS_FLAT'][key] = value
+		for key,value in tgen.bld.env['CDS_LIBS'].iteritems():
+			tgen.bld.env['CDS_LIBS_FLAT'][key] = value
 			if os.path.isabs(value):
 				found_absolute_path = True
 				if not tgen.bld.root.find_dir(value):
@@ -24,10 +24,9 @@ def parse_cds_libs(tgen):
 			else:
 				if not tgen.path.find_dir(value):
 					tgen.bld.fatal('Cadence library '+key+' not found in '+value+'.')
-		#conf.msg('Checking for environment variable CDS_LIBS','Found '+str(len(conf.env['CDS_LIBS_FLAT']))+' libraries.')
+		Logs.info('Checking for environment variable CDS_LIBS...Found '+str(len(tgen.bld.env['CDS_LIBS_FLAT']))+' libraries.')
 	except AttributeError, e:
-		#conf.msg('Checking for environment variable CDS_LIBS','None')
-		pass
+		Logs.warn('Checking for environment variable CDS_LIBS...Found None')
 
 	if found_absolute_path:
 		Logs.warn('Defining absolute paths in conf.env.CDS_LIBS can lead to undefined behavior, especially when doing so for your worklib!')
@@ -158,7 +157,7 @@ class cdsWriteCdsLibs(Task.Task):
 		libdefs = open(self.outputs[1].abspath(),'w')
 
 		try:
-			for key,value in self.env['CDS_LIBS'].iteritems():
+			for key,value in self.generator.bld.env['CDS_LIBS'].iteritems():
 				if os.path.isabs(value):
 					cdslib.write('DEFINE '+key+' '+value+"\n")
 					libdefs.write('DEFINE '+key+' '+value+"\n")
@@ -167,7 +166,7 @@ class cdsWriteCdsLibs(Task.Task):
 					cdslib.write('DEFINE '+key+' '+value.abspath()+"\n")
 					libdefs.write('DEFINE '+key+' '+value.abspath()+"\n")
 
-			for value in self.env['CDS_LIB_INCLUDES']:
+			for value in self.generator.bld.env['CDS_LIB_INCLUDES']:
 				if os.path.isabs(os.path.expandvars(value)):
 					cdslib.write('INCLUDE '+value+"\n")
 					libdefs.write('INCLUDE '+value+"\n")
@@ -183,7 +182,7 @@ class cdsWriteCdsLibs(Task.Task):
 		libdefs.close()
 
 		hdlvar = open(self.outputs[2].abspath(),'w')
-		hdlvar.write('DEFINE WORK worklib')
+		hdlvar.write('DEFINE WORK '+self.env.CDS_WORKLIB+'\n')
 		hdlvar.close()
 
 		return 0

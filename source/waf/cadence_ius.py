@@ -37,6 +37,11 @@ def configure(conf):
 	if not conf.env.NCSIM_OPTIONS:
 		conf.env.NCSIM_OPTIONS = ['-64bit','-gui']
 
+
+	conf.find_program('ncsim',var='CDS_NCSIM')
+	conf.find_program('ncelab',var='CDS_NCELAB')
+	conf.find_program('ncvlog',var='CDS_NCVLOG')
+
 #TaskGen.declare_chain(
 #        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
 #        ext_in       = ['.v', ],
@@ -46,14 +51,14 @@ def configure(conf):
 #)
 
 TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.lib.src',],
         ext_out      = [ '.lib.src.out',],
         reentrant    = False,
         scan         = scan_verilog_task
 )
 TaskGen.declare_chain(
-        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.vp', ],
         ext_out      = [ '.vp.out', ],
         reentrant    = False,
@@ -105,15 +110,15 @@ TaskGen.declare_chain(
 
 class CadenceSvlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
 
 class CadenceVlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
 
 class CadenceVamslogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_vams}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_vams}'
 
 
 
@@ -192,7 +197,7 @@ def cds_ius_prepare(self):
 
 @Task.always_run
 class ncelabTask(ChattyBrickTask):
-	run_str  = 'ncelab ${gen.simulation_toplevel} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
+	run_str  = '${CDS_NCELAB} ${gen.simulation_toplevel} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
 	def check_output(self,ret,out):
 		for num,line in enumerate(out.split('\n')):
 			if line.find('ncelab: *E') == 0:
@@ -217,7 +222,7 @@ def cds_ius_elaborate(self):
 @Task.always_run
 class ncsimTask(ChattyBrickTask):
 	shell = True
-	run_str = 'ncsim -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}'
+	run_str = '${CDS_NCSIM} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}'
 
 
 from waflib.TaskGen import feature

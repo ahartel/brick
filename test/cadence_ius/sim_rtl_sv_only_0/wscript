@@ -1,3 +1,4 @@
+
 def configure(conf):
     conf.load('cadence_ius')
 
@@ -9,12 +10,12 @@ def build(bld):
         name = 'compile_top',
         source = bld.convert_string_paths(
             [
-                'package.sv',
-                'tb.sv',
-                'top.sv',
+                '../../source/verilog/package.sv',
+                '../../source/verilog/tb.sv',
+                '../../source/verilog/top.sv',
             ]),
         features = 'cds_compile_hdl',
-        verilog_search_paths = bld.convert_string_paths(['./'])
+        verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
     )
     bld.add_group()
     bld (
