@@ -1,2 +1,104 @@
-
 \chapter{Simulations with Cadence Incisive}
+\label{chap:incisive}
+\section{Incisive HDL simulation workflow}
+\marginnote{3-step process}
+The Cadence Incisive tool chain implements a three-step workflow for building
+\gls{HDL}/mixed-signal simulations. The tool chain consists of four tools (of
+which two implement the same of the three steps but for different languages):
+\begin{itemize}
+	\item \tf{ncvlog}/\tf{ncvhdl} for compiling design files
+	\item \tf{ncelab} for elaborating a design hierarchy
+	\item \tf{ncsim} for simulating an elaborated design hierarchy
+\end{itemize}
+
+\subsection{ncvlog}
+The Verilog compiler \tf{ncvlog} can be invoked the following way:
+\begin{lstbashplain}
+ ncvlog [options] filename { filename }
+\end{lstbashplain}
+For the Verilog family of \glspl{HDL}, there are three supported sub-types by
+\tf{ncvlog}:
+\begin{itemize}
+	\item Verilog 2001 can be compiled by invoking \tf{ncvlog} without any
+		particular option, just by giving a filename as an argument.
+	\item For SystemVerilog, the command line option \tf{-sv} needs to be
+		added.
+	\item For Verilog-AMS, the command line option \tf{-ams} needs to be
+		added.
+\end{itemize}
+
+\marginnote{worklib}
+All compiled code is compiled into proprietary design libraries. By default,
+\tf{ncvlog} creates a sub-directory called \ti{INCA\_libs} in the current
+working directory. This subdirectory contains a \gls{cds} called \ti{worklib},
+which is defined as the default working library and contains the actual binary
+file with all compiled code.
+
+This default behavior can be change by adding two files to the picture. These
+are called \ti{cds.lib} and \ti{hdl.var}.
+
+\marginnote{cds.lib}
+The \ti{cds.lib} file contains definitions of \glspl{cds}
+and aliases for these libraries. All \glspl{cds} that will be used in any
+Cadence software tool have to be defined in a \ti{cds.lib} file that has to be
+placed in the current working directory.
+
+\marginnote{hdl.var}
+The \ti{hdl.var} file can be used to configure the
+compilation process, for example by defining which of the existing \glspl{cds}
+should be used as the current working library. To change the currently used
+working library, the \tf{hdl.var} file has to contain the following code:
+\begin{minted}{verilog}
+DEFINE WORK ./worklib
+\end{minted}
+
+If any of the Verilog files that have to be compiled for a design use the
+\vkey{include} statement, the compiler has to know where to look for these
+files. By default, it will only check the current working directory. Other
+include directories can be specified with the following command.
+\begin{lstbashplain}
+ ncvlog -incdir directory [options] filename { filename }
+\end{lstbashplain}
+Multiple \tf{-incdir} options are legal.
+
+\subsection{ncelab}
+The design hierarchy elaboration (or just elaboration) process is implemented
+with the tool \tf{ncelab} which can be invoked the following way:
+\begin{lstbashplain}
+ ncelab [options] [Lib.]Cell[:View] { [Lib.]Cell[:View] }
+\end{lstbashplain}
+
+\marginnote{elaboration}
+During elaboration, \tf{ncelab} checks whether all instantiated modules (or
+interface/packages etc.) have previously been compiled into any of the present
+\glspl{cds}. It also checks whether port connections match and, in case of
+mixed-signal simulations, it automatically inserts interface modules
+(translating digital to analog signals and vice-versa) or inserts spice models. 
+
+The top-level module of the design hierarchy has to be specified by giving the
+module name in the Cadence-specific Library-Cell-View syntax. If a Verilog
+module called \ti{test} has been compiled into a library called \ti{worklib}.
+It can be specified like this: \tf{worklib.test:module}, or just
+\tf{worklib.test} (if there is only one view for this cell), or even simpler:
+\tf{test} (if there is only one library and one view).
+The view name \ti{module} is chosen by default for verilog files, however it
+can be modified with the \ti{VIEW\_MAP} option in the \ti{hdl.var} file.
+\begin{minted}{verilog}
+DEFINE VIEW_MAP (.v    => behav, \
+                 .rtl  => rtl, \
+                 .gate => gate, \
+                  +     => module)
+\end{minted}
+Here, the + operator represents any other extension.
+
+\subsection{ncsim}
+
+A simulation run has to be started with the \tf{ncsim} command in the following
+way:
+\begin{lstbashplain}
+ ncsim [options] [Lib.]Cell[:View]
+\end{lstbashplain}
+
+If \tf{ncsim} should be started with the \ti{Simvision} GUI, the option
+\tf{-gui} has to be passed to \tf{ncsim}.
+
