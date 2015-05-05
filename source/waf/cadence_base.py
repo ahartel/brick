@@ -2,43 +2,44 @@ import os,re,copy
 from waflib import Configure, TaskGen, Task, Logs, Errors
 
 def configure(conf):
-	conf.env.CDS_DIR = os.environ['CDSDIR']
+	#conf.env.CDS_DIR = os.environ['CDSDIR']
 
 	conf.env['CDS_LIB_PATH'] = conf.bldnode.make_node('cds.lib').abspath()
 	conf.env['CDS_HDLVAR_PATH'] = conf.bldnode.make_node('hdl.var').abspath()
 	conf.env['CDS_LIBS_FLAT'] = {}
 
-@Configure.conf
-def parse_cds_libs(conf):
+#@Configure.conf
+def parse_cds_libs(tgen):
 	# Here, we check if all the libraries given in CDS_LIBS
 	# and all the include paths defined in CDS_LIB_INCLUDES
 	# exist and merge them into CDS_LIBS_FLAT.
 	found_absolute_path = False
 	try:
-		for key,value in conf.env['CDS_LIBS'].iteritems():
-			conf.env['CDS_LIBS_FLAT'][key] = value
+		for key,value in tgen.env['CDS_LIBS'].iteritems():
+			tgen.env['CDS_LIBS_FLAT'][key] = value
 			if os.path.isabs(value):
 				found_absolute_path = True
-				if not conf.root.find_dir(value):
-					conf.fatal('Cadence library '+key+' not found in '+value+'.')
+				if not tgen.bld.root.find_dir(value):
+					tgen.bld.fatal('Cadence library '+key+' not found in '+value+'.')
 			else:
-				if not conf.path.find_dir(value):
-					conf.fatal('Cadence library '+key+' not found in '+value+'.')
-		conf.msg('Checking for environment variable CDS_LIBS','Found '+str(len(conf.env['CDS_LIBS_FLAT']))+' libraries.')
+				if not tgen.path.find_dir(value):
+					tgen.bld.fatal('Cadence library '+key+' not found in '+value+'.')
+		#conf.msg('Checking for environment variable CDS_LIBS','Found '+str(len(conf.env['CDS_LIBS_FLAT']))+' libraries.')
 	except AttributeError, e:
-		conf.msg('Checking for environment variable CDS_LIBS','None')
+		#conf.msg('Checking for environment variable CDS_LIBS','None')
+		pass
 
 	if found_absolute_path:
 		Logs.warn('Defining absolute paths in conf.env.CDS_LIBS can lead to undefined behavior, especially when doing so for your worklib!')
 
 	try:
 		# copy cds_includes
-		my_includes = copy.copy(conf.env['CDS_LIB_INCLUDES'])
+		my_includes = copy.copy(tgen.env['CDS_LIB_INCLUDES'])
 		# start processing stack
 		include = my_includes.pop()
 		while include:
 			if not os.path.exists(os.path.expandvars(include)):
-				conf.fatal('Cadence library include '+include+' does not exist.')
+				tgen.bld.fatal('Cadence library include '+include+' does not exist.')
 			else:
 				with open(os.path.expandvars(include),'r') as include_file:
 					for line in include_file.readlines():
@@ -46,7 +47,7 @@ def parse_cds_libs(conf):
 							continue
 						define = re.search('DEFINE\s+(\w+)\s+([\.\w\$\/]+)',line)
 						if define:
-							conf.env['CDS_LIBS_FLAT'][define.group(1)] = os.path.expandvars(define.group(2))
+							tgen.bld.env['CDS_LIBS_FLAT'][define.group(1)] = os.path.expandvars(define.group(2))
 						else:
 							inc = re.search('INCLUDE\s+([\.\w\$\/]+)',line)
 							if inc:
@@ -59,34 +60,34 @@ def parse_cds_libs(conf):
 		pass
 
 	# if CDS_LIBS has not been defined, define it
-	if len(conf.env['CDS_LIBS']) == 0:
-		conf.env['CDS_LIBS'] = {}
+	if len(tgen.bld.env['CDS_LIBS']) == 0:
+		tgen.bld.env['CDS_LIBS'] = {}
 
-	if not conf.env.CDS_WORKLIB:
-		conf.env.CDS_WORKLIB = 'worklib'
-		worklib = conf.path.get_bld().make_node('worklib')
+	# if worklib hasn't been specified, do it
+	if not 'CDS_WORKLIB' in tgen.bld.env:
+		tgen.bld.env['CDS_WORKLIB'] = 'worklib'
+		worklib = tgen.bld.path.get_bld().make_node('worklib')
 		if not os.path.isdir(worklib.abspath()):
 			worklib.mkdir()
 
-		if not conf.env['CDS_LIBS_FLAT'].has_key('worklib'):
+		if not tgen.env['CDS_LIBS_FLAT'].has_key('worklib'):
 			try:
-				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
+				tgen.bld.env['CDS_LIBS']['worklib'] = worklib.path_from(tgen.bld.path)
 			except TypeError:
-				conf.env['CDS_LIBS'] = {}
-				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
-			conf.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(conf.path)
-		elif not conf.env['CDS_LIBS'].has_key('worklib'):
+				tgen.bld.env['CDS_LIBS'] = {}
+				tgen.bld.env['CDS_LIBS']['worklib'] = worklib.path_from(tgen.bld.path)
+			tgen.bld.env['CDS_LIBS_FLAT']['worklib'] = worklib.path_from(tgen.bld.path)
+		elif not tgen.bld.env['CDS_LIBS'].has_key('worklib'):
 			try:
-				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
+				tgen.bld.env['CDS_LIBS']['worklib'] = worklib.path_from(tgen.bld.path)
 			except TypeError:
-				conf.env['CDS_LIBS'] = {}
-				conf.env['CDS_LIBS']['worklib'] = worklib.path_from(conf.path)
+				tgen.bld.env['CDS_LIBS'] = {}
+				tgen.bld.env['CDS_LIBS']['worklib'] = worklib.path_from(tgen.bld.path)
 
 
 @TaskGen.taskgen_method
 def get_cellview_path(self,libcellview,create_if_not_exists=False):
-	# get an instance of the root node
-	# ugly but hackalicious
+	# get an instance of the root node (ugly)
 	up = "../"
 	for i in range(self.path.height()-1):
 		up += "../"
@@ -193,6 +194,7 @@ def cadence_get_cdslib_base(self):
 
 @TaskGen.feature("cds_write_libs")
 def write_cds_lib(self):
+	parse_cds_libs(self)
 	# write cds.lib file to toplevel directory
 	cds_lib_path = self.cadence_get_cdslib_base().make_node('cds.lib')
 	lib_defs_path = self.cadence_get_cdslib_base().make_node('lib.defs')
