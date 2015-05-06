@@ -1,1 +1,29 @@
-\chapter{Introdcution}
+\chapter{Introduction}
+The \ti{brick} project is a set of python scripts intened to facilitate the
+development of mixed-signal \Glspl{ASIC}. It was developped at the
+Electronic Vision(s) Group of Heidelberg University.
+
+\ti{brick} is based on the \ti{Waf} build system. \ti{Waf} is best explained by
+citing the Waf book \cite{wafbook}:
+\begin{displayquote}
+	The Waf framework is somewhat different from traditional build systems in
+	the sense that it does not provide support for a specific language. Rather,
+	the focus is to support the major usecases encountered when working on a
+	software project. As such, it is essentially a library of components that
+	are suitable for use in a build system, with an emphasis on extensibility.
+	Although the default distribution contains various plugins for several
+	programming languages and different tools (c, d, ocaml, java, etc), it is
+	by no means a frozen product. Creating new extensions is both a standard
+	and a recommended practice.
+\end{displayquote}
+
+Encouraged by this description of \ti{Waf}, several extensions to it have been
+created. These extensions are described in \cref{chap:bricktools}.
+For a detailed introduction to \ti{Waf}, the interested reader is referred to
+the online version of the \ti{Waf} book
+\cite{wafbook}\footnote{\url{https://waf.io/book/}}. A short introduction to
+\ti{Waf} is given in \cref{chap:waf}.
+\Cref{chap:incisive} describes the simulation tools that come with Cadence
+Incisive and explains why it makes sense to simplify some tasks by introducing
+\ti{Waf} extensions. \Cref{chap:modelsim} does the same for the Modeltech
+simulation software package.

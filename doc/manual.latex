@@ -2,27 +2,48 @@
 \KOMAoptions{fontsize=12pt}
 \KOMAoptions{paper=a4}
 \KOMAoptions{draft=true}
+\usepackage{color}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
-\usepackage[colorlinks=true,linkcolor=black,citecolor=black,filecolor=black,urlcolor=black,plainpages=false,pdfpagelabels,breaklinks=true]{hyperref}
 \usepackage{todonotes}
 \usepackage{tikz-timing}
 \usepackage{listings}
 \usepackage{makeidx}                              % index of key words
 \usepackage{csquotes}
 \usepackage{minted}
-\newcommand{\lstwscript}{\begin{minted}[mathescape,linenos,
-               numbersep=5pt,
-               gobble=4,
-               frame=lines,
-			   framesep=2mm]{python}}
+\usepackage{scrhack}
+\usepackage{hyphenat}
+\usepackage{marginnote}
+\usepackage[style=alphabetic,backend=biber]{biblatex}
+\usepackage[colorlinks,linkcolor=blue]{hyperref}
+\usepackage{cleveref}
+\usepackage[toc]{glossaries}
+\setglossarystyle{listgroup}
+\makeglossaries
+\input{glossary.tex}
+\addbibresource{mybib.bib}
 
-\newcommand{\lstbash}{\begin{minted}[linenos,
-	numbersep=5pt,gobble=1,frame=lines,framesep=2mm]{bash}}
+\newenvironment{lstwscript}{%
+\VerbatimEnvironment
+\begin{minted}[mathescape,linenos,numbersep=5pt,frame=lines,framesep=2mm]{python}}
+{%
+\end{minted}}
+
+\newenvironment{lstbash}{%
+\VerbatimEnvironment
+\begin{minted}[linenos,numbersep=5pt,frame=lines,framesep=2mm]{bash}}
+{%
+\end{minted}}
+
+\newenvironment{lstbashplain}{%
+\VerbatimEnvironment
+\begin{minted}[numbersep=5pt]{bash}}
+{%
+\end{minted}}
 
 \makeindex
 \title{Multi-user mixed-signal ASIC workflow}
-\subtitle{Stuff I learned about making ASICs}
+%\subtitle{Stuff I learned about making ASICs}
 \author{Andreas Hartel}
 %\institution{Heidelberg University}
 \lstdefinestyle{BashInputStyle}{
@@ -38,16 +59,13 @@
   xleftmargin=0.1\linewidth
 }
 % Custom colors
-\usepackage{color}
 \definecolor{deepblue}{rgb}{0,0,0.5}
 \definecolor{deepred}{rgb}{0.6,0,0}
 \definecolor{deepgreen}{rgb}{0,0.5,0}
 
-\newcommand{\wscript}{\texttt{wscript} }
-\newcommand{\ncvlog}{\texttt{ncvlog} }
-\newcommand{\ncelab}{\texttt{ncelab} }
-\newcommand{\ncsim}{\texttt{ncsim} }
-\newcommand{\brick}{\texttt{brICk}}
+\newcommand{\tf}[1]{\texttt{#1}}
+\newcommand{\ti}[1]{\textit{#1}}
+\newcommand{\vkey}[1]{`{}#1}
 
 \begin{document}
 \maketitle
@@ -55,14 +73,14 @@
 \cleardoublepage
 \dictum[Clarence "Kelly" Johnson]{Keep it simple, stupid!}
 \include{introduction}
-\include{waf_usage}
 \include{incisive}
 \include{modelsim}
+\include{waf_usage}
 \include{recipes}
 \begin{appendix}
 	\include {repository}
 	%\include{multi_repo}
-	%\include{brick_tools}
+	\include{brick_tools}
 
 %\chapter{timing}
 %\def \degr {${}^\circ $}
@@ -134,5 +152,7 @@
 
 \backmatter
 \printindex
+\printbibliography
+\printglossaries
 \end{document}
 

@@ -1,0 +1,28 @@
+\chapter{Usage of existing \tf{brICk} tools}
+\label{chap:bricktools}
+\section{brick init}
+
+command line options: --users, --units, --rundirs
+
+Gernerates a basic directory structure with given rundirs, user dirs and unit dirs.
+
+Every user dir already contains some basic cds and cadence files.
+
+Every unit dir already contains the subdirectories cdslib, source, abstract and constraints.
+
+Every rundir contains an empty wscript and a link to the waf binary which is also copied to the project root.
+
+Also creates the doc directory.
+
+A .gitignore file is also already created.
+
+\section{synopsys\_dc\_shell}
+
+Make use of environment variables:
+\begin{itemize}
+	\item \lstinline[style=BashInputStyle]'$BRICK_RESULTS'\\
+		You can write your results and reports to this directory.
+	\item \lstinline[style=BashInputStyle]'$DC_SHELL_SOURCE_TCL'\\
+		You should source this file to load the sources that are passed to the task generator.
+\end{itemize}
+

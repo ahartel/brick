@@ -1,77 +1,120 @@
 \chapter{Simulation Recipes}
+To run and test the examples in this chapter, you can clone the \ti{brICk}
+repository\footnote{git clone git@gitviz.kip.uni-heidelberg.de/brick.git} and
+go to the path that is specified for each example.
+
+Prior to running any example you need to check that all \ti{Cadence Incisive}
+programs are accessible and you need to add the tool paths to your PYTHONPATH
+environment variable:
+\begin{lstbashplain}
+export PYTHONPATH=$PYTHONPATH:/your_brick_path/source/waf:\
+/your_brick_path/source/python
+\end{lstbashplain}
+
 \section{Cadence Incisive}
-\subsection{Basic RTL simulation \wscript}
-The most basic \wscript should look like this:
-\lstwscript
-	def configure(cfg):
-        cfg.load('brick_general')
-        cfg.load('cadence_base')
-        cfg.load('cadence_ius')
- 
-    def build(bld):
-        bld.load('brick_general')
-        bld ( features = 'cds_write_libs' )
-     
-        bld (
-            name = 'compile_top',
-            features = 'cds_compile_hdl',
-            source = bld.convert_string_paths(
-                [
-                    source_file0,
-                    source_file1,
-                ]),
-            verilog_search_paths = bld.convert_string_paths(
-                [
-                    search_path0,
-                    search_path1,
-                ]
-            ),
-        )
-     
-        bld.add_group()
-     
-        bld (
-            toplevel = 'worklib.tb_top',
-            features = 'cds_elab',
-            always = True
-        )
- 
-    def run(bld):
-        bld (
-            features = 'ncsim',
-            toplevel = 'worklib.tb_top',
-        )
- 
-    from waflib.Build import BuildContext
-    class one(BuildContext):
-        cmd = 'run'
-        fun = 'run'
-
-\end{minted}
-
-This \wscript sets up calls to \ncvlog for each file given to the \enquote{compile\_top} task generator.
-Afterwards it runs ncelab on the given toplevel unit.
-When typing \lstinline[style=BashInputStyle]'./waf run', \ncsim is invoked. By default, this starts a GUI version of \ncsim.
-\subsection{Disabling the \ncsim GUI}
-You can modify this behavior by adding the following line to the end of the configure step.
-\lstwscript
+For background information about simulating \gls{HDL} design with \ti{Cadence
+Incisive} please see \cref{chap:incisive}.
+\subsection{Basic RTL simulation}
+The most basic \tf{wscript} for RTL simulation with \ti{Cadence Incisive} is
+shown in the following listing. A running example of it can be found in the
+folder \tf{test/cadence\_ius/sim\_rtl\_only\_0}.
+\begin{lstwscript}
 def configure(cfg):
-	...
-	cfg.env['NCSIM_OPTIONS'].remove('-gui')
-\end{minted}
+    cfg.load('cadence_ius')
 
-\subsection{Changing the worklib's name}
+def build(bld):
+    bld.load('brick_general')
+    bld ( features = 'cds_write_libs' )
+ 
+    bld (
+        name = 'compile_top',
+        features = 'cds_compile_hdl',
+        source = bld.convert_string_paths(
+            [
+                source_file0,
+                source_file1,
+            ]),
+        verilog_search_paths = bld.convert_string_paths(
+            [
+                search_path0,
+                search_path1,
+            ]
+        ),
+    )
+ 
+    bld.add_group()
+ 
+    bld (
+        toplevel = 'worklib.tb_top',
+        features = 'cds_elab',
+        always = True
+    )
 
-\todo{Make a cake}\missingfigure{Hallo}
+def run(bld):
+    bld (
+        features = 'ncsim',
+        toplevel = 'worklib.tb_top',
+    )
 
-\subsection{Schematic-Based Mixed-signal RTL simulation \wscript}
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+}
+\end{lstwscript}
 
-\subsection{Layout-Based Mixed-signal RTL simulation \wscript}
+This \tf{wscript} sets up calls to \tf{ncvlog} for all files given to the
+\ti{compile\_top} task generator. Afterwards it runs \tf{ncelab} on the given
+toplevel unit. When typing \lstinline[style=BashInputStyle]'./waf run',
+\tf{ncsim} is invoked. By default, this starts a GUI version of \tf{ncsim}.
+\subsubsection{Disabling the \tf{ncsim} GUI}
+You can also start \tf{ncsim} without a GUI, by modifying the \tf{configure}
+function of the wscript like this:
+\begin{lstwscript}
+def configure(cfg):
+    cfg.load('cadence_ius')
+    cfg.env['NCSIM_OPTIONS'].remove('-gui')
+\end{lstwscript}
+
+\subsubsection{Changing the worklib's name}
+Any working library that is explicitely given by the user (i.e. written into
+the \tf{hdl.var} file has to be listed in the \tf{cds.lib} file as well and the
+directory that contains the library has to be created by the user.
+
+To tell the \ti{Incisive} tools to use a different working library the
+\tf{wscript} has to be modified like this:
+\begin{lstwscript}
+def configure(conf):
+    cfg.load('cadence_ius')
+    cfg.env.CDS_LIBS = ['./myworklib']
+    cfg.env.CDS_WORKLIB = 'myworklib'
+def build(bld):
+    ...
+    bld (
+        toplevel = 'mywork.tb_top',
+        features = 'cds_elab',
+        always = True
+    )
+
+def run(bld):
+    bld (
+        features = 'ncsim',
+        toplevel = 'worklib.tb_top',
+    )
+
+...
+\end{lstwscript}
+This example code can be found in the folder
+\tf{test/cadence\_ius/sim\_rtl\_only\_0} of the repository.
+
+\subsection{Schematic-Based Mixed-signal RTL simulation}
+
+\subsection{Layout-Based Mixed-signal RTL simulation}
 
 \section{Modelsim}
-\subsection{Basic RTL simulation \wscript}
+\subsection{Basic RTL simulation}
 
-\lstwscript
+\begin{lstwscript}
 def configure(conf):
     conf.load('brick_general')
     conf.load('modelsim')
@@ -101,6 +144,6 @@ from waflib.Build import BuildContext
 class one(BuildContext):
     cmd = 'run'
     fun = 'run'
-\end{minted}
+\end{lstwscript}
 
 
