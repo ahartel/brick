@@ -1,0 +1,66 @@
+import os
+
+def configure(conf):
+    conf.env.CDS_MIXED_SIGNAL = True
+
+    conf.load('cadence_ius')
+
+    conf.env['NCELAB_OPTIONS'].extend([
+        '-amsconnrules', 'ConnRules_12V_full_fast', 'ConnRules_12V_full_fast',
+        '-access', '+r',
+        '-iereport'
+    ])
+
+def build(bld):
+    bld.load('brick_general')
+    bld ( features = 'cds_write_libs' )
+
+    bld (
+        name = 'compile_top',
+        source = bld.convert_string_paths(
+            [
+                '../../source/verilog/package.sv',
+                '../../source/verilog/tb.sv',
+                '../../source/verilog/top.sv',
+                '../../source/verilog-ams/inverter.vams',
+                '../../source/verilog-ams/inverter_array.vams',
+                '../../source/verilog-ams/ConnRules12.vams',
+            ]),
+        features = 'cds_compile_hdl',
+        verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
+    )
+    bld.add_group()
+    bld (
+        toplevel = 'worklib.tb',
+        features = 'cds_elab',
+        always = True
+    )
+
+def run(bld):
+    bld (
+        features = 'ncsim',
+        toplevel = 'worklib.tb',
+        stop_time = '100n',
+    )
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+
+
+#ELAB_OPTIONS'].extend([                                        
+# 95             '-amsfastspice',
+# 96             '-modelpath', os.environ['PROJECT_ROOT']+'/env/include_all_models.scs',
+# 97             #'-libverbose',
+# 98             '-iereport',
+# 99             'cds_globals',
+#100         ])
+#101 
+#102         conf.env['NCSIM_OPTIONS'].extend([
+#103             '-analogControl', '../amsControl.scs',
+#104         ])
+#105 
+
+
+

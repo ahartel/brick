@@ -2,11 +2,11 @@
 
 module tb();
 	logic clk;
-	logic a;
+	logic[1:0] a;
 
 	initial begin
 		clk = 0;
-		$deposit(a,0);
+		$deposit(a,2'b00);
 		#(`WAIT_TIME);
 		$finish();
 	end

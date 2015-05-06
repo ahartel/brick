@@ -15,6 +15,8 @@ def build(bld):
                 '../../source/verilog/package.sv',
                 '../../source/verilog/tb.sv',
                 '../../source/verilog/top.sv',
+                '../../source/verilog/inverter.sv',
+                '../../source/verilog/inverter_array.sv',
             ]),
         features = 'cds_compile_hdl',
         verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])

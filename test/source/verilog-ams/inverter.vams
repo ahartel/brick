@@ -1,0 +1,13 @@
+`include "disciplines.vams"
+
+module inverter(in,out);
+	input in;
+	output out;
+	electrical in,out;
+
+	parameter real supply_voltage = 1.2;
+
+	analog begin
+		V(out) <+ transition(supply_voltage - V(in),0,100p,100p);
+	end
+endmodule

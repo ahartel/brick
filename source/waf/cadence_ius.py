@@ -9,10 +9,19 @@ def configure(conf):
 	conf.load('brick_general')
 	conf.load('cadence_base')
 
+	# check for IUSDIR environment variable
 	try:
 		conf.env.IUS_DIR = os.environ['IUSDIR']
 	except KeyError:
 		conf.env.IUS_DIR = os.environ['IUS_DIR']
+
+	# if mixed-signal is enabled, add connectlib
+	if conf.env.CDS_MIXED_SIGNAL:
+		try:
+			conf.env.CDS_LIBS['connectLib'] = os.environ['IUSDIR']+'/tools/affirma_ams/etc/connect_lib/connectLib'
+		except TypeError:
+			conf.env.CDS_LIBS = {}
+			conf.env.CDS_LIBS['connectLib'] = os.environ['IUSDIR']+'/tools/affirma_ams/etc/connect_lib/connectLib'
 
 	conf.env.NCVLOG_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog.log'
 	conf.env.NCVLOG_SV_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog_sv.log'
@@ -34,6 +43,8 @@ def configure(conf):
 		conf.env.NCVHDL_OPTIONS = ['-64bit','-use5x']
 	if not conf.env.NCELAB_OPTIONS:
 		conf.env.NCELAB_OPTIONS = ['-64bit','-timescale','1ns/10ps','-access','+r']
+	if conf.env.CDS_MIXED_SIGNAL:
+		conf.env.NCELAB_OPTIONS.extend(['-discipline', 'logic'])
 	if not conf.env.NCSIM_OPTIONS:
 		conf.env.NCSIM_OPTIONS = ['-64bit','-gui']
 
@@ -42,13 +53,6 @@ def configure(conf):
 	conf.find_program('ncelab',var='CDS_NCELAB')
 	conf.find_program('ncvlog',var='CDS_NCVLOG')
 
-#TaskGen.declare_chain(
-#        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-#        ext_in       = ['.v', ],
-#        ext_out      = ['.v.out',],
-#        reentrant    = False,
-#        scan         = scan_verilog_task
-#)
 
 TaskGen.declare_chain(
         rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
@@ -79,20 +83,6 @@ TaskGen.declare_chain(
         scan         = vhdl_scanner,
         reentrant    = False,
 )
-
-#TaskGen.declare_chain(
-#        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-#        ext_in       = ['.vams'],
-#        ext_out      = ['.vams.out'],
-#        reentrant    = False,
-#)
-
-#TaskGen.declare_chain(
-#        rule         = 'ncvlog -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_VAMS_LOGFILE}_${TGT[0]} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
-#        ext_in       = ['.va'],
-#        ext_out      = ['.va.out'],
-#        reentrant    = False,
-#)
 
 TaskGen.declare_chain(
         rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
@@ -222,13 +212,24 @@ def cds_ius_elaborate(self):
 @Task.always_run
 class ncsimTask(ChattyBrickTask):
 	shell = True
-	run_str = '${CDS_NCSIM} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS}'
+	run_str = '${CDS_NCSIM} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${NCSIM_OPTIONS} ${gen.ANALOG_CONTROL}'
 
 
-from waflib.TaskGen import feature
-@feature('ncsim')
-def modelsim_run(self):
+@TaskGen.feature('ncsim')
+def ncsim_run(self):
 	self.env.SIMULATION_TOPLEVEL = self.toplevel
+	self.ANALOG_CONTROL = ''
+	if self.bld.env.CDS_MIXED_SIGNAL:
+		# create amsControl.scs
+		analog_control_file = self.path.get_bld().make_node('amsControl.scs')
+		f = open(analog_control_file.abspath(),'w')
+		stop_time = getattr(self,'stop_time','100u')
+		f.write('tran tran stop='+stop_time+'\n')
+		for line in getattr(self,'analog_control_mixin',[]):
+			f.write(line+'\n')
+		f.close()
+		self.ANALOG_CONTROL = '-analogControl '+analog_control_file.abspath()
+
 	self.create_task('ncsimTask',None,None)
 
 # vim: noexpandtab:

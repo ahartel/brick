@@ -1,0 +1,10 @@
+`include "disciplines.vams"
+
+module inverter_array(in,out);
+	input[1:0] in;
+	output[1:0] out;
+	electrical[1:0] in,out;
+
+	inverter inv_0(in[0],out[0]);
+	inverter inv_1(in[1],out[1]);
+endmodule
