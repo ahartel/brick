@@ -7,6 +7,7 @@ def configure(conf):
 	conf.env['CDS_LIB_PATH'] = conf.bldnode.make_node('cds.lib').abspath()
 	conf.env['CDS_HDLVAR_PATH'] = conf.bldnode.make_node('hdl.var').abspath()
 	conf.env['CDS_LIBS_FLAT'] = {}
+	conf.env['CDS_HDL_VIEW_MAP'] = {'.vams': 'behav','+':'module'}
 
 #@Configure.conf
 def parse_cds_libs(tgen):
@@ -183,6 +184,10 @@ class cdsWriteCdsLibs(Task.Task):
 
 		hdlvar = open(self.outputs[2].abspath(),'w')
 		hdlvar.write('DEFINE WORK '+self.env.CDS_WORKLIB+'\n')
+		hdlvar.write('DEFINE VIEW_MAP ( \\\n')
+		for k,v in self.generator.bld.env['CDS_HDL_VIEW_MAP'].iteritems():
+			hdlvar.write(k+' => '+v+', \\\n')
+		hdlvar.write(')\n')
 		hdlvar.close()
 
 		return 0
