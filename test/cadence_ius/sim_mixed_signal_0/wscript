@@ -7,8 +7,7 @@ def configure(conf):
 
     conf.env['NCELAB_OPTIONS'].extend([
         '-amsconnrules', 'ConnRules_12V_full_fast', 'ConnRules_12V_full_fast',
-        '-access', '+r',
-        '-iereport'
+        '-libverbose',
     ])
 
 def build(bld):
@@ -24,7 +23,7 @@ def build(bld):
                 '../../source/verilog/top.sv',
                 '../../source/verilog-ams/inverter.vams',
                 '../../source/verilog-ams/inverter_array.vams',
-                '../../source/verilog-ams/ConnRules12.vams',
+                os.environ['BRICK_DIR']+'/source/verilog-ams/ConnRules12.vams'
             ]),
         features = 'cds_compile_hdl',
         verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
