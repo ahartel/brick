@@ -100,15 +100,15 @@ TaskGen.declare_chain(
 
 class CadenceSvlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
 
 class CadenceVlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
 
 class CadenceVamslogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile_name} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_vams}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_vams}'
 
 
 
@@ -141,7 +141,7 @@ def cds_ius_prepare(self):
 		raise Errors.ConfigurationError('Please specify the source attribute for task generator '+getattr(self,'name','?noname? (and give it a name, too!)'))
 
 	# generate the logfile name
-	self.logfile_name = self.env.NCVLOG_SV_LOGFILE+'_'+self.name
+	self.logfile = self.env.NCVLOG_SV_LOGFILE+'_'+self.name
 
 	# process source here, skip default process_source
 	self.source_vams = []
