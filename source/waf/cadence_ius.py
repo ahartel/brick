@@ -112,21 +112,13 @@ class CadenceVamslogTask(Task.Task):
 
 
 
-class vlibTask(Task.Task):
-	def run(self):
-		run_str = 'mkdir -p ${TGT[0].parent.abspath()} && touch ${TGT[0].abspath()}'
-		(f, dvars) = Task.compile_fun(run_str, False)
-		return f(self)
-
 @TaskGen.before('process_source')
 @TaskGen.feature('cds_compile_hdl')
 def cds_ius_prepare(self):
 	# save worklib to env
 	self.env.WORKLIB = getattr(self,'worklib',self.env.CDS_WORKLIB)
 	# create task to generate worklib (if necessary)
-	worklib = self.path.get_bld().make_node(self.env.WORKLIB+'/.oalib')
-	if not getattr(self,'worklib_task',None):
-		self.worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
+	self.check_create_worklib_task(self.env.WORKLIB)
 	#
 	# transform search paths to the format used for ncvlog
 	#
