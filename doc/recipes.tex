@@ -1,20 +1,17 @@
-\chapter{Simulation Recipes}
-To run and test the examples in this chapter, you can clone the \ti{brICk}
-repository\footnote{git clone git@gitviz.kip.uni-heidelberg.de/brick.git} and
-go to the path that is specified for each example.
+\chapter{Recipes}
+\label{chap:recipes}
+To run and test the examples in this chapter, you can go to to the path that is
+specified for each example.
 
 Prior to running any example you need to check that all \ti{Cadence Incisive}
-programs are accessible and you need to add the tool paths to your PYTHONPATH
-environment variable:
-\begin{lstbashplain}
-export PYTHONPATH=$PYTHONPATH:/your_brick_path/source/waf:\
-/your_brick_path/source/python
-\end{lstbashplain}
+programs are accessible and you need to follow the instructions in
+\cref{sec:install}.
 
-\section{Cadence Incisive}
+\section{Simulating with Cadence Incisive}
 For background information about simulating \gls{HDL} design with \ti{Cadence
 Incisive} please see \cref{chap:incisive}.
 \subsection{Basic RTL simulation}
+\label{sec:ius_basic_rtl}
 The most basic \tf{wscript} for RTL simulation with \ti{Cadence Incisive} is
 shown in the following listing. A running example of it can be found in the
 folder \tf{test/cadence\_ius/sim\_rtl\_only\_0}.
@@ -31,13 +28,13 @@ def build(bld):
         features = 'cds_compile_hdl',
         source = bld.convert_string_paths(
             [
-                source_file0,
-                source_file1,
+                'source_file0',
+                'source_file1',
             ]),
         verilog_search_paths = bld.convert_string_paths(
             [
-                search_path0,
-                search_path1,
+                'search_path0',
+                'search_path1',
             ]
         ),
     )
@@ -65,7 +62,7 @@ class one(BuildContext):
 
 This \tf{wscript} sets up calls to \tf{ncvlog} for all files given to the
 \ti{compile\_top} task generator. Afterwards it runs \tf{ncelab} on the given
-toplevel unit. When typing \lstinline[style=BashInputStyle]'./waf run',
+toplevel unit. When typing \mint{bash}'./waf run',
 \tf{ncsim} is invoked. By default, this starts a GUI version of \tf{ncsim}.
 \subsubsection{Disabling the \tf{ncsim} GUI}
 You can also start \tf{ncsim} without a GUI, by modifying the \tf{configure}
@@ -88,6 +85,7 @@ def configure(conf):
     cfg.load('cadence_ius')
     cfg.env.CDS_LIBS = ['./myworklib']
     cfg.env.CDS_WORKLIB = 'myworklib'
+
 def build(bld):
     ...
     bld (
@@ -107,37 +105,60 @@ def run(bld):
 This example code can be found in the folder
 \tf{test/cadence\_ius/sim\_rtl\_only\_0} of the repository.
 
-\subsection{Schematic-Based Mixed-signal RTL simulation}
+It is worth noting that the workflow presented in this subsection also has to
+be used for \gls{RVM}.
 
-\subsection{Layout-Based Mixed-signal RTL simulation}
-
-\section{Modelsim}
-\subsection{Basic RTL simulation}
+\clearpage
+\subsection{Behavioral-Based Mixed-signal simulation}
+If you want to use Verilog-AMS behaioral models that contain analog blocks or
+signals of discipline electrical, the following \tf{wscript} snippet can help
+you to set up a simulation.
 
 \begin{lstwscript}
+import os
+
 def configure(conf):
-    conf.load('brick_general')
-    conf.load('modelsim')
+    conf.env.CDS_MIXED_SIGNAL = True
+
+    conf.load('cadence_ius')
+
+    conf.env['NCELAB_OPTIONS'].extend([
+        '-amsconnrules', 'ConnRules_12V_full_fast',
+        'ConnRules_12V_full_fast',
+    ])
 
 def build(bld):
     bld.load('brick_general')
+    bld ( features = 'cds_write_libs' )
 
     bld (
         name = 'compile_top',
+        features = 'cds_compile_hdl',
         source = bld.convert_string_paths(
-            [   
-                'tb.sv',
-                'top.sv',
-            ])  
-            ,   
-        features = 'modelsim',
+            [
+                'source_file0',
+                'source_file1',
+                os.environ['BRICK_DIR']+'/source/verilog-ams/ConnRules12.vams',
+            ]),
+        verilog_search_paths = bld.convert_string_paths(
+            [
+                'search_path0',
+                'search_path1',
+            ]
+        ),
+    )
+    bld.add_group()
+    bld (
+        toplevel = 'worklib.tb',
+        features = 'cds_elab',
+        always = True
     )   
-
 
 def run(bld):
     bld (
-        features = 'vsim',
+        features = 'ncsim',
         toplevel = 'worklib.tb',
+        stop_time = '100n',
     )   
 
 from waflib.Build import BuildContext
@@ -146,4 +167,127 @@ class one(BuildContext):
     fun = 'run'
 \end{lstwscript}
 
+In this listing, compared to the listing in \cref{sec:ius_basic_rtl}, lines 2,
+6-9, 22 and 42 have been added and mark the important changes. The rest of the
+listing has remained unchanged. The additional lines' purposes are described
+next:
+\begin{description}
+    \item[Line 2:] The environment variable \tf{CDS\_MIXED\_SIGNAL} enables the
+ mixed-signal flow. In particular, it changes the default options that are
+ passed to \tf{ncelab} and tells to the task generator for the \tf{ncsim} task
+ to create and use an analog control file.
+    \item[Lines 6-9:] These add options to the \tf{ncelab} call that tell it to
+ use the connect rules that are defined in line 22.
+    \item[Line 22:] Adds a Verilog-AMS source file to the compilation process.
+ This file defines connect rules for the automatic connect module insertion
+ process that is handled by \tf{ncelab}.
+    \item[Line 42:] Tells the task generator for the \tf{ncsim} task to set the
+ stop time of the transient simulation to 100 ns.
+\end{description}
+
+\subsection{Schematic-Based Mixed-signal simulation}
+
+\begin{lstwscript}
+import os
+
+def configure(conf):
+    conf.env.CDS_MIXED_SIGNAL = True
+
+    conf.load('cadence_ius')
+    conf.load('cadence_mixed_signal')
+                                                                                       
+    conf.env['CDS_LIBS']['brick_test'] = '../../cdslib/'
+    conf.env.CDS_LIB_INCLUDES = [ 
+        '$TSMC_DIR/oa/cds.lib',
+    ]   
+
+    conf.env['NCELAB_OPTIONS'].extend([
+        '-amsconnrules', 'ConnRules_12V_full_fast', 'ConnRules_12V_full_fast',
+        '-libverbose',
+        '-modelpath',
+        os.environ['TSMC_DIR']+'/oa/models/spectre/toplevel.scs(tt_lib)',
+    ])
+
+def build(bld):
+    bld.load('brick_general')
+    bld ( features = 'cds_write_libs' )
+
+    bld (
+        feature = 'cds_mixed_signal',
+        cellview = 'lib.cell:view',
+    )
+
+    bld (
+        name = 'compile_top',
+        source = bld.convert_string_paths(
+            [
+                '../../source/verilog/package.sv',
+                '../../source/verilog/tb.sv',
+                '../../source/verilog/top.sv',
+                '../../source/verilog-ams/inverter_array.vams',
+                os.environ['BRICK_DIR']+'/source/verilog-ams/ConnRules12.vams'
+            ]),
+        features = 'cds_compile_hdl',
+        verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
+    )
+    bld.add_group()
+    bld (
+        toplevel = 'worklib.tb',
+        features = 'cds_elab',
+        always = True
+    )
+
+def run(bld):
+    bld (
+        features = 'ncsim',
+        toplevel = 'worklib.tb',
+        stop_time = '100n',
+    )
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+\end{lstwscript}
+
+\warningsign Note that the 
+
+\subsection{Layout-Based Mixed-signal simulation}
+
+%\section{Simulating with Modelsim}
+%\subsection{Basic RTL simulation}
+%
+%\begin{lstwscript}
+%def configure(conf):
+%    conf.load('brick_general')
+%    conf.load('modelsim')
+%
+%def build(bld):
+%    bld.load('brick_general')
+%
+%    bld (
+%        name = 'compile_top',
+%        source = bld.convert_string_paths(
+%            [   
+%                'tb.sv',
+%                'top.sv',
+%            ])  
+%            ,   
+%        features = 'modelsim',
+%    )   
+%
+%
+%def run(bld):
+%    bld (
+%        features = 'vsim',
+%        toplevel = 'worklib.tb',
+%    )   
+%
+%from waflib.Build import BuildContext
+%class one(BuildContext):
+%    cmd = 'run'
+%    fun = 'run'
+%\end{lstwscript}
+
+\section{Checking and Extracting Layouts with Calibre}
 

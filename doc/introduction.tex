@@ -1,6 +1,11 @@
+\setchapterpreamble[u]{%
+ \dictum[Larry Wall]{Using a simple tool to solve a complex problem does not
+     result in a simple solution.}
+ \vspace{1cm}}
 \chapter{Introduction}
-The \ti{brick} project is a set of python scripts intened to facilitate the
-development of mixed-signal \Glspl{ASIC}. It was developped at the
+
+The \ti{brick} project is a set of python scripts intended to facilitate the
+development of mixed-signal \Glspl{ASIC}. It was developed at the
 Electronic Vision(s) Group of Heidelberg University.
 
 \ti{brick} is based on the \ti{Waf} build system. \ti{Waf} is best explained by
@@ -23,7 +28,38 @@ For a detailed introduction to \ti{Waf}, the interested reader is referred to
 the online version of the \ti{Waf} book
 \cite{wafbook}\footnote{\url{https://waf.io/book/}}. A short introduction to
 \ti{Waf} is given in \cref{chap:waf}.
+
 \Cref{chap:incisive} describes the simulation tools that come with Cadence
 Incisive and explains why it makes sense to simplify some tasks by introducing
 \ti{Waf} extensions. \Cref{chap:modelsim} does the same for the Modeltech
 simulation software package.
+
+Methods for \gls{LVS}, \gls{DRC} and \gls{PEX} with the \ti{Calibre} tools by
+\ti{Mentor} are shortly outlined in \cref{chap:calibre}.
+
+\Cref{chap:recipes} finally gives some example \tf{wscript}s that show how to use the \ti{Waf} tools that are described in this document.
+
+\section{Installation}
+\label{sec:install}
+
+On the machines of the \ti{ASIC lab}, you can simply load the latest brick
+module. To find out which versions are available, you can enter
+\mint{bash}|module av brick|
+Once you've found the version number, enter
+\mint{bash}|module load brick/<version>|
+
+To install \ti{brICk} on your own machine, the following steps are necessary:
+\begin{enumerate}
+	\item Clone the repository from
+		\mint{bash}|git@brainscales-r@kip.uni-heidelberg.de:brick.git|
+	\item Add to your PYTHONPATH:
+		\begin{lstbashplain}
+export PYTHONPATH=$PYTHONPATH:/your_brick_path/source/waf:\
+/your_brick_path/source/python
+		\end{lstbashplain}
+	\item Add an environment variable called \tf{BRICK\_DIR}:
+		\begin{lstbashplain}
+export BRICK_DIR=/your_brick_path/
+		\end{lstbashplain}
+\end{enumerate}
+

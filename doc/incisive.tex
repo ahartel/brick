@@ -84,12 +84,12 @@ It can be specified like this: \tf{worklib.test:module}, or just
 The view name \ti{module} is chosen by default for verilog files, however it
 can be modified with the \ti{VIEW\_MAP} option in the \ti{hdl.var} file.
 \begin{minted}{verilog}
-DEFINE VIEW_MAP (.v    => behav, \
-                 .rtl  => rtl, \
-                 .gate => gate, \
+DEFINE VIEW_MAP (.vams => behav, \
                   +     => module)
 \end{minted}
-Here, the + operator represents any other extension.
+Here, the + operator represents any other extension. This particular
+\ti{VIEW\_MAP} is used by default in \ti{brICk} when working with the
+\ti{cadence\_ius} module.
 
 \subsection{ncsim}
 
