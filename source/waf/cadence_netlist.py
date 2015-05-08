@@ -1,5 +1,6 @@
 import os,re
 from waflib import Task,Errors,Node,TaskGen,Configure,Logs
+from brick_general import ChattyBrickTask
 
 def configure(conf):
 	conf.load('cadence_base')
@@ -12,17 +13,27 @@ def configure(conf):
 				'-ncvlogopts', '-use5x -64bit'
 			]
 
+	if not conf.env.RUNAMS_OPTIONS:
+		conf.env.RUNAMS_OPTIONS = []
+	conf.env.RUNAMS_OPTIONS.extend(['-netlisteropts', 'amsPortConnectionByNameOrOrder=order:useSpectreInfo=spectre veriloga spice symbol'])
+	conf.env.RUNAMS_OPTIONS.extend(['-solver', 'ultrasim'])
+	conf.env.RUNAMS_OPTIONS.extend(['-netlist', 'all'])
+
+	conf.find_program('runams',var='CADENCE_RUNAMS')
 	conf.find_program('si', var='CADENCE_SI')
 
-class cdsNetlistTask(Task.Task):
+#@Task.always_run
+class cdsNetlistTask(ChattyBrickTask):
+	vars = ['CADENCE_RUNAMS','CDS_LIB_PATH','CDS_HDLVAR_PATH','RUNAMS_OPTIONS']
+	run_str = "${env.CADENCE_RUNAMS} -lib ${gen.libname} -cell ${gen.cellname} -view ${gen.viewname} -cdslib ${env.CDS_LIB_PATH} -hdlvar ${env.CDS_HDLVAR_PATH} ${env.RUNAMS_OPTIONS} -rundir ${gen.rundir} -log ${gen.logfile}"
 
-	def run(self):
-		"""Checking logfile for critical warnings line by line"""
+	def check_output(self,ret,out):
+		for num,line in enumerate(out.split('\n')):
+			if line.find('ERROR') == 0:
+				Logs.error("Error in line %d: %s" % (num,line))
+				ret = 1
 
-		run_str = '${AMSDESIGNER} -lib '+self.generator.libname+' -cell '+self.generator.cellname+' -view '+self.generator.viewname+' -compile all -netlist all -CDSLIB ${env.CDS_LIB_PATH} -hdlvar ${env.CDS_HDLVAR_PATH} ${AMSDESIGNER_OPTIONS}'
-
-		(f, dvars) = Task.compile_fun(run_str, False)
-		return f(self)
+		return ret
 
 class auCdlTask(Task.Task):
 	#run_str = 'rm -f .running && cp ${SRC[1].abspath()} si.env && cp si.env ${BRICK_RESULTS} && ${CADENCE_SI} -batch -command netlist'
@@ -51,7 +62,7 @@ class auCdlTask(Task.Task):
 @TaskGen.feature('cds_netlist_sim')
 def add_cds_netlist_target(self):
 	try:
-		cellview = getattr(self,'view','')
+		cellview = getattr(self,'cellview','')
 		if cellview.find('.') == -1 or cellview.find(':') == -1:
 			Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_netlist\'.')
 			return
@@ -68,6 +79,11 @@ def add_cds_netlist_target(self):
 		config_file = config_file.make_node(self.cellname+'/'+self.viewname+'/expand.cfg')
 		#if not config_file:
 		#	raise Errors.ConfigurationError('Cellview '+self.cellname+':'+self.viewname+' in library '+self.libname+' not found.')
+
+		# logfile
+		self.logfile = self.env.BRICK_LOGFILES+'/cadence_netlist_'+self.cellname+'.log'
+
+		self.rundir = self.cellname
 
 		t = self.create_task('cdsNetlistTask', config_file)
 	except ValueError:
