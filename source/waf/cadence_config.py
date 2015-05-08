@@ -52,24 +52,20 @@ def gen_cds_config_task(self):
 		Logs.error('Please specify the viewlist as a list with the feature \'cds_config\'.')
 		return
 	# save top-level design
-	self.design = fix_verilog_name_cellview(getattr(self,'design',self.libname+'.'+self.cellname+':schematic'))
+	self.design = fix_verilog_name_cellview(self.libname+'.'+self.cellname+':schematic')
 	# mixins
 	self.mixins = "\n".join(getattr(self,'mixins',[]))
 
-	config_node = None
-	try:
-		config_node = self.path.find_node(self.env['CDS_LIBS_FLAT'][self.libname])
-		if not config_node.find_node(self.cellname+'/'+self.viewname):
-			config_node = config_node.make_node(self.cellname+'/'+self.viewname)
-			config_node.mkdir()
-		else:
-			config_node = config_node.find_node(self.cellname+'/'+self.viewname)
+	inputs = []
+	if not hasattr(self,'config_cellview'):
+		worklib_task = self.check_create_worklib_task(self.env.CDS_WORKLIB)
+		if worklib_task:
+			inputs = worklib_task.outputs
 
-	except KeyError,e:
-		Logs.error('Cadence library '+self.libname+' was not defined in conf.env.CDS_LIBS_FLAT')
-		return
+	config_libcellview = fix_verilog_name_cellview(getattr(self,'config_cellview',self.env.CDS_WORKLIB+'.'+self.cellname+':brick_config'))
+	config_node = self.get_cellview_path(config_libcellview,True)
 
-	self.create_task('CDSconfigTask',None,[config_node.make_node('expand.cfg'),config_node.make_node('master.tag')])
+	self.create_task('CDSconfigTask',inputs,[config_node.make_node('expand.cfg'),config_node.make_node('master.tag')])
 
 # vim: noexpandtab:
 
