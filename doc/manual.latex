@@ -6,9 +6,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{todonotes}
+\usepackage{tikz}
 \usepackage{tikz-timing}
-\usepackage{listings}
-\usepackage{makeidx}                              % index of key words
+%\usepackage{makeidx}                              % index of key words
 \usepackage{csquotes}
 \usepackage{minted}
 \usepackage{scrhack}
@@ -22,6 +22,9 @@
 \makeglossaries
 \input{glossary.tex}
 \addbibresource{mybib.bib}
+
+\usetikzlibrary{shapes.geometric}
+\newcommand{\warningsign}{\tikz[baseline=-.75ex] \node[shape=regular polygon, regular polygon sides=3, inner sep=0pt, draw, thick] {\textbf{!}};}
 
 \newenvironment{lstwscript}{%
 \VerbatimEnvironment
@@ -41,23 +44,23 @@
 {%
 \end{minted}}
 
-\makeindex
+%\makeindex
 \title{Multi-user mixed-signal ASIC workflow}
 %\subtitle{Stuff I learned about making ASICs}
 \author{Andreas Hartel}
 %\institution{Heidelberg University}
-\lstdefinestyle{BashInputStyle}{
-  language=bash,
-  basicstyle=\small\sffamily,
-  numbers=left,
-  numberstyle=\tiny,
-  numbersep=3pt,
-  frame=tb,
-  columns=fullflexible,
-  backgroundcolor=\color{yellow!20},
-  linewidth=0.9\linewidth,
-  xleftmargin=0.1\linewidth
-}
+%\lstdefinestyle{BashInputStyle}{
+%  language=bash,
+%  basicstyle=\small\sffamily,
+%  numbers=left,
+%  numberstyle=\tiny,
+%  numbersep=3pt,
+%  frame=tb,
+%  columns=fullflexible,
+%  backgroundcolor=\color{yellow!20},
+%  linewidth=0.9\linewidth,
+%  xleftmargin=0.1\linewidth
+%}
 % Custom colors
 \definecolor{deepblue}{rgb}{0,0,0.5}
 \definecolor{deepred}{rgb}{0.6,0,0}
@@ -70,17 +73,17 @@
 \begin{document}
 \maketitle
 \tableofcontents
-\cleardoublepage
-\dictum[Clarence "Kelly" Johnson]{Keep it simple, stupid!}
 \include{introduction}
 \include{incisive}
 \include{modelsim}
+\include{calibre}
 \include{waf_usage}
 \include{recipes}
 \begin{appendix}
 	\include {repository}
 	%\include{multi_repo}
 	\include{brick_tools}
+	\include{dos_donts}
 
 %\chapter{timing}
 %\def \degr {${}^\circ $}
@@ -151,7 +154,7 @@
 \end{appendix}
 
 \backmatter
-\printindex
+%\printindex
 \printbibliography
 \printglossaries
 \end{document}

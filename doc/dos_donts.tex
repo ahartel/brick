@@ -1,0 +1,12 @@
+\chapter{Do's and Dont's}
+\section{Do's}
+\begin{itemize}
+    \item When creating the module hierarchy in your HDL code, or when you're chosing module names for your behavioral models, make sure that the module names of your behaviorals match the cell names of the analog macros that are eventually instantiated.
+\end{itemize}
+\section{Dont's}
+\begin{itemize}
+	\item Don't instantiate arrays of AMS modules in pure verilog or SystemVerilog code, because otherwise \tf{ncelab} will tell you:
+\begin{lstbashplain}
+ncelab: *E,ILANAOI (...): Only pure digital array of instances are allowed in AMS.
+\end{lstbashplain}
+\end{itemize}
