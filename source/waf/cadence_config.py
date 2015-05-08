@@ -44,12 +44,7 @@ def gen_cds_config_task(self):
 	# remove last comma
 	self.liblist = self.liblist.rstrip(', ')
 	# extract lib, cell and view
-	cellview = getattr(self,'view','')
-	if cellview.find('.') == -1 or cellview.find(':') == -1:
-		Logs.error('Please specify a cellview of the form Lib:Cell:View with the \'view\' attribute with the feature \'cds_config\'.')
-		return
-	(self.libname,rest) = cellview.split(".")
-	(self.cellname,self.viewname) = rest.split(":")
+	(self.libname,self.cellname,self.viewname) = self.get_cadence_lib_cell_view_from_cellview()
 	# save viewlist
 	try:
 		self.viewlist = ",".join(getattr(self,'viewlist',['schematic','symbol']))
@@ -76,5 +71,5 @@ def gen_cds_config_task(self):
 
 	self.create_task('CDSconfigTask',None,[config_node.make_node('expand.cfg'),config_node.make_node('master.tag')])
 
-
+# vim: noexpandtab:
 

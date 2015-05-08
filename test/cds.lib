@@ -1,0 +1,2 @@
+INCLUDE $TSMC_DIR/oa/cds.lib
+DEFINE brick_test /superfast/home/ahartel/brick-devel/test/cdslib

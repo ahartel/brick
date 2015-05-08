@@ -146,9 +146,8 @@ def get_cadence_lib_cell_view_from_cellview(self):
 	try:
 		(lib, cell, view) = split_cellview(self.cellview)
 
-	except ValueError:
-		Logs.Error('For taskgen "'+self.name+'", you need to specify a parameter "cellview" in the form of lib.cell:view')
-		return 1
+	except AttributeError:
+		raise Errors.WafError('For taskgen "'+self.name+'", you need to specify a parameter "cellview" in the form of lib.cell:view')
 
 	return (lib,fix_verilog_name(cell),view)
 

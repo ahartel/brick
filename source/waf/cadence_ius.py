@@ -146,7 +146,7 @@ def cds_ius_prepare(self):
 		self.name = Node.split_path(self.source[0])[-1]
 
 	if not hasattr(self,'source'):
-		raise Errors.ConfigurationErro('Please specify the source attribute for task generator '+getattr(self,'name','?noname? (and give it a name, too!)'))
+		raise Errors.ConfigurationError('Please specify the source attribute for task generator '+getattr(self,'name','?noname? (and give it a name, too!)'))
 
 	# generate the logfile name
 	self.logfile_name = self.env.NCVLOG_SV_LOGFILE+'_'+self.name
