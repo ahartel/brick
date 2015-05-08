@@ -25,13 +25,13 @@ def build(bld):
         features = 'cds_config',
         name = 'create_inverter_config',
         libs = ['brick_test','tsmcN65'],
-        cellview = 'brick_test.inverter:brick_config',
-        update_outputs = True
+        cellview = 'brick_test.inverter:schematic',
+        #update_outputs = True
     )
 
     bld (
         features = 'cds_mixed_signal',
-        cellview = 'brick_test.inverter:brick_config',
+        cellview = 'worklib.inverter:brick_config',
         netlist = True,
         compile = True,
     )
