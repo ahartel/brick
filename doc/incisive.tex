@@ -107,7 +107,11 @@ include directories can be specified with the following command.
 \end{lstbashplain}
 Multiple \tf{-incdir} options are legal.
 
+If you want to explicitely change the view name of a particular compilation
+unit, you can override the \ti{VIEW\_MAP} settings with the \tf{-view} option.
+
 \subsection{ncelab}
+\label{sec:ncelab}
 The design hierarchy elaboration (or just elaboration) process is implemented
 with the tool \tf{ncelab} which can be invoked the following way:
 \begin{lstbashplain}
@@ -159,6 +163,8 @@ library rtlLib "top.v";
 library aLib "adder.v";
 library gateLib "adder.vg";
 \end{minted}
+ You have to tell \tf{ncvlog} and \tf{ncelab} to use a particular library map
+ file with the \tf{-libmap filename} option.
     \item The \vkey{uselib} compiler directive inside the \ti{Verilog} code
  \begin{minted}{verilog}
 // File: source/top.v
@@ -175,6 +181,8 @@ endmodule
  \begin{lstbashplain}
  ncelab [options] -binding [Lib.]Cell[:View] [Lib.]Cell[:View]
 \end{lstbashplain}
+ In this example the second [Lib.]Cell[:View] argument specifies the top-level
+ view. Multipl
     \item A Verilog configuration
  \begin{minted}{verilog}
 config cfg;
