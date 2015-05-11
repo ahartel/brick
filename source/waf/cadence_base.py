@@ -7,7 +7,7 @@ def configure(conf):
 	conf.env['CDS_LIB_PATH'] = conf.bldnode.make_node('cds.lib').abspath()
 	conf.env['CDS_HDLVAR_PATH'] = conf.bldnode.make_node('hdl.var').abspath()
 	conf.env['CDS_LIBS_FLAT'] = {}
-	conf.env['CDS_HDL_VIEW_MAP'] = {'.vams': 'behav','+':'module'}
+	conf.env['CDS_HDL_VIEW_MAP'] = {'.vams': 'ams','+':'module'}
 
 #@Configure.conf
 def parse_cds_libs(tgen):
