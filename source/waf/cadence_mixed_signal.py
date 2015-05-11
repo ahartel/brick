@@ -17,7 +17,7 @@ def gen_cds_mixed_signal_tasks(self):
 
 	self.netlister_opts = "amsPortConnectionByNameOrOrder=order:useSpectreInfo=spectre veriloga spice symbol"
 	self.rundir = "runams_"+self.libname+"_"+self.cellname+"_"+self.viewname
-	netlist_node = self.path.get_bld().make_node(self.rundir+"/netlist/netlist.vams")
+	netlist_node = self.bld.bldnode.make_node(self.rundir+"/netlist/netlist.vams")
 	self.source_string_vams = netlist_node.abspath()
 	self.env.WORKLIB = getattr(self,'worklib',self.env.CDS_WORKLIB)
 	self.logfile = self.env.NCVLOG_SV_LOGFILE+'_'+self.rundir
