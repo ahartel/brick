@@ -100,15 +100,15 @@ TaskGen.declare_chain(
 
 class CadenceSvlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} -sv ${NCVLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.ncvlog_add_options} ${gen.source_string_sv}'
 
 class CadenceVlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.ncvlog_add_options} ${gen.source_string_v}'
 
 class CadenceVamslogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.source_string_vams}'
+	run_str = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.logfile} -ams ${NCVLOG_VAMS_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.ncvlog_add_options} ${gen.source_string_vams}'
 
 
 
@@ -164,6 +164,11 @@ def cds_ius_prepare(self):
 	#print self.name
 	#print len(self.source_string_vams), len(self.source_string_v), len(self.source_string_sv)
 
+	if hasattr(self,'view'):
+		self.ncvlog_add_options = ['-VIEW',self.view]
+	else:
+		self.ncvlog_add_options = []
+
 	if len(self.source_string_vams) > 0:
 		task = self.create_task("CadenceVamslogTask",self.source_vams,[])
 	if len(self.source_string_v) > 0:
@@ -179,7 +184,7 @@ def cds_ius_prepare(self):
 
 @Task.always_run
 class ncelabTask(ChattyBrickTask):
-	run_str  = '${CDS_NCELAB} ${gen.simulation_toplevel} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
+	run_str  = '${CDS_NCELAB} ${gen.simulation_toplevel} ${gen.bindings} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCELAB_LOGFILE} ${NCELAB_OPTIONS} '
 	def check_output(self,ret,out):
 		for num,line in enumerate(out.split('\n')):
 			if line.find('ncelab: *E') == 0:
@@ -196,6 +201,10 @@ def cds_ius_elaborate(self):
 	except AttributeError:
 		Logs.error('Please name a toplevel unit for elaboration with feature \'cds_elab\'')
 		return -1
+
+	self.bindings = []
+	for bind in getattr(self,'binding',[]):
+		self.bindings.extend(['-binding',bind])
 
 	self.create_task("ncelabTask")
 

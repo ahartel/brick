@@ -22,6 +22,11 @@ def gen_cds_mixed_signal_tasks(self):
 	self.env.WORKLIB = getattr(self,'worklib',self.env.CDS_WORKLIB)
 	self.logfile = self.env.NCVLOG_SV_LOGFILE+'_'+self.rundir
 
+	if hasattr(self,'view'):
+		self.ncvlog_add_options = ['-VIEW',self.view]
+	else:
+		self.ncvlog_add_options = []
+
 	if len(self.env.VERILOG_INC_DIRS) > 0:
 		self.env.VERILOG_INC_DIRS.extend(['-INCDIR',self.rundir+'/netlist'])
 	else:
