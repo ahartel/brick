@@ -79,7 +79,10 @@ the \tf{hdl.var} file has to be listed in the \tf{cds.lib} file as well and the
 directory that contains the library has to be created by the user.
 
 To tell the \ti{Incisive} tools to use a different working library the
-\tf{wscript} has to be modified like this:
+\tf{wscript} has to be modified like in the following code example. A running
+example of it can be found in the folder
+\tf{test/cadence\_ius/sim\_rtl\_only\_1}.
+
 \begin{lstwscript}
 def configure(conf):
     cfg.load('cadence_ius')
@@ -102,8 +105,6 @@ def run(bld):
 
 ...
 \end{lstwscript}
-This example code can be found in the folder
-\tf{test/cadence\_ius/sim\_rtl\_only\_0} of the repository.
 
 It is worth noting that the workflow presented in this subsection also has to
 be used for \gls{RVM}.
@@ -111,9 +112,16 @@ be used for \gls{RVM}.
 \clearpage
 \subsection{Behavioral-Based Mixed-signal simulation}
 \label{sec:ius_behave_rtl}
-If you want to use Verilog-AMS behaioral models that contain analog blocks or
-signals of discipline electrical, the following \tf{wscript} snippet can help
-you to set up a simulation.
+If you want to use \ti{Verilog-AMS} behaioral models that contain analog blocks
+or signals of discipline electrical, the following \tf{wscript} snippet can
+help you to set up a simulation. This \tf{wscript} can also be used when you
+want to simulate schematics and the \ti{Verilog-AMS} files that are derived
+from these schematics have already been netlisted. If, on the other hand, your
+schematics have not yet been netlistet and you want them to get netlisted
+automatically, please refer to \cref{sec:ius_schematic_rtl}.
+
+The example code presented in this section can be found in the folder\\
+\tf{test/cadence\_ius/sim\_mixed\_signal\_0} of the repository.
 
 \begin{lstwscript}
 import os
@@ -186,7 +194,9 @@ next:
  stop time of the transient simulation to 100 ns.
 \end{description}
 
+\clearpage
 \subsection{Schematic-Based Mixed-signal simulation}
+\label{sec:ius_schematic_rtl}
 
 \begin{lstwscript}
 import os

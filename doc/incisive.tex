@@ -11,6 +11,8 @@ which two implement the same of the three steps but for different languages):
 	\item \tf{ncsim} for simulating an elaborated design hierarchy
 \end{itemize}
 
+These tools will be described in detail in the following subsecitons.
+
 \subsection{ncvlog}
 The Verilog compiler \tf{ncvlog} can be invoked the following way:
 \begin{lstbashplain}
@@ -28,11 +30,14 @@ For the Verilog family of \glspl{HDL}, there are three supported sub-types by
 \end{itemize}
 
 \marginnote{worklib}
-All compiled code is compiled into proprietary design libraries. By default,
-\tf{ncvlog} creates a sub-directory called \ti{INCA\_libs} in the current
-working directory. This subdirectory contains a \gls{cds} called \ti{worklib},
-which is defined as the default working library and contains the actual binary
-file with all compiled code.
+All code is compiled into design libraries having \ti{Cadence}'s proprietary
+format. The library into which the files are compiled is called the working
+library. This library can be specified by the user. If the user does not
+specify the working library, then, by default, \tf{ncvlog} creates a
+sub-directory called \ti{INCA\_libs} in the current working directory. This
+subdirectory contains a \gls{cds} called \ti{worklib}, which is defined as the
+default working library and contains the actual binary file with all compiled
+code.
 
 This default behavior can be change by adding two files to the picture. These
 are called \ti{cds.lib} and \ti{hdl.var}.
@@ -52,6 +57,47 @@ working library, the \tf{hdl.var} file has to contain the following code:
 DEFINE WORK ./worklib
 \end{minted}
 
+\marginnote{\tf{VIEW\_MAP}}
+The \ti{hdl.var} file can also be used to specify the name of the \gls{cds}
+view into which the \ti{Verilog} files are compiled. The view names can also be
+chosen depending on the suffix of the design files. By default, the view name
+\ti{module} is chosen for all verilog files, however it can be modified with
+the \ti{VIEW\_MAP} option in the \ti{hdl.var} file.
+\begin{minted}{verilog}
+DEFINE VIEW_MAP (.vams => behav, \
+                  +    => module)
+\end{minted}
+Here, the + operator represents any other extension. This particular
+\ti{VIEW\_MAP} is used by default in \ti{brICk} when working with the
+\ti{cadence\_ius} module.
+
+\marginnote{\tf{LIB\_MAP}}
+Another property that is important for the elaboration process (see
+\cref{sec:ncelab}) and that can be specified in the \ti{hdl.var} file is the
+\ti{LIB\_MAP} property. It defines a mapping of source files (or source file
+directories) to \glspl{cds}. For example:
+\begin{minted}{verilog}
+DEFINE LIB_MAP ( \
+        ./design/lib1/... => lib1, \
+        ./source => lib2, \
+         top.v            => lib3, \
+         +                => worklib )
+\end{minted}
+
+As stated in the Cadence User Guide \citep{cds2014compverilog}, in this example:
+\begin{itemize}
+    \item All files in ./design/lib1 and in directories below ./design/lib1 are
+ mapped to library lib1.
+    \item All files in the ./source directory are mapped to library lib2.
+    \item The file top.v is mapped to library lib3.
+    \item Everything else is mapped to library worklib.
+\end{itemize}
+
+The \ti{LIB\_MAP} property also defines which libraries should be scanned by
+\tf{ncelab} during the binding process and in which order these should be
+scanned.
+
+\marginnote{include directories}
 If any of the Verilog files that have to be compiled for a design use the
 \vkey{include} statement, the compiler has to know where to look for these
 files. By default, it will only check the current working directory. Other
@@ -70,7 +116,7 @@ with the tool \tf{ncelab} which can be invoked the following way:
 
 \marginnote{elaboration}
 During elaboration, \tf{ncelab} checks whether all instantiated modules (or
-interface/packages etc.) have previously been compiled into any of the present
+interfaces/packages etc.) have previously been compiled into any of the present
 \glspl{cds}. It also checks whether port connections match and, in case of
 mixed-signal simulations, it automatically inserts interface modules
 (translating digital to analog signals and vice-versa) or inserts spice models. 
@@ -81,16 +127,70 @@ module called \ti{test} has been compiled into a library called \ti{worklib}.
 It can be specified like this: \tf{worklib.test:module}, or just
 \tf{worklib.test} (if there is only one view for this cell), or even simpler:
 \tf{test} (if there is only one library and one view).
-The view name \ti{module} is chosen by default for verilog files, however it
-can be modified with the \ti{VIEW\_MAP} option in the \ti{hdl.var} file.
-\begin{minted}{verilog}
-DEFINE VIEW_MAP (.vams => behav, \
-                  +     => module)
-\end{minted}
-Here, the + operator represents any other extension. This particular
-\ti{VIEW\_MAP} is used by default in \ti{brICk} when working with the
-\ti{cadence\_ius} module.
 
+\marginnote{The binding process}
+Starting with the toplevel module, \tf{ncelab} tries to find compiled modules
+for all instances in the design. This process is called \ti{binding}. Details
+about the binding process can be found in chapter 14 of \citep{cds2014amssimug}
+and the elaboration manual \citep{cds2014ncelab}.
+
+\marginnote{default binding process}
+This paragraph gives a short overview of the default binding process and how it
+can be influenced:
+\begin{enumerate}
+    \item If a module has already been bound, the same binding will be used
+ again.
+    \item The libraries given in the \ti{LIB\_MAP} property are scanned for the
+ given module name, taking into account only those view names that are
+ specified in the \ti{VIEW\_MAP} property. The libraries and views are scanned
+ in the order in which they appear in the \ti{hdl.var} file.
+    \item If no binding is found in the libraries specified by \ti{LIB\_MAP},
+ check the library of the parent module's binding.
+    \item If no binding exists, search all known libraries (as defined by the
+ \ti{cds.lib} file.
+\end{enumerate}
+
+This default binding process can be overridden by the user using the following
+means:
+\begin{itemize}
+    \item A \ti{Library Map File}
+ \begin{minted}{verilog}
+library rtlLib "top.v";
+library aLib "adder.v";
+library gateLib "adder.vg";
+\end{minted}
+    \item The \vkey{uselib} compiler directive inside the \ti{Verilog} code
+ \begin{minted}{verilog}
+// File: source/top.v
+module top ();
+    // You want to use the rtl view in the library called source
+    `uselib lib=source view=rtl
+    foo a();
+    `uselib
+    foo b();
+    bar c();
+endmodule
+\end{minted}
+    \item The \tf{-binding} option of \tf{ncelab}
+ \begin{lstbashplain}
+ ncelab [options] -binding [Lib.]Cell[:View] [Lib.]Cell[:View]
+\end{lstbashplain}
+    \item A Verilog configuration
+ \begin{minted}{verilog}
+config cfg;
+    design rtlLib.top;
+    default liblist aLib rtlLib gateLib;
+    instance top.a2 liblist gateLib;
+    cell foo use gateLib.foo;
+endconfig
+\end{minted}
+    \item A Cadence hierarchy configuration\\
+ If you specify as the top-level unit a Cadence Hierarchy view (typically
+ called a \ti{config} view), \tf{ncelab} will follow the rules specified in
+ this view.
+\end{itemize}
+
+\clearpage
 \subsection{ncsim}
 
 A simulation run has to be started with the \tf{ncsim} command in the following

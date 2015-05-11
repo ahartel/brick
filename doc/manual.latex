@@ -14,14 +14,13 @@
 \usepackage{scrhack}
 \usepackage{hyphenat}
 \usepackage{marginnote}
-\usepackage[style=alphabetic,backend=biber]{biblatex}
 \usepackage[colorlinks,linkcolor=blue]{hyperref}
+\usepackage[round,authoryear,sort&compress]{natbib}
 \usepackage{cleveref}
 \usepackage[toc]{glossaries}
 \setglossarystyle{listgroup}
 \makeglossaries
 \input{glossary.tex}
-\addbibresource{mybib.bib}
 
 \usetikzlibrary{shapes.geometric}
 \newcommand{\warningsign}{\tikz[baseline=-.75ex] \node[shape=regular polygon, regular polygon sides=3, inner sep=0pt, draw, thick] {\textbf{!}};}
@@ -66,7 +65,7 @@
 \definecolor{deepred}{rgb}{0.6,0,0}
 \definecolor{deepgreen}{rgb}{0,0.5,0}
 
-\newcommand{\tf}[1]{\texttt{#1}}
+\newcommand{\tf}[1]{\mbox{\texttt{#1}}}
 \newcommand{\ti}[1]{\textit{#1}}
 \newcommand{\vkey}[1]{`{}#1}
 
@@ -155,7 +154,9 @@
 
 \backmatter
 %\printindex
-\printbibliography
+\bibliographystyle{myabbrvnat}
+\bibliography{mybib.bib}
+\addcontentsline{toc}{chapter}{Bibliography}
 \printglossaries
 \end{document}
 
