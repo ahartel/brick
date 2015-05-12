@@ -2,7 +2,6 @@ import os,re,copy
 from waflib import Configure, TaskGen, Task, Logs, Errors
 
 def configure(conf):
-	#conf.env.CDS_DIR = os.environ['CDSDIR']
 
 	conf.env['CDS_LIB_PATH'] = conf.bldnode.make_node('cds.lib').abspath()
 	conf.env['CDS_HDLVAR_PATH'] = conf.bldnode.make_node('hdl.var').abspath()
@@ -149,7 +148,7 @@ def get_cadence_lib_cell_view_from_cellview(self):
 	except AttributeError:
 		raise Errors.WafError('For taskgen "'+self.name+'", you need to specify a parameter "cellview" in the form of lib.cell:view')
 
-	return (lib,fix_verilog_name(cell),view)
+	return (lib,cell,view)
 
 class cdsWriteCdsLibs(Task.Task):
 	def run(self):

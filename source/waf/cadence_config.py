@@ -62,7 +62,7 @@ def gen_cds_config_task(self):
 		if worklib_task:
 			inputs = worklib_task.outputs
 
-	config_libcellview = fix_verilog_name_cellview(getattr(self,'config_cellview',self.env.CDS_WORKLIB+'.'+self.cellname+':brick_config'))
+	config_libcellview = getattr(self,'config_cellview',self.env.CDS_WORKLIB+'.'+self.cellname+':brick_config')
 	config_node = self.get_cellview_path(config_libcellview,True)
 
 	self.create_task('CDSconfigTask',inputs,[config_node.make_node('expand.cfg'),config_node.make_node('master.tag')])
