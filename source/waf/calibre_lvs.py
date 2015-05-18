@@ -25,9 +25,6 @@ def create_calibre_lvs_task(self):
 	if not os.path.exists(self.svdb.abspath()):
 		self.svdb.mkdir()
 
-	recognize_gates = getattr(self,'recognize_gates','NONE')
-	if recognize_gates == True:
-		recognize_gates = 'ALL'
 
 	f = open(self.rule_file.abspath(),"w")
 	f.write("""
@@ -56,7 +53,6 @@ LVS REPORT OPTION NONE
 LVS FILTER UNUSED OPTION NONE SOURCE
 LVS FILTER UNUSED OPTION NONE LAYOUT
 
-LVS RECOGNIZE GATES {6}
 LVS ABORT ON SUPPLY ERROR YES
 LVS IGNORE PORTS NO
 LVS GLOBALS ARE PORTS NO
@@ -69,7 +65,7 @@ ERC MAXIMUM VERTEX 4096
 
 DRC ICSTATION YES
 
-""".format(self.layout_gds.abspath(),self.layout_cellname,self.source_netlist.abspath(),self.source_cellname,self.output_file_base.abspath(),self.svdb.abspath(),recognize_gates))
+""".format(self.layout_gds.abspath(),self.layout_cellname,self.source_netlist.abspath(),self.source_cellname,self.output_file_base.abspath(),self.svdb.abspath()))
 
 	for line in getattr(self,'mixins',[]):
 		f.write(line+'\n')
