@@ -42,7 +42,7 @@ def configure(conf):
 	if not conf.env.NCVHDL_OPTIONS:
 		conf.env.NCVHDL_OPTIONS = ['-64bit','-use5x']
 	if not conf.env.NCELAB_OPTIONS:
-		conf.env.NCELAB_OPTIONS = ['-64bit','-timescale','1ns/10ps','-access','+r']
+		conf.env.NCELAB_OPTIONS = ['-64bit','-timescale','1ns/10ps']
 	if conf.env.CDS_MIXED_SIGNAL:
 		conf.env.NCELAB_OPTIONS.extend(['-discipline', 'logic'])
 	if not conf.env.NCSIM_OPTIONS:
@@ -190,6 +190,9 @@ class ncelabTask(ChattyBrickTask):
 			if line.find('ncelab: *E') == 0:
 				Logs.error("Error in line %d: %s" % (num,line[10:]))
 				ret = 1
+			elif line.find('ncelab: *F') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[10:]))
+				ret = 1
 
 		return ret
 
@@ -205,6 +208,9 @@ def cds_ius_elaborate(self):
 	self.bindings = []
 	for bind in getattr(self,'binding',[]):
 		self.bindings.extend(['-binding',bind])
+
+	if getattr(self,'primary',False):
+		self.bindings.append('-mkprimsnap')
 
 	self.create_task("ncelabTask")
 
@@ -224,8 +230,11 @@ def ncsim_run(self):
 		# create amsControl.scs
 		analog_control_file = self.path.get_bld().make_node('amsControl.scs')
 		f = open(analog_control_file.abspath(),'w')
-		stop_time = getattr(self,'stop_time','100u')
-		f.write('tran tran stop='+stop_time+'\n')
+		if hasattr(self,'analysis'):
+			f.write(self.analysis+'\n')
+		else:
+			stop_time = getattr(self,'stop_time','100u')
+			f.write('tran tran stop='+stop_time+'\n')
 		for line in getattr(self,'analog_control_mixin',[]):
 			f.write(line+'\n')
 		f.close()
