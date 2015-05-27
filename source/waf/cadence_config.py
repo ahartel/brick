@@ -1,10 +1,10 @@
-from waflib import Logs, TaskGen
+from waflib import Logs, TaskGen, Task
 from cadence_base import fix_verilog_name, fix_verilog_name_cellview
 
 def configure(conf):
 	pass
 
-from waflib import Task
+@Task.always_run
 class CDSconfigTask(Task.Task):
 
 	def run(self):
@@ -52,7 +52,7 @@ def gen_cds_config_task(self):
 		Logs.error('Please specify the viewlist as a list with the feature \'cds_config\'.')
 		return
 	# save top-level design
-	self.design = fix_verilog_name_cellview(self.libname+'.'+self.cellname+':schematic')
+	self.design = fix_verilog_name_cellview(self.libname+'.'+self.cellname+':'+self.viewname)
 	# mixins
 	self.mixins = "\n".join(getattr(self,'mixins',[]))
 
