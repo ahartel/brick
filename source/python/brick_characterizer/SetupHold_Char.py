@@ -285,9 +285,9 @@ class SetupHold_Char(CharBase):
                     # be conservative!
                     # in the case of setup timing this means to take the lower threshold
                     if self.probe_signal_directions[probe] == 'positive_unate':
-                        self.setups[sig] = [-1.*self.lower_th[sig][0],-1.*self.lower_th[sig][1]]
+                        self.setups[sig] = [self.lower_th[sig][0],self.lower_th[sig][1]]
                     elif self.probe_signal_directions[probe] == 'negative_unate':
-                        self.setups[sig] = [-1.*self.lower_th[sig][1],-1.*self.lower_th[sig][0]]
+                        self.setups[sig] = [self.lower_th[sig][1],self.lower_th[sig][0]]
 
                     self.logger_debug("Rise Setup time for signal "+sig+": "+str(self.setups[sig][0]))
                     self.logger_debug("Fall Setup time for signal "+sig+": "+str(self.setups[sig][1]))
