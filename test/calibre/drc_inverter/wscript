@@ -1,0 +1,36 @@
+import os
+
+def configure(conf):
+
+    conf.env['CDS_LIBS'] = {'brick_test': '../../cdslib/'}
+    conf.env.CDS_LIB_INCLUDES = [
+        '$TSMC_DIR/oa/cds.lib',
+    ]
+
+    conf.load('cadence_strmout')
+    conf.load('calibre_drc')
+
+def build(bld):
+    bld.load('brick_general')
+
+    bld ( features = 'cds_write_libs' )
+
+    #   
+    # Generate abstract for capacitive_memory
+    #   
+    inverter_streamout = bld (
+        name = 'streamout_inverter',
+        features = 'cds_strmout',
+        cellview = 'brick_test.inverter:layout',
+    )
+
+    bld (
+        features = 'calibre_drc',
+        cellname = 'inverter',
+        layout_gds = inverter_streamout.get_cadence_strmout_gds_node(),
+        includes = [bld.root.find_node('/cad/libs/tsmc/oa/Calibre/drc/calibre.drc')],
+        unselect_checks = [
+            #'M9.DN.2L',
+        ]
+    )
+

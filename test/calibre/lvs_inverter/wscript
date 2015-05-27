@@ -1,0 +1,47 @@
+import os
+
+def configure(conf):
+
+    conf.env['CDS_LIBS'] = {'brick_test': '../../cdslib/'}
+    conf.env.CDS_LIB_INCLUDES = [
+        '$TSMC_DIR/oa/cds.lib',
+    ]
+
+    conf.load('cadence_strmout')
+    conf.load('cadence_netlist')
+    conf.load('calibre_lvs')
+    conf.load('calibre_pex')
+
+def build(bld):
+    bld.load('brick_general')
+
+    bld ( features = 'cds_write_libs' )
+
+    #   
+    # Generate abstract for capacitive_memory
+    #   
+    inverter_streamout = bld (
+        name = 'streamout_inverter',
+        features = 'cds_strmout',
+        cellview = 'brick_test.inverter:layout',
+    )
+
+    inverter_netlist = bld (
+        name = 'cds_netlist_lvs_inverter',
+        features = 'cds_netlist_lvs',
+        cellview = 'brick_test.inverter:schematic',
+        include = os.environ['BRICK_DIR']+'/source/spice/tsmc_special_cells.net'
+    )
+
+
+    print bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')
+
+    bld (
+        features = 'calibre_lvs',
+        layout_cellname = 'inverter',
+        source_cellname = 'inverter',
+        layout_gds = inverter_streamout.get_cadence_strmout_gds_node(),
+        source_netlist = inverter_netlist.get_cds_netlist_lvs_node(),
+        includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
+    )
+
