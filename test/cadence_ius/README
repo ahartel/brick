@@ -1,0 +1,17 @@
+sim_mixed_signal_0/
+	Behavioral-Based mixed-signal simulation example (with default settings)
+sim_mixed_signal_1/
+	Schematic-Based mixed-signal simulation example (does not select
+	schematic-based inverter explicitely)
+sim_mixed_signal_2/
+	Schematic-Based mixed-signal simulation example (does explicitely select
+	schematic-based explicitely, compiles both the behavioral and the
+	schematic-based inverter)
+sim_mixed_signal_3/
+	Example for testing interconnect type of systemverilog
+sim_rtl_only_0/
+	Simple RTL-only test-design, with default settings
+sim_rtl_only_1/
+	Same design as in sim_rtl_only_0, with a worklib chosen by the user
+sim_rtl_only_2/
+	Same design as in sim_rtl_only_0, with multi-snapshot elaboration
