@@ -1,0 +1,53 @@
+`include "disciplines.vams"
+
+module adc (
+	clk,in,out
+);
+
+	parameter integer adc_size = 8 from [1:inf);
+	parameter real fullscale = 1.2;
+	parameter real delay_ = 0, trise = 0.5n, tfall = 0.5n;
+	parameter real clk_vth = 0.6;
+	parameter real out_high = 1.2, out_low = 0 from (-inf:out_high);
+
+	input in, clk;
+	electrical clk;
+	electrical in;
+	output out;
+	electrical[adc_size-1:0] out;
+
+
+ real sample,thresh;
+ real result[0:adc_size-1];
+ integer i;
+
+ analog
+ begin
+   @(cross(V(clk)-clk_vth, +1))
+   begin
+     sample = V(in);
+     thresh = fullscale/2;
+     for(i=adc_size-1;i>=0;i=i-1)
+     begin
+       if (sample > thresh)
+       begin
+         result[i] = out_high;
+         sample = sample - thresh;
+       end
+       else result[i] = out_low;
+       sample = 2*sample;
+     end
+   end
+   V(out[0]) <+ transition(result[0],delay_,trise,tfall);
+   V(out[1]) <+ transition(result[1],delay_,trise,tfall);
+   V(out[2]) <+ transition(result[2],delay_,trise,tfall);
+   V(out[3]) <+ transition(result[3],delay_,trise,tfall);
+   V(out[4]) <+ transition(result[4],delay_,trise,tfall);
+   V(out[5]) <+ transition(result[5],delay_,trise,tfall);
+   V(out[6]) <+ transition(result[6],delay_,trise,tfall);
+   V(out[7]) <+ transition(result[7],delay_,trise,tfall);
+   //for(i=adc_size-1;i>=0;i=i-1)
+   //   V(out[i]) <+ transition(result[i],delay_,trise,tfall);
+ end
+
+endmodule
