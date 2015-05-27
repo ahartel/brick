@@ -110,7 +110,9 @@ It is worth noting that the workflow presented in this subsection also has to
 be used for \gls{RVM}.
 
 \subsubsection{Changing the view mapping}
-
+\todo[inline]{Enter view mapping snippet}
+\subsubsection{Using multiple snapshots}
+\todo[inline]{Enter multiple snapshot snippet}
 
 \clearpage
 \subsection{Behavioral-Based Mixed-signal simulation}
@@ -400,4 +402,114 @@ the \tf{ncvlog} calls.
 %\end{lstwscript}
 
 \section{Checking and Extracting Layouts with Calibre}
+\subsection{Design Rule Check}
+If you already have a \ti{GDSII} file, you can use the following minimal
+\tf{wscript} to set up a \gls{DRC} with \ti{Calibre}.
+\begin{lstwscript}
+def configure(conf):
+
+    conf.load('calibre_drc')
+
+def build(bld):
+
+    bld (
+        features = 'calibre_drc',
+        cellname = 'inverter',
+        layout_gds = bld.find_node('your.gds'),
+        includes = [bld.root.find_node('/path/to/your/rule-file')],
+        unselect_checks = [
+            #'M9.DN.2L',
+        ]
+    )
+
+\end{lstwscript}
+
+\subsubsection{Generating the GDSII file on-the-fly}
+If you want to run a \gls{DRC} on a layout that resides in one of your Cadence
+libraries, you can let \ti{brick} generate a streamed-out \ti{GDSII} file for
+you on-the-fly.
+\begin{lstwscript}
+def configure(conf):
+
+    conf.env['CDS_LIBS'] = {'brick_test': '../../cdslib/'}
+    conf.env.CDS_LIB_INCLUDES = [
+        '$TSMC_DIR/oa/cds.lib',
+    ]
+
+    conf.load('cadence_strmout')
+    conf.load('calibre_drc')
+
+def build(bld):
+    bld.load('brick_general')
+    bld ( features = 'cds_write_libs' )
+
+    #   
+    # Generate abstract for capacitive_memory
+    #   
+    inverter_streamout = bld (
+        name = 'streamout_inverter',
+        features = 'cds_strmout',
+        cellview = 'brick_test.inverter:layout',
+    )
+
+    bld (
+        features = 'calibre_drc',
+        cellname = 'inverter',
+        layout_gds = inverter_streamout.get_cadence_strmout_gds_node(),
+        includes = [bld.root.find_node('/path/to/your/rule-file')],
+        unselect_checks = [
+            #'M9.DN.2L',
+        ]
+    )
+\end{lstwscript}
+
+\subsection{Layout Versus Schematic}
+\begin{lstwscript}
+import os
+
+def configure(conf):
+
+    conf.env['CDS_LIBS'] = {'brick_test': '../../cdslib/'}
+    conf.env.CDS_LIB_INCLUDES = [
+        '$TSMC_DIR/oa/cds.lib',
+    ]
+
+    conf.load('cadence_strmout')
+    conf.load('cadence_netlist')
+    conf.load('calibre_lvs')
+
+def build(bld):
+    bld.load('brick_general')
+
+    bld ( features = 'cds_write_libs' )
+
+    #   
+    # Generate abstract for capacitive_memory
+    #   
+    inverter_streamout = bld (
+        name = 'streamout_inverter',
+        features = 'cds_strmout',
+        cellview = 'brick_test.inverter:layout',
+    )
+
+    inverter_netlist = bld (
+        name = 'cds_netlist_lvs_inverter',
+        features = 'cds_netlist_lvs',
+        cellview = 'brick_test.inverter:schematic',
+        include = os.environ['BRICK_DIR']+'/source/spice/tsmc_special_cells.net'
+    )
+
+
+    print bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')
+
+    bld (
+        features = 'calibre_lvs',
+        layout_cellname = 'inverter',
+        source_cellname = 'inverter',
+        layout_gds = inverter_streamout.get_cadence_strmout_gds_node(),
+        source_netlist = inverter_netlist.get_cds_netlist_lvs_node(),
+        includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
+    )
+
+\end{lstwscript}
 
