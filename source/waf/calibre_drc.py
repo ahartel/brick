@@ -93,7 +93,7 @@ class calibreDrcTask(ChattyBrickTask):
 		for num,line in enumerate(out.split('\n')):
 			match = regex.match(line)
 			if match:
-				Logs.error("Error in DRC: Found %s errors, for details see %s" % (match.groups(0),self.generator.get_calibre_drc_logfile_node().abspath()))
+				Logs.error("Error in DRC: Found %s errors, for details see %s" % (match.group(1),self.generator.get_calibre_drc_logfile_node().abspath()))
 				ret = 1
 
 		with open(self.generator.get_calibre_drc_logfile_node().abspath(),'w') as f:

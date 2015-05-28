@@ -23,11 +23,9 @@ def configure(conf):
 			conf.env.CDS_LIBS = {}
 			conf.env.CDS_LIBS['connectLib'] = os.environ['IUSDIR']+'/tools/affirma_ams/etc/connect_lib/connectLib'
 
-	conf.env.NCVLOG_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog.log'
-	conf.env.NCVLOG_SV_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog_sv.log'
-	conf.env.NCVHDL_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvhdl.log'
-	conf.env.NCVLOG_VAMS_LOGFILE = conf.env.BRICK_LOGFILES+'/ncvlog_vams.log'
-	conf.env.NCSDFC_LOGFILE = conf.env.BRICK_LOGFILES+'/ncsdfc.log'
+	conf.env.NCVLOG_LOGFILE = '/ncvlog.log'
+	conf.env.NCVHDL_LOGFILE = '/ncvhdl.log'
+	conf.env.NCSDFC_LOGFILE = '/ncsdfc.log'
 	conf.env.NCELAB_LOGFILE = conf.env.BRICK_LOGFILES+'/ncelab.log'
 	conf.env.NCSIM_LOGFILE = conf.env.BRICK_LOGFILES+'/ncsim.log'
 
@@ -55,21 +53,21 @@ def configure(conf):
 
 
 TaskGen.declare_chain(
-        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.lib.src',],
         ext_out      = [ '.lib.src.out',],
         reentrant    = False,
         scan         = scan_verilog_task
 )
 TaskGen.declare_chain(
-        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.vp', ],
         ext_out      = [ '.vp.out', ],
         reentrant    = False,
         scan         = scan_verilog_task
 )
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhd'],
         ext_out      = ['.vhd.out'],
         scan         = vhdl_scanner,
@@ -77,7 +75,7 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vhdl'],
         ext_out      = ['.vhdl.out'],
         scan         = vhdl_scanner,
@@ -85,14 +83,14 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
         ext_in       = ['.sdf'],
         ext_out       = ['.sdf.compiled'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
         ext_in       = ['.sdf.gz'],
         ext_out       = ['.sdf.compiled'],
         reentrant    = False,
@@ -141,7 +139,7 @@ def cds_ius_prepare(self):
 		raise Errors.ConfigurationError('Please specify the source attribute for task generator '+getattr(self,'name','?noname? (and give it a name, too!)'))
 
 	# generate the logfile name
-	self.logfile = self.env.NCVLOG_SV_LOGFILE+'_'+self.name
+	self.logfile = self.get_logdir_node().make_node(self.env.NCVLOG_LOGFILE+'_'+self.name).abspath()
 
 	# process source here, skip default process_source
 	self.source_vams = []

@@ -35,7 +35,7 @@ def get_cadence_strmout_gds_node(self):
 
 @TaskGen.taskgen_method
 def get_cadence_strmout_results_dir(self):
-	return self.bld.bldnode.find_node('results')
+	return self.get_resultdir_node()
 
 class cdsStrmoutTask(ChattyBrickTask):
 	vars = ['CDS_STRMOUT']
