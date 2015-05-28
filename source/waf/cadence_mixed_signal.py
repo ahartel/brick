@@ -20,7 +20,7 @@ def gen_cds_mixed_signal_tasks(self):
 	netlist_node = self.bld.bldnode.make_node(self.rundir+"/netlist/netlist.vams")
 	self.source_string_vams = netlist_node.abspath()
 	self.env.WORKLIB = getattr(self,'worklib',self.env.CDS_WORKLIB)
-	self.logfile = self.env.NCVLOG_SV_LOGFILE+'_'+self.rundir
+	self.logfile = self.get_logdir_node().make_node(self.env.NCVLOG_LOGFILE+'_'+self.rundir).abspath()
 
 	if hasattr(self,'view'):
 		self.ncvlog_add_options = ['-VIEW',self.view]

@@ -16,7 +16,6 @@ def configure(conf):
     #conf.env['NCELAB_OPTIONS'].remove('logic')
 
 def build(bld):
-    bld.load('brick_general')
     bld ( features = 'cds_write_libs' )
 
     bld (
