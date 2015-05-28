@@ -6,7 +6,8 @@ def configure(conf):
 	"""This function gets called by waf upon loading of this module in a configure method"""
 	conf.load('brick_general')
 
-	conf.env['CALIBRE_LVS'] = 'calibre'
+	conf.find_program('calibre',var='CALIBRE_LVS')
+
 	conf.env['CALIBRE_LVS_OPTIONS'] = [
 			'-64', '-hier',
 		]

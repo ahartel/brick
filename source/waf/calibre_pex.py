@@ -3,12 +3,11 @@ from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs
 from brick_general import ChattyBrickTask
 
 def configure(conf):
+	"""This function gets called by waf upon loading of this module in a configure method"""
 	conf.load('brick_general')
 
-	"""This function gets called by waf upon loading of this module in a configure method"""
-	if not conf.env.BRICK_LOGFILES:
-		conf.env.BRICK_LOGFILES = './logfiles'
-	conf.env['CALIBRE_PEX'] = 'calibre'
+	conf.find_program('calibre',var='CALIBRE_PEX')
+
 	if not conf.env.CALIBRE_PEX_OPTIONS:
 		conf.env['CALIBRE_PEX_OPT_PHDB'] = [
 			'-64', '-turbo',
@@ -23,16 +22,26 @@ def configure(conf):
 			'-64', '-turbo',
 		]
 
+@TaskGen.taskgen_method
+def get_calibre_pex_rule_file_path(self):
+	ret_node = self.bld.bldnode.find_node('calibre_pex_rules')
+	if not ret_node:
+		ret_node = self.bld.bldnode.make_node('calibre_pex_rules')
+		ret_node.mkdir()
+	return ret_node
 
 
 @TaskGen.feature('calibre_pex')
 def create_calibre_pex_task(self):
 
-	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_pex_rules_'+self.cellname))
-	self.xcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_xcells_'+self.cellname))
-	self.hcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_hcells_'+self.cellname))
+	self.rule_file = self.get_calibre_pex_rule_file_path().make_node('rules_'+self.cellname)
+	self.xcells_file =  self.get_calibre_pex_rule_file_path().make_node('xcells_'+self.cellname)
+	self.hcells_file =  self.get_calibre_pex_rule_file_path().make_node('hcells_'+self.cellname)
 
-	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
+	self.svdb = self.get_resultdir_node().make_node('svdb')
+	if not os.path.exists(self.svdb.abspath()):
+		self.svdb.mkdir()
+
 
 	which_names = 'LAYOUTNAMES'
 	if hasattr(self,'source_netlist'):
@@ -162,7 +171,7 @@ DRC ICSTATION YES
 
 @TaskGen.taskgen_method
 def get_calibre_pex_output_file_node(self,ext=''):
-	output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
+	output_file_base = self.get_resultdir_node().make_node(self.cellname)
 	return output_file_base.change_ext(ext)
 
 @TaskGen.taskgen_method

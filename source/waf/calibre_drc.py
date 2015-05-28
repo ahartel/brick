@@ -7,8 +7,9 @@ def configure(conf):
 
 	conf.load('brick_general')
 
-	conf.env['CALIBRE_DRC'] = 'calibre'
-	conf.env['CALIBRE_DRV'] = 'calibredrv'
+	conf.find_program('calibre',var='CALIBRE_DRC')
+	conf.find_program('calibredrv',var='CALIBRE_DRV')
+
 	conf.env['CALIBRE_DRC_OPTIONS'] = [
 			'-64', '-hier', '-turbo' ,'-turbo_all',
 		]
