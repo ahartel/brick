@@ -117,7 +117,7 @@ def add_cds_netlist_lvs_target(self):
 		raise Errors.WafError('Could not find schematic in cellview "'+self.cellview+'" in cds_netlist_lvs.')
 		return 1
 	# the configuration file for the netlister
-	self.si_env = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'si.env_'+self.libname+'_'+self.cellname+'_'+self.viewname))
+	self.si_env = self.bld.bldnode.make_node('si.env_'+self.libname+'_'+self.cellname+'_'+self.viewname)
 	# the output netlist
 	lvs_netlist = self.get_cds_netlist_lvs_node()
 	f1 = open(self.si_env.abspath(),"w")
