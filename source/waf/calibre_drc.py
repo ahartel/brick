@@ -3,11 +3,10 @@ from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs,Context
 from brick_general import ChattyBrickTask
 
 def configure(conf):
+	"""This function gets called by waf upon loading of this module in a configure method"""
+
 	conf.load('brick_general')
 
-	"""This function gets called by waf upon loading of this module in a configure method"""
-	if not conf.env.BRICK_LOGFILES:
-		conf.env.BRICK_LOGFILES = './logfiles'
 	conf.env['CALIBRE_DRC'] = 'calibre'
 	conf.env['CALIBRE_DRV'] = 'calibredrv'
 	conf.env['CALIBRE_DRC_OPTIONS'] = [
@@ -15,14 +14,22 @@ def configure(conf):
 		]
 	conf.env['CALIBRE_DRV_OPTIONS'] = []
 
+@TaskGen.taskgen_method
+def get_calibre_drc_rule_file_path(self):
+	ret_node = self.bld.bldnode.find_node('calibre_drc_rules')
+	if not ret_node:
+		ret_node = self.bld.bldnode.make_node('calibre_drc_rules')
+		ret_node.mkdir()
+	return ret_node
+
 
 @TaskGen.feature('calibre_drc')
 def create_calibre_drc_task(self):
 
-	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_drc_rules_'+self.cellname))
+	self.rule_file = self.get_calibre_drc_rule_file_path().make_node('calibre_drc_rules_'+self.name+'_'+self.cellname)
 
-	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.cellname))
-	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
+	self.output_file_base = self.get_resultdir_node().make_node(self.cellname)
+	self.svdb = self.get_resultdir_node().make_node('svdb')
 	if not os.path.exists(self.svdb.abspath()):
 		self.svdb.mkdir()
 
@@ -63,12 +70,11 @@ DRC ICSTATION YES
 
 	f.close()
 
-
 	t = self.create_task('calibreDrcTask', input, output)
 
 @TaskGen.taskgen_method
 def get_calibre_drc_logfile_node(self):
-	return self.bld.bldnode.find_node(self.env.BRICK_LOGFILES).make_node('calibre_drc_'+self.cellname+'.log')
+	return self.get_logdir_node().make_node('calibre_drc_'+self.cellname+'.log')
 
 @TaskGen.taskgen_method
 def get_calibre_drc_options(self):
@@ -83,9 +89,11 @@ class calibreDrcTask(ChattyBrickTask):
 	run_str = '${CALIBRE_DRC} -drc ${gen.get_calibre_drc_options()} ${CALIBRE_DRC_OPTIONS} ${gen.rule_file.abspath()}'
 
 	def check_output(self,ret,out):
+		regex = re.compile("--- TOTAL RESULTS GENERATED = ([1-9]\d+)")
 		for num,line in enumerate(out.split('\n')):
-			if line.find('ERROR:') == 0:
-				Logs.error("Error in line %d: %s" % (num,line[6:]))
+			match = regex.match(line)
+			if match:
+				Logs.error("Error in DRC: Found %s errors, for details see %s" % (match.groups(0),self.generator.get_calibre_drc_logfile_node().abspath()))
 				ret = 1
 
 		with open(self.generator.get_calibre_drc_logfile_node().abspath(),'w') as f:

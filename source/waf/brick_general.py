@@ -14,21 +14,27 @@ def configure(conf):
 	os.environ['PROJECT_ROOT'] = conf.srcnode.abspath()
 
 def build(bld):
-	if not bld.bldnode.find_dir(bld.env.BRICK_RESULTS):
-		bld.bldnode.make_node(bld.env.BRICK_RESULTS).mkdir()
-	os.environ['BRICK_RESULTS'] = bld.bldnode.make_node(bld.env.BRICK_RESULTS).abspath()
-
-	if not bld.bldnode.find_dir(bld.env.BRICK_LOGFILES):
-		bld.bldnode.make_node(bld.env.BRICK_LOGFILES).mkdir()
-	os.environ['BRICK_LOGFILES'] = bld.bldnode.make_node(bld.env.BRICK_LOGFILES).abspath()
 
 	os.environ['PROJECT_ROOT'] = bld.srcnode.abspath()
 
 @TaskGen.taskgen_method
 def get_logdir_node(self):
-	if not self.bld.bldnode.find_dir(self.bld.env.BRICK_LOGFILES):
-		self.bld.bldnode.make_node(self.bld.env.BRICK_LOGFILES).mkdir()
-	return self.bld.bldnode.make_node(self.bld.env.BRICK_LOGFILES)
+	ret_node = self.bld.bldnode.find_dir(self.bld.env.BRICK_LOGFILES)
+	if not ret_node:
+		ret_node = self.bld.bldnode.make_node(self.bld.env.BRICK_LOGFILES)
+		ret_node.mkdir()
+
+	return ret_node
+
+@TaskGen.taskgen_method
+def get_resultdir_node(self):
+	ret_node = self.bld.bldnode.find_dir(self.bld.env.BRICK_RESULTS)
+	if not ret_node:
+		ret_node = self.bld.bldnode.make_node(self.bld.env.BRICK_RESULTS)
+		ret_node.mkdir()
+
+	return ret_node
+
 
 from waflib.Configure import conf
 from waflib.Errors import WafError
