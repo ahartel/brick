@@ -3,7 +3,6 @@ def configure(conf):
     conf.load('cadence_ius')
 
 def build(bld):
-    bld.load('brick_general')
     bld ( features = 'cds_write_libs' )
 
     bld (

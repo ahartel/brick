@@ -5,7 +5,6 @@ def configure(conf):
     conf.env.CDS_WORKLIB = 'mywork'
 
 def build(bld):
-    bld.load('brick_general')
     bld ( features = 'cds_write_libs' )
 
     bld (
