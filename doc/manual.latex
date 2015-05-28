@@ -2,6 +2,7 @@
 \KOMAoptions{fontsize=12pt}
 \KOMAoptions{paper=a4}
 \KOMAoptions{draft=true}
+\usepackage{lmodern}
 \usepackage{color}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}

@@ -1,2 +1,108 @@
 \chapter{Checking and Extracting Layouts with Calibre}
 \label{chap:calibre}
+
+\ti{Calibre} is a tool by \ti{Mentor Graphics} that allows to run several
+checks on \gls{ASIC} design files. These checks include:
+\begin{itemize}
+	\item \acrfull{DRC}
+		checks a layout design file for violations of the design rules that are
+		specified by the manufacturer.
+	\item \acrfull{LVS}
+		checks a layout design file for correctness according to a so calles
+		source netlist (usually a schematic) of the circuit that has been drawn
+		in this layout.
+	\item \acrfull{PEX}
+		extracts the parasitic passive elements from a circuit's layout and
+		generates a \ti{Spice} netlist which contains the explicitely present
+		elements of the circuit plus the parasitic passive elements.
+\end{itemize}
+
+All of these features can be invoked via the same tool, called \ti{Calibre}.
+Furthermore, all of these tools use so called \acrfull{SVRF} files to specify
+most of the options for the checks and to specify the input files.
+
+\begin{table}[h]
+	\begin{center}
+\begin{tabular}{l|l}
+Layout System & The format of the layout data.\\
+Layout Path & The location of the layout data.\\
+Layout Primary & The top-level cell within the layout data.\\
+DRC Results Database & The results database pathname and format.\\
+\hline
+Layout System & The format of the layout data.\\
+Layout Path & The location of the layout data.\\
+Layout Primary & The top-level cell within the layout data.\\
+Source System & The format of the source data.\\
+Source Path & The location of the source data.\\
+Source Primary & The top-level cell within the source data.\\
+LVS Report & Where to save the LVS comparison report.\\
+\hline
+Pex Netlist & The resulting netlist from parasitics extraction.
+\end{tabular}
+	\end{center}
+\end{table}
+
+\section{DRC}
+For DRC, the invocation works as follows:
+
+\begin{lstbashplain}
+ calibre -drc [options] rule_file
+\end{lstbashplain}
+
+\section{LVS}
+For LVS, the invocation works as follows:
+\begin{lstbashplain}
+calibre -lvs [options] rule_file
+\end{lstbashplain}
+
+\section{PEX}
+Parasitics extraction is a three-step process in itself. These three steps will
+be explained next:
+
+\begin{enumerate}
+	\item Create a \acrfull{PHDB}\\
+		The Calibre xRC User's Manual \citep{calibre2014xrc} states:
+		\begin{quote}
+The Persistent Hierarchical Database, usually referred to as the PHDB, contains information
+about your design’s layout, connectivity, and devices necessary for calculating the parasitic
+information.
+		\end{quote}
+	\begin{lstbashplain}
+calibre -xrc -phdb SVRF_file
+	\end{lstbashplain}
+	\item Create the \acrfull{PDB}\\
+		The Calibre xRC User's Manual \citep{calibre2014xrc} states:
+		\begin{quote}
+Once you have created the PHDB, you create the PDB. The PDB stores the parasitic models for
+each extracted net.
+This step can be run multiple times without regenerating the PHDB. You might want to do this
+if you are extracting different types of parasitics on different nets or if you are also extracting
+inductance with the Calibre ® xL Parasitic Inductance Engine.
+		\end{quote}
+	\begin{lstbashplain}
+calibre -xrc -phb [-r|-c|-rc|-rcc] SVRF_file
+	\end{lstbashplain}
+	\item Create a Netlist of Report\\
+		The Calibre xRC User's Manual \citep{calibre2014xrc} states:
+		\begin{quote}
+As the last step, you produce a netlist or report using the Calibre xRC formatter. The netlist can
+be in any of several formats such as HSPICE or DSPF. You can also set the formatter to
+perform different types of reductions to produce netlists that are more easily simulated.
+		\end{quote}
+	\begin{lstbashplain}
+calibre -xrc -fmt SVRF_file
+	\end{lstbashplain}
+\end{enumerate}
+
+Detailed documentation of the tools that are explained in this chapter, can be
+found via the following links (that should work in the KIP).
+\begin{itemize}
+	\item
+		\href{file:///cad/products/mentor/calibre_2014.2_33.25/docs_cal_2014.2_14.13/docs/pdfdocs/svrf_ur.pdf}{Standard
+		Verification Rule Format (SVRF) Manual}
+	\item
+		\href{file:///cad/products/mentor/calibre_2014.2_33.25/docs_cal_2014.2_14.13/docs/pdfdocs/calibre_ver_user.pdf}{
+		Calibre ® Verification User’s Manual}
+	\item \href{file:///cad/products/mentor/calibre_2014.2_33.25/docs_cal_2014.2_14.13/docs/pdfdocs/xrc_user.pdf}
+		{Calibre ® xRC TM User’s Manual}
+\end{itemize}
