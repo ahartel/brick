@@ -227,10 +227,13 @@ class calibrePexPDBTask(ChattyBrickTask):
 	def check_output(self,ret,out):
 		with open(self.generator.get_calibre_pex_logfile_node('pdb').abspath(),'w') as f:
 			f.write(out)
-		#for num,line in enumerate(out.split('\n')):
-			#if line.find('**ERROR:') == 0:
-			#	Logs.error("Error in line %d: %s" % (num,line[8:]))
-			#	ret = 1
+		for num,line in enumerate(out.split('\n')):
+			if line.find('ERROR:') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[6:]))
+				ret = 1
+			elif line.find('FATAL ERROR:') == 0:
+				Logs.error("Error in line %d: %s" % (num,line[12:]))
+				ret = 1
 
 		return ret
 
