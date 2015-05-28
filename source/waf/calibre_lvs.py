@@ -3,25 +3,31 @@ from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs,Context
 from brick_general import ChattyBrickTask
 
 def configure(conf):
+	"""This function gets called by waf upon loading of this module in a configure method"""
 	conf.load('brick_general')
 
-	"""This function gets called by waf upon loading of this module in a configure method"""
-	if not conf.env.BRICK_LOGFILES:
-		conf.env.BRICK_LOGFILES = './logfiles'
 	conf.env['CALIBRE_LVS'] = 'calibre'
 	conf.env['CALIBRE_LVS_OPTIONS'] = [
 			'-64', '-hier',
 		]
 
+@TaskGen.taskgen_method
+def get_calibre_lvs_rule_file_path(self):
+	ret_node = self.bld.bldnode.find_node('calibre_lvs_rules')
+	if not ret_node:
+		ret_node = self.bld.bldnode.make_node('calibre_lvs_rules')
+		ret_node.mkdir()
+	return ret_node
+
 
 @TaskGen.feature('calibre_lvs')
 def create_calibre_lvs_task(self):
 
-	self.rule_file = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_lvs_rules_'+self.layout_cellname))
-	self.hcells_file =  self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),'calibre_hcells_'+self.layout_cellname))
+	self.rule_file = self.get_calibre_lvs_rule_file_path().make_node(self.layout_cellname)
+	self.hcells_file =  self.get_calibre_lvs_rule_file_path().make_node('calibre_hcells_'+self.layout_cellname)
 
-	self.output_file_base = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,self.layout_cellname))
-	self.svdb = self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),self.env.BRICK_RESULTS,'svdb'))
+	self.output_file_base = self.get_resultdir_node().make_node(self.layout_cellname)
+	self.svdb = self.get_resultdir_node().make_node('svdb')
 	if not os.path.exists(self.svdb.abspath()):
 		self.svdb.mkdir()
 
@@ -46,8 +52,6 @@ LVS REPORT "{4}.lvs.report"
 
 LVS REPORT OPTION A AV B BV C CV D E E1 F FX G H I N O P R RA S V W X
 LVS REPORT MAXIMUM ALL
-
-DRC ICSTATION YES
 
 LVS REPORT OPTION NONE
 LVS FILTER UNUSED OPTION NONE SOURCE
@@ -81,13 +85,13 @@ DRC ICSTATION YES
 		f.close()
 
 	output = self.svdb.make_node(self.layout_cellname+'.sp')
-	open(output.abspath(),'w').close() 
+	open(output.abspath(),'w').close()
 
 	t = self.create_task('calibreLvsTask', [self.layout_gds,self.source_netlist], [self.output_file_base.change_ext(".lvs.report"), output])
 
 @TaskGen.taskgen_method
 def get_calibre_lvs_logfile_node(self):
-	return self.bld.bldnode.find_node(self.env.BRICK_LOGFILES).make_node('calibre_lvs_'+self.layout_cellname+'.log')
+	return self.get_logdir_node().make_node('calibre_lvs_'+self.layout_cellname+'.log')
 
 @TaskGen.taskgen_method
 def get_calibre_lvs_spice_node(self):

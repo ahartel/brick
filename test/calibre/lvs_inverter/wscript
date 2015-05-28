@@ -10,10 +10,8 @@ def configure(conf):
     conf.load('cadence_strmout')
     conf.load('cadence_netlist')
     conf.load('calibre_lvs')
-    conf.load('calibre_pex')
 
 def build(bld):
-    bld.load('brick_general')
 
     bld ( features = 'cds_write_libs' )
 
