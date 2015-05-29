@@ -8,18 +8,20 @@ checks on \gls{ASIC} design files. These checks include:
 		checks a layout design file for violations of the design rules that are
 		specified by the manufacturer.
 	\item \acrfull{LVS}
-		checks a layout design file for correctness according to a so calles
+		checks a layout design file for correctness according to a so called
 		source netlist (usually a schematic) of the circuit that has been drawn
 		in this layout.
 	\item \acrfull{PEX}
 		extracts the parasitic passive elements from a circuit's layout and
-		generates a \ti{Spice} netlist which contains the explicitely present
+		generates a \ti{Spice} netlist which contains the explicitly present
 		elements of the circuit plus the parasitic passive elements.
 \end{itemize}
 
 All of these features can be invoked via the same tool, called \ti{Calibre}.
 Furthermore, all of these tools use so called \acrfull{SVRF} files to specify
 most of the options for the checks and to specify the input files.
+\Cref{tab:svrf} shows the \gls{SVRF} rules that are used to specify the inputs
+and outputs for Calibre's tasks.
 
 \begin{table}[h]
 	\begin{center}
@@ -37,23 +39,118 @@ Source Path & The location of the source data.\\
 Source Primary & The top-level cell within the source data.\\
 LVS Report & Where to save the LVS comparison report.\\
 \hline
+Layout System & The format of the layout data.\\
+Layout Path & The location of the layout data.\\
+Layout Primary & The top-level cell within the layout data.\\
 Pex Netlist & The resulting netlist from parasitics extraction.
 \end{tabular}
+\caption{\gls{SVRF} file commands to specify inputs and outputs of a
+\ti{Calibre} task. Left column shows the commands, right column contains a
+description. The first block of rows can be used for \gls{DRC}, second block
+for \gls{LVS} and the third block for \gls{PEX}.}
+\label{tab:svrf}
 	\end{center}
 \end{table}
 
+\ti{BrICk} handles the generation of the rule file for each task automatically.
+The user only has to specify a \ti{GDSII} file and a top-level cell name (in
+the case of \gls{DRC} and \gls{PEX}) and a source \gls{spice} netlist (in the
+case of \gls{LVS} and possibly \gls{PEX}). For examples of how to set up
+\ti{grICk} to use \ti{Calibre}, please refer to \cref{sec:calibre_recipes}.
+
+A technology-dependent rule file will be necessary for all of the checks that
+can be run with \ti{Calibre}. This rule file will usually be provided by the
+manufacturer in the correct \gls{SVRF} format that can be understood by
+\ti{Calibre}.
+
 \section{DRC}
-For DRC, the invocation works as follows:
+The \gls{DRC} only needs a layout file and a technology-dependent rule file as
+inputs. It will only check the geometries in the layout against the rules that
+are given by the manufacturer. These rules can, for example, constrain the
+density of a metal layer (by a lower or upper bound) or they can define minimum
+distances between geometries on any layer.
+
+To invoke \ti{Calibre} for DRC, the command looks as follows:
 
 \begin{lstbashplain}
  calibre -drc [options] rule_file
 \end{lstbashplain}
 
+\ti{BrICk} will automatically set up this call with the correct options for
+you.
+
 \section{LVS}
-For LVS, the invocation works as follows:
+The \gls{LVS} tool needs as an input a layout file, a netlist file and a
+technology-dependent rule file. It will extract the geometries from the layout
+and, using the definitions in the rule file, combine them to recognize devices,
+such as transistors, resistors and capacitors for example.
+The tool will then compare the extracted layout netlist (since the connectivity
+between the devices can also be extracted from the layout) with the so called
+source netlist, that will usually be derived from a schematic. Therefore, this
+tool is called \acrlong{LVS}.
+
+To invoke \ti{Calibre} for \gls{LVS}, the command looks as follows:
 \begin{lstbashplain}
 calibre -lvs [options] rule_file
 \end{lstbashplain}
+
+\ti{BrICk} will automatically set up this call with the correct options for
+you.
+
+\subsection{Hierarchical LVS}
+For detailed information about hierarchical \gls{LVS}, see also chapter 14 in
+\citep{calibre2014ver}.
+The Calibre Verification User's Manual \citep{calibre2014ver} states:
+\begin{quote}
+Calibre nmLVS-H is a hierarchical LVS application. Calibre nmLVS-H maintains
+the database hierarchy and exploits this hierarchy to reduce processing time,
+memory use, and LVS discrepancy counts.
+\end{quote}
+
+Hierarchically corresponding cells have to be explicitly defined in a so called
+\ti{hcell file}. This file contains one correspondence per line where
+corresponding layout and source cell name are separated by a space in each
+line.
+
+With \ti{brICk}, you can specify the content of the \ti{hcell file} as a
+\ti{Python} list via the hcell property of the task generator that defines the
+\gls{LVS}. An example is given in \cref{sec:calibre_recipes_pex}.
+
+About the question of how many cells should be specified in the hcell list, the
+Calibre Verification User's Manual \citep{calibre2014ver} says:
+\begin{quote}
+In general, an hcell list should be a relatively brief list of corresponding
+cell pairs, such that these cells are placed numerous times in the hierarchy.
+Logic cells or RAM array cells are good examples of cells to specify in an
+hcell list.
+
+Providing an exhaustive list of all cells in the hierarchy is not needed and is
+often counter-productive for performance. For example, via cells should
+generally not be in the hcell list. This is because circuit extraction can
+selectively flatten the hierarchy to improve performance in some cases.
+Specifying certain cells like via cells or other very small cells could impede
+the performance-improvement heuristics in Calibre nmLVS-H. Omitting a cell from
+the hcell list does not necessarily mean it is entirely expanded because it may
+have hcells in its hierarchy that are preserved.
+
+If it is the intent to preserve hierarchy regardless of the performance cost,
+then using a comprehensive hcell list serves that purpose.
+\end{quote}
+
+Another important feature of \ti{Calibre's} \gls{LVS} is the ability to compare
+some cells only to the level of their port connections and to not check the
+layout inside these cells. This method is called black-boxing. The mechanism to
+specify cells that should be treated as black boxes is the \gls{SVRF} rule
+\tf{LVS BOX}. The following example shows how to use it. For more information
+see page 938 in \citep{calibre2014svrf}.
+\begin{verbatim}
+LVS BOX LAYOUT A_lay
+LVS BOX SOURCE A_src
+\end{verbatim}
+
+To introduce such additional statements into the rule file that is generated by
+\ti{brICk}, please use the \tf{mixins} attribute for the task generator of
+\gls{LVS}. See also \cref{sec:calibre_recipes_pex}.
 
 \section{PEX}
 Parasitics extraction is a three-step process in itself. These three steps will
@@ -63,13 +160,19 @@ be explained next:
 	\item Create a \acrfull{PHDB}\\
 		The Calibre xRC User's Manual \citep{calibre2014xrc} states:
 		\begin{quote}
-The Persistent Hierarchical Database, usually referred to as the PHDB, contains information
-about your design’s layout, connectivity, and devices necessary for calculating the parasitic
-information.
+The Persistent Hierarchical Database, usually referred to as the PHDB, contains
+information about your design’s layout, connectivity, and devices necessary for
+calculating the parasitic information.
 		\end{quote}
+		This database can be generate by running \ti{Calibre} with the
+		following command:
 	\begin{lstbashplain}
 calibre -xrc -phdb SVRF_file
 	\end{lstbashplain}
+	However, if you want the parasitics netlist and the parasitics report to
+	contain the same device and net names as your schematic, you can run
+	\gls{LVS} instead of this step. The \gls{PHDB} will then be generated by
+	\gls{LVS} and contain the correct source names.
 	\item Create the \acrfull{PDB}\\
 		The Calibre xRC User's Manual \citep{calibre2014xrc} states:
 		\begin{quote}
@@ -79,9 +182,50 @@ This step can be run multiple times without regenerating the PHDB. You might wan
 if you are extracting different types of parasitics on different nets or if you are also extracting
 inductance with the Calibre ® xL Parasitic Inductance Engine.
 		\end{quote}
+		This step actually extracts the parasitics from the layout. It can be
+		invoked via the following command:
 	\begin{lstbashplain}
 calibre -xrc -phb [-r|-c|-rc|-rcc] SVRF_file
 	\end{lstbashplain}
+
+		To specify the amount of detail that will be extracted you can use the
+		following command-line options:
+		\begin{itemize}
+			\item resistance (-r)
+			 \item lumped capacitance (-c)
+			 \item resistance and distributed capacitance (-rc)
+			 \item resistance with distributed capacitance and coupled capacitance between nets (-rcc)
+		\end{itemize}
+
+		The Calibre xRC User's Manual \citep{calibre2014xrc} states:
+		\begin{quote}
+		 There is a trade-off between the amount of detail and how long the
+		 netlist takes to simulate. For example, a netlist with parasitics as
+		 lumped capacitance takes less time to simulate than one with coupled
+		 capacitance between nets, which takes less time than one
+		 with coupled capacitance between nets including floating nets.
+		\end{quote}
+
+		You can also distinguish between a flat extraction, which flattens all
+		design hierarchy and extracts parasisitcs for everything not
+		explicitly excluded, and full hierarchical extraction, which extracts
+		each cell listed in an \ti{xcell file} only once.
+
+		To make use of this feature you need to run \gls{LVS} with an hcell
+		file that contains the cells that you want to extract hierarchically.
+		The lines of the xcell file contain a layout cell name, an optional
+		source cell name and a flag.
+		For example:
+		\begin{verbatim}
+// layout_name source_name flag
+NOR  NOR  -I     //treated as an ideal cell
+NAND NAND -P     //treated as a primitive
+INV  INV         //handling depends on the extraction type
+NMOS NMOS -PCDEF //treated as a pcell
+		\end{verbatim}
+
+	Please refer to \cref{sec:calibre_recipes_pex} for a running example.
+
 	\item Create a Netlist of Report\\
 		The Calibre xRC User's Manual \citep{calibre2014xrc} states:
 		\begin{quote}
@@ -101,8 +245,26 @@ found via the following links (that should work in the KIP).
 		\href{file:///cad/products/mentor/calibre_2014.2_33.25/docs_cal_2014.2_14.13/docs/pdfdocs/svrf_ur.pdf}{Standard
 		Verification Rule Format (SVRF) Manual}
 	\item
-		\href{file:///cad/products/mentor/calibre_2014.2_33.25/docs_cal_2014.2_14.13/docs/pdfdocs/calibre_ver_user.pdf}{
+		\href{file:///cad/products/mentor/calibre_2014.2_33.25/docs_cal_2014.2_14.13/docs/pdfdocs/calbr_ver_user.pdf}{
 		Calibre ® Verification User’s Manual}
 	\item \href{file:///cad/products/mentor/calibre_2014.2_33.25/docs_cal_2014.2_14.13/docs/pdfdocs/xrc_user.pdf}
 		{Calibre ® xRC TM User’s Manual}
 \end{itemize}
+
+\section{Inspecting Errors}
+The \ti{Calibre} software suite also comes with a GDSII viewer and a browser for check results.
+This program is called \tf{calibredrv}. It can be invoked the following way to view a GDSII file:
+
+	\begin{lstbashplain}
+calibredrv -m <filename>
+	\end{lstbashplain}
+
+To start it directly with a check result browser you can use one of the following commands:
+
+	\begin{lstbashplain}
+calibredrv -m <filename> -rve -drc <drc_result_file>
+calibredrv -m <filename> \
+           -rve -lvs <lvs_database_svdb> <top-level cell name>
+	\end{lstbashplain}
+
+\ti{BrICk} can set this up for you. See \cref{sec:calibre_recipes_drc} for an example.

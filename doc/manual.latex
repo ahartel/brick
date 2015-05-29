@@ -15,13 +15,15 @@
 \usepackage{scrhack}
 \usepackage{hyphenat}
 \usepackage{marginnote}
-\usepackage[colorlinks,linkcolor=blue]{hyperref}
+\usepackage[colorlinks]{hyperref}
 \usepackage[round,authoryear,sort&compress]{natbib}
 \usepackage{cleveref}
 \usepackage[toc]{glossaries}
 \setglossarystyle{listgroup}
 \makeglossaries
 \input{glossary.tex}
+
+\renewcommand*{\glstextformat}[1]{\textcolor{black}{#1}}
 
 \usetikzlibrary{shapes.geometric}
 \newcommand{\warningsign}{\tikz[baseline=-.75ex] \node[shape=regular polygon, regular polygon sides=3, inner sep=0pt, draw, thick] {\textbf{!}};}

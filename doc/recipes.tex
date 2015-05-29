@@ -398,7 +398,9 @@ the \tf{ncvlog} calls.
 %\end{lstwscript}
 
 \section{Checking and Extracting Layouts with Calibre}
+\label{sec:calibre_recipes}
 \subsection{Design Rule Check}
+\label{sec:calibre_recipes_drc}
 If you already have a \ti{GDSII} file, you can use the following minimal
 \tf{wscript} to set up a \gls{DRC} with \ti{Calibre}.
 This example can be found in the folder\\
@@ -430,13 +432,31 @@ for you. It will add include statements for the files that you'd specify
 on line 11 and it will add \tf{DRC UNSELECT CHECK} statements for the checks that
 you'd specified in lines 12-14.
 
+\subsubsection{Running Calibre Designrev to inspect errors}
+If you want to run \ti{Calibre Designrev} to inspect the errors that \gls{DRC}
+has found in your layout you can add the following code to your \tf{wscript}
+and execute \tf{./waf run} after you've run the check.
+
+\begin{lstwscript}
+def run(bld):
+    bld (
+        features = 'calibre_rve_drc',
+        cellname = 'inverter',
+        gds = bld.path.find_node('../brick_test_inverter.gds'),                                                                                                               
+    )   
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+\end{lstwscript}
+
 \subsubsection{Generating the GDSII file on-the-fly}
 If you want to run a \gls{DRC} on a layout that resides in one of your Cadence
 libraries, you can let \ti{brick} generate a streamed-out \ti{GDSII} file for
 you on-the-fly.
 This example can be found in the folder
 \tf{test/calibre/drc\_inverter\_streamout}.
-
 \begin{lstwscript}
 def configure(conf):
 
@@ -531,6 +551,7 @@ Please note that you can use the \ti{include} attribute of the
 netlist that is generated from the schematic. 
 
 \subsection{Parasitics Extraction}
+\label{sec:calibre_recipes_pex}
 
 This example demonstrates how to perform a parasitics extraction on a layout
 that resides in one of your Cadence design libraries. It can be found in\\
@@ -600,7 +621,7 @@ def build(bld):
         features = 'calibre_pex',
         cellname = 'inverter',
         layout_gds = inverter_streamout.get_cadence_strmout_gds_node(),
-        source_netlist = inverter_netlist.get_cds_netlist_lvs_node(),
+        use_sourcenames = True,
         includes = [
             bld.root.find_node(/your/process/rule/file))
         ],
