@@ -50,7 +50,7 @@ def build(bld):
         features = 'calibre_pex',
         cellname = 'inverter_chain',
         layout_gds = inverter_streamout.get_cadence_strmout_gds_node(),
-        source_netlist = inverter_netlist.get_cds_netlist_lvs_node(),
+        use_sourcenames = True,
         includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
         only_extract_nets = [
             'inbetween'

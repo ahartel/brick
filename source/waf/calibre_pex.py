@@ -18,9 +18,6 @@ def configure(conf):
 		conf.env['CALIBRE_PEX_OPT_FMT'] = [
 			'-64',
 		]
-		conf.env['CALIBRE_PEX_OPT_LVS'] = [
-			'-64', '-turbo',
-		]
 
 @TaskGen.taskgen_method
 def get_calibre_pex_rule_file_path(self):
@@ -44,7 +41,7 @@ def create_calibre_pex_task(self):
 
 
 	which_names = 'LAYOUTNAMES'
-	if hasattr(self,'source_netlist'):
+	if getattr(self,'use_sourcenames',False):
 		which_names = 'SOURCENAMES'
 
 	selected_nets = ""
@@ -74,15 +71,6 @@ LAYOUT CASE YES
 
 """.format(self.layout_gds.abspath(),self.cellname))
 
-		if hasattr(self,'source_netlist'):
-			f.write("""
-
-SOURCE PATH "{0}"
-SOURCE PRIMARY "{1}"
-SOURCE SYSTEM SPICE
-SOURCE CASE YES""".format(self.source_netlist.abspath(),self.cellname))
-
-
 		f.write("""
 
 MASK SVDB DIRECTORY "{1}" QUERY XRC CCI NOPINLOC IXF NXF SLPH
@@ -109,20 +97,6 @@ PEX NETLIST CHARACTER MAP "<[ >] %_"
 //PEX NETLIST GLOBAL NETS pc_pre_buf pc_pst_buf pc_preb_buf sense_pre_buf wen_pst_buf wen_pre_buf enb_int_left writeen_pst_buf
 
 
-LVS ISOLATE SHORTS YES
-
-LVS POWER NAME
-"vdd"
-"vdd12a"
-"vdd12d"
-"vdd25a"
-"vdd25d"
-
-LVS GROUND NAME
-"gnd"
-"gnda"
-"gndd"
-
 DRC ICSTATION YES
 	""".format(selected_nets))
 
@@ -146,24 +120,18 @@ DRC ICSTATION YES
 		f.write("\n".join(getattr(self,'xcells',[])))
 		f.close()
 
-	if hasattr(self,'source_netlist') and hasattr(self,'hcells'):
-		f = open(self.hcells_file.abspath(),"w")
-		f.write("\n".join(getattr(self,'hcells',[])))
-		f.close()
-
 
 	inputs = [self.layout_gds]
-	if hasattr(self,'source_netlist'):
+	if getattr(self,'use_sourcenames',False):
 		layout_spice_node = self.svdb.make_node(self.cellname+'.sp')
 		if not os.path.exists(layout_spice_node.abspath()):
 			from waflib.Errors import WafError
 			raise WafError('File '+self.cellname+'.sp not found in '+self.svdb.abspath()+' (tool calibre_pex). Probably, you forgot to run LVS first.')
 
 		inputs.append(layout_spice_node)
-		inputs.append(self.source_netlist)
 
 	pdb = self.create_task('calibrePexPDBTask', inputs)
-	if not hasattr(self,'source_netlist'):
+	if not getattr(self,'use_sourcenames',False):
 		phdb = self.create_task('calibrePexPHDBTask', inputs)
 		pdb.set_run_after(phdb)
 	fmt = self.create_task('calibrePexFMTTask', inputs, [self.get_calibre_pex_output_file_node(".pex.netlist"),self.get_calibre_pex_output_file_node(".pex.report")])
@@ -207,7 +175,7 @@ def get_fmt_options(self):
 	return conditional_options
 
 class calibrePexPHDBTask(ChattyBrickTask):
-	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
+	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
 	run_str = '${CALIBRE_PEX} -xrc -phdb ${gen.get_phdb_options()} ${CALIBRE_PEX_OPT_PHDB} ${gen.rule_file.abspath()}'
 
 	def check_output(self,ret,out):
@@ -221,7 +189,7 @@ class calibrePexPHDBTask(ChattyBrickTask):
 		return ret
 
 class calibrePexPDBTask(ChattyBrickTask):
-	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
+	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
 	run_str = '${CALIBRE_PEX} -xrc -pdb ${gen.get_pdb_options()} ${CALIBRE_PEX_OPT_PDB} ${gen.rule_file.abspath()}'
 
 	def check_output(self,ret,out):
@@ -238,7 +206,7 @@ class calibrePexPDBTask(ChattyBrickTask):
 		return ret
 
 class calibrePexFMTTask(ChattyBrickTask):
-	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_LVS','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
+	vars = ['CALIBRE_PEX','CALIBRE_PEX_OPT_PDB','CALIBRE_PEX_OPT_FMT','CALIBRE_PEX_OPT_PHDB']
 	run_str = '${CALIBRE_PEX} -xrc -fmt ${gen.get_fmt_options()} ${CALIBRE_PEX_OPT_FMT} ${gen.rule_file.abspath()}'
 
 	def check_output(self,ret,out):
