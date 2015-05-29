@@ -32,7 +32,6 @@ def build(bld):
     )
 
 
-    print bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')
 
     bld (
         features = 'calibre_lvs',
@@ -42,4 +41,16 @@ def build(bld):
         source_netlist = inverter_netlist.get_cds_netlist_lvs_node(),
         includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
     )
+
+def run(bld):
+    bld (
+        features = 'calibre_rve_lvs',
+        cellname = 'inverter',
+        gds = bld.bldnode.find_node('results/brick_test_inverter.gds')
+    )
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
 

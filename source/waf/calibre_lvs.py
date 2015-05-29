@@ -7,6 +7,7 @@ def configure(conf):
 	conf.load('brick_general')
 
 	conf.find_program('calibre',var='CALIBRE_LVS')
+	conf.find_program('calibredrv',var='CALIBRE_DRV')
 
 	conf.env['CALIBRE_LVS_OPTIONS'] = [
 			'-64', '-hier',
@@ -127,25 +128,23 @@ class calibreLvsTask(ChattyBrickTask):
 
 @TaskGen.feature('calibre_rve_lvs')
 def create_calibre_rve_lvs_task(self):
+	try:
+		getattr(self,'gds',None).abspath()
+	except AttributeError:
+		Logs.error('Please name an existing GDSII file for feature \'cds_rve_drc\'')
+
+	self.svdb = self.get_resultdir_node().make_node('svdb')
 	if not self.svdb:
-		Logs.error('Please name an existing svdb directory for feature \'cds_rve_lvs\'')
-		return
+		Logs.error('Database '+self.get_resultdir_node().make_node('svdb').abspath()+' not found. Please run feature \'calibre_lvs\' first.')
 
-	spice_file = self.svdb.find_node(self.cellname+'.sp')
+	input = [self.gds]
 
-	t = self.create_task('calibreRveLvsTask',spice_file)
+	t = self.create_task('calibreRveLvsTask',input)
 
 @Task.always_run
 class calibreRveLvsTask(Task.Task):
 	vars = ['CALIBRE_LVS','CALIBRE_LVS_OPTIONS','CALIBRE_LVS_RULES']
-	def run(self):
-		run_str = "%s -rve -lvs %s %s" % (self.env.CALIBRE_LVS, self.generator.svdb.abspath(),self.generator.cellname)
-		out = ""
-		try:
-			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
-		except Exception as e:
-			out = e.stdout
-
+	run_str = "${CALIBRE_DRV} -m ${SRC[0].abspath()} -rve -lvs ${gen.svdb.abspath()} ${gen.cellname}"
 
 # for convenience
 @Configure.conf

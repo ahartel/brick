@@ -105,16 +105,19 @@ class calibreDrcTask(ChattyBrickTask):
 
 @TaskGen.feature('calibre_rve_drc')
 def create_calibre_rve_drc_task(self):
-	if not self.report:
-		Logs.error('Please name an existing report file for feature \'cds_rve_drc\'')
-		return
 
 	try:
 		getattr(self,'gds',None).abspath()
 	except AttributeError:
 		Logs.error('Please name an existing GDSII file for feature \'cds_rve_drc\'')
 
-	t = self.create_task('calibreRveDrcTask', [self.gds, self.report])
+	report = self.get_resultdir_node().find_node(self.cellname+'.drc.results')
+	if not report:
+		Logs.error('Report '+self.get_resultdir_node().make_node(self.cellname+'.drc.results').abspath()+' not found. Please run feature \'calibre_drc\' first.')
+
+	input = [self.gds,report]
+
+	t = self.create_task('calibreRveDrcTask', input)
 
 @Task.always_run
 class calibreRveDrcTask(Task.Task):

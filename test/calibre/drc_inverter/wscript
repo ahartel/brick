@@ -16,3 +16,15 @@ def build(bld):
         ]
     )
 
+def run(bld):
+    bld (
+        features = 'calibre_rve_drc',
+        cellname = 'inverter',
+        gds = bld.path.find_node('../brick_test_inverter.gds'),
+    )
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+
