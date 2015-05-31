@@ -15,7 +15,7 @@ def create_brick_characterize_task(self):
 class brickCharacterizerTask(Task.Task):
     def run(self):
         os.chdir(self.generator.bld.bldnode.abspath())
-        do_characterization(
+        return do_characterization(
             # names
             self.generator.lib_name,
             self.generator.cell_name,
@@ -49,4 +49,4 @@ class brickCharacterizerTask(Task.Task):
             getattr(self.generator,'additional_probes',{}),
             getattr(self.generator,'default_max_transition',0.2)
         )
-        return 0
+

@@ -1,10 +1,8 @@
-import threading, logging
-inc_lock = threading.Lock()
+import logging
+from multiprocessing import Pool
+import threading
 sh_lock = threading.Lock()
 dt_lock = threading.Lock()
-
-threads_running = 0
-max_threads = 9
 
 caps = {}
 setups = {}
@@ -13,68 +11,54 @@ delays = {}
 transitions = {}
 
 def start_setup_hold_thread(run,constraint_template):
-    global max_threads
-    global inc_lock
     global sh_lock
-    global threads_running
     global setups
     global holds
-    from time import sleep
 
-    while not threads_running < max_threads:
-        sleep(1)
-    inc_lock.acquire()
-    threads_running += 1
-    inc_lock.release()
-
-    print "Starting thread for "+run.whats_my_name()
+    logging.info("Starting thread for "+run.whats_my_name())
+    OK = True
     while run.has_steps():
-        run.next_step()
-    print "thread "+run.whats_my_name()+' done'
-    logging.debug("Getting rise time values from thread "+run.whats_my_name()+": "+str(run.get_clock_rise_time())+", "+str(run.get_signal_rise_time()))
+        if not run.next_step() == 0:
+            OK = False
+            break
 
-    this_setups = run.get_setups()
-    this_holds = run.get_holds()
-    sh_lock.acquire()
-    for signal,values in this_setups.iteritems():
-        if not setups.has_key(signal):
-            setups[signal] = {}
-            for tran in constraint_template[0]:
-                setups[signal][tran] = {}
+    if OK == False:
+        logging.error("Setup/Hold thread "+run.whats_my_name()+" failed.")
+        return 1
+    else:
+        logging.info("Thread "+run.whats_my_name()+' terminated successfully.')
+        logging.debug("Getting rise time values from thread "+run.whats_my_name()+": "+str(run.get_clock_rise_time())+", "+str(run.get_signal_rise_time()))
 
-        setups[signal][run.get_clock_rise_time()][run.get_signal_rise_time()] = values
+        this_setups = run.get_setups()
+        this_holds = run.get_holds()
+        sh_lock.acquire()
+        for signal,values in this_setups.iteritems():
+            if not setups.has_key(signal):
+                setups[signal] = {}
+                for tran in constraint_template[0]:
+                    setups[signal][tran] = {}
 
-    for signal,values in this_holds.iteritems():
-        if not holds.has_key(signal):
-            holds[signal] = {}
-            for tran in constraint_template[0]:
-                holds[signal][tran] = {}
+            setups[signal][run.get_clock_rise_time()][run.get_signal_rise_time()] = values
 
-        holds[signal][run.get_clock_rise_time()][run.get_signal_rise_time()] = values
+        for signal,values in this_holds.iteritems():
+            if not holds.has_key(signal):
+                holds[signal] = {}
+                for tran in constraint_template[0]:
+                    holds[signal][tran] = {}
 
-    #logging.debug("Setups for thread "+run.whats_my_name()+": "+str(setups)+", holds: "+str(holds))
-    sh_lock.release()
-    logging.debug("Setup/Hold time merging lock for thread "+run.whats_my_name()+" released.")
+            holds[signal][run.get_clock_rise_time()][run.get_signal_rise_time()] = values
 
-    inc_lock.acquire()
-    threads_running -= 1
-    inc_lock.release()
-    logging.debug("Thread counter decremented for Setup/Hold thread "+run.whats_my_name()+".")
+        #logging.debug("Setups for thread "+run.whats_my_name()+": "+str(setups)+", holds: "+str(holds))
+        sh_lock.release()
+        logging.debug("Setup/Hold time merging lock for thread "+run.whats_my_name()+" released.")
+
+
+        return 0
 
 def start_delay_thread(run,delay_template):
-    global threads_running
-    global max_threads
-    global inc_lock
     global dt_lock
     global delays
     global transitions
-    from time import sleep
-
-    while not threads_running < max_threads:
-        sleep(1)
-    inc_lock.acquire()
-    threads_running += 1
-    inc_lock.release()
 
     print "Starting thread for "+run.whats_my_name()
     while run.has_steps():
@@ -100,10 +84,6 @@ def start_delay_thread(run,delay_template):
 
         transitions[signal][run.get_input_rise_time()][run.get_load_capacitance()] = values
     dt_lock.release()
-
-    inc_lock.acquire()
-    threads_running -= 1
-    inc_lock.release()
 
 
 
@@ -154,6 +134,8 @@ def do_characterization(
     global setups
     global holds
 
+    setup_hold_failed = False
+    delay_failed = False
 
     if not only_rewrite_lib_file:
         #
@@ -232,24 +214,23 @@ def do_characterization(
                     setup_hold_runs[len(setup_hold_runs)-1].set_signal_rise_time(constraint_template[1][j])
 
 
-            run_cnt = 0
-
-            t = []
-
+            pool = Pool(processes=9)
+            results = []
             for run in setup_hold_runs:
-                print run.whats_my_name()
-                t.append(threading.Thread(target=start_setup_hold_thread,args=(run,constraint_template)))
-                t[len(t)-1].start()
-                run_cnt += 1
+                print "Appending job "+run.whats_my_name()+" to Pool"
+                results.append(pool.apply_async(start_setup_hold_thread,(run,constraint_template)))
 
-            print "added "+str(run_cnt)+" threads"
+            pool.close()
+            pool.join()
 
-            for thread in t:
-                if thread.is_alive():
-                    thread.join()
+            setup_hold_failed = False
+            for res in results:
+                if not res.get() == 0:
+                    setup_hold_failed = True
+                    print "Setup/Hold timing characterization failed because one of the threads return non-zero."
+                    break
 
-
-        if not skip_delays:
+        if not skip_delays and not setup_hold_failed:
             from brick_characterizer.CellRiseFall_Char import CellRiseFall_Char
 
             delay_runs = []
@@ -270,34 +251,36 @@ def do_characterization(
                     delay_runs[len(delay_runs)-1].set_load_capacitance(delay_template[1][j])
 
 
-            run_cnt = 0
-
-            t = []
-
+            pool = Pool(processes=9)
+            results = []
             for run in delay_runs:
-                print run.whats_my_name()
-                t.append(threading.Thread(target=start_delay_thread,args=(run,delay_template)))
-                t[len(t)-1].start()
-                run_cnt += 1
+                print "Appending job "+run.whats_my_name()+" to Pool"
+                results.append(pool.apply_async(start_delay_thread,(run,delay_template)))
 
-            print "added "+str(run_cnt)+" threads"
+            pool.close()
+            pool.join()
 
-            for thread in t:
-                if thread.is_alive():
-                    thread.join()
+            delay_failed = False
+            for res in results:
+                if not res.get() == 0:
+                    delay_failed = True
+                    print "Delay timing characterization failed because one of the threads return non-zero."
+                    break
 
         import pickle
         # save setup and hold results for later re-writing of lib files
-        with open(lib_name+'_'+cell_name+'_setups.dat', 'w') as output:
-            pickle.dump(setups,output,pickle.HIGHEST_PROTOCOL)
-        with open(lib_name+'_'+cell_name+'_holds.dat', 'w') as output:
-            pickle.dump(holds,output,pickle.HIGHEST_PROTOCOL)
+        if not setup_hold_failed:
+            with open(lib_name+'_'+cell_name+'_setups.dat', 'w') as output:
+                pickle.dump(setups,output,pickle.HIGHEST_PROTOCOL)
+            with open(lib_name+'_'+cell_name+'_holds.dat', 'w') as output:
+                pickle.dump(holds,output,pickle.HIGHEST_PROTOCOL)
 
-        # save setup and hold results for later re-writing of lib files
-        with open(lib_name+'_'+cell_name+'_delays.dat', 'w') as output:
-            pickle.dump(delays,output,pickle.HIGHEST_PROTOCOL)
-        with open(lib_name+'_'+cell_name+'_output_transitions.dat', 'w') as output:
-            pickle.dump(transitions,output,pickle.HIGHEST_PROTOCOL)
+        # save delay and output transition timings for later re-writing of lib files
+        if not delay_failed:
+            with open(lib_name+'_'+cell_name+'_delays.dat', 'w') as output:
+                pickle.dump(delays,output,pickle.HIGHEST_PROTOCOL)
+            with open(lib_name+'_'+cell_name+'_output_transitions.dat', 'w') as output:
+                pickle.dump(transitions,output,pickle.HIGHEST_PROTOCOL)
 
         with open(lib_name+'_'+cell_name+'_input_capacitance.dat', 'w') as output:
             pickle.dump(caps,output,pickle.HIGHEST_PROTOCOL)
@@ -322,9 +305,10 @@ def do_characterization(
     #
     # Write lib file
     #
-
-    from brick_characterizer.LibBackend import LibBackend
-    be = LibBackend(constraint_template,delay_template,default_max_transition)
-    be.write(lib_name,cell_name,output_lib_file,inputs,outputs,inouts,powers,caps,clocks,input_timing_signals,output_timing_signals,setups,holds,delays,transitions)
-
-
+    if not setup_hold_failed and not delay_failed:
+        from brick_characterizer.LibBackend import LibBackend
+        be = LibBackend(constraint_template,delay_template,default_max_transition)
+        be.write(lib_name,cell_name,output_lib_file,inputs,outputs,inouts,powers,caps,clocks,input_timing_signals,output_timing_signals,setups,holds,delays,transitions)
+    else:
+        print "Not writing .lib file because setup/hold or delay calculation had an error."
+        return 1
