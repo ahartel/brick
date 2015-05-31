@@ -185,9 +185,10 @@ class SetupHold_Char(CharBase):
             self.generate_clock_edge(name,direction)
             self.add_probe(name)
 
+        self.logger_debug("Generating "+str(len(self.probe_signals))+" edges.")
         for probe,signal in self.probe_signals.iteritems():
             self.generate_two_edges(signal,self.signal_rise_time,self.current_delay[signal][0],self.current_delay[signal][1],self.probe_signal_directions[probe])
-            self.logger_debug("Generating edge for "+signal+" with rising delay "+str(self.current_delay[signal][0])+ " and falling delay "+str(self.current_delay[signal][1]))
+            #self.logger_debug("Generating edge for "+signal+" with rising delay "+str(self.current_delay[signal][0])+ " and falling delay "+str(self.current_delay[signal][1]))
             self.add_probe(signal)
 
         #for signal in self.probe_signals.iterkeys():
@@ -267,16 +268,20 @@ class SetupHold_Char(CharBase):
             self.state = 'delay'
             self.state_cnt = 0
             self.write_spice_file()
-            self.run()
-            self.check_timing()
+            if not self.run() == 0:
+                return 1
+            if not self.check_timing() == 0:
+                return 1
 
             self.state = 'setup'
             self.state_cnt = 0
 
         elif self.state == 'setup':
             self.write_spice_file()
-            self.run()
-            self.check_timing()
+            if not self.run() == 0:
+                return 1
+            if not self.check_timing() == 0:
+                return 1
 
             if self.state_cnt == self.max_setup_steps-1:
                 self.state_cnt = 0
@@ -306,8 +311,10 @@ class SetupHold_Char(CharBase):
 
         elif self.state == 'hold':
             self.write_spice_file()
-            self.run()
-            self.check_timing()
+            if not self.run() == 0:
+                return 1
+            if not self.check_timing() == 0:
+                return 1
 
             if self.state_cnt == self.max_hold_steps-1:
                 self.state = 'done'
@@ -337,13 +344,16 @@ class SetupHold_Char(CharBase):
 
         else:
             self.state = 'done'
-            return00
+
+        return 0
 
 
     def check_timing(self):
         # parse result file
         # after this step, all edges are identified
-        self.parse_print_file()
+        if not self.parse_print_file() == 0:
+            return 1
+        self.logger_info('Continuing to interpret edges from parse_print_file() in '+self.whats_my_name()+' step '+self.state+'_'+str(self.state_cnt))
         # find clock edge
         clock_edges = {}
         for clock_name, clock_dir in self.clocks.iteritems():
@@ -374,8 +384,9 @@ class SetupHold_Char(CharBase):
                     else:
                         self.logger_debug( "Delay: "+str(delta_t[0]))
                 else:
-                    self.logger_debug("Rising edge for signal "+signal+" not found but expected")
+                    self.logger_error("Rising edge for signal "+signal+" not found but expected")
                     delta_t[0] = self.infinity
+                    return 1
 
                 f_edges_signal = self.get_falling_edges(signal)
                 if f_edges_signal and len(f_edges_signal) > 0:
@@ -388,8 +399,9 @@ class SetupHold_Char(CharBase):
                     else:
                         self.logger_debug( "Delay: "+str(delta_t[1]))
                 else:
-                    self.logger_debug("Falling edge for signal "+signal+" not found but expected")
+                    self.logger_error("Falling edge for signal "+signal+" not found but expected")
                     delta_t[1] = self.infinity
+                    return 1
             elif self.probe_signal_directions[signal] == 'negative_unate':
                 f_edges_signal = self.get_falling_edges(signal)
                 if f_edges_signal and len(f_edges_signal) > 0:
@@ -402,8 +414,9 @@ class SetupHold_Char(CharBase):
                     else:
                         self.logger_debug( "Delay: "+str(delta_t[1]))
                 else:
-                    self.logger_debug("Falling edge for signal "+signal+" not found but expected")
+                    self.logger_error("Falling edge for signal "+signal+" not found but expected")
                     delta_t[1] = self.infinity
+                    return 1
 
                 r_edges_signal = self.get_rising_edges(signal)
                 if r_edges_signal and len(r_edges_signal) > 0:
@@ -416,8 +429,9 @@ class SetupHold_Char(CharBase):
                     else:
                         self.logger_debug( "Delay: "+str(delta_t[0]) )
                 else:
-                    self.logger_debug("Rising edge for signal "+signal+" not found but expected")
+                    self.logger_error("Rising edge for signal "+signal+" not found but expected")
                     delta_t[0] = self.infinity
+                    return 1
 
             if delta_t[0] == self.infinity:
                 self.logger_warning('Rising delay for signal '+signal+' could not be determined in '+self.whats_my_name()+' step '+self.state+'_'+str(self.state_cnt))
@@ -534,7 +548,7 @@ class SetupHold_Char(CharBase):
             #                # step half a step back, already went too far
             #                self.current_delay[related][edge_type] -= self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
 
-
+        return 0
 
     def parse_print_file(self):
         import subprocess,os
@@ -544,18 +558,10 @@ class SetupHold_Char(CharBase):
         else:
             call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
         self.logger_debug(" ".join(call))
-        process = subprocess.Popen(call,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-        process.wait()
+        returncode = subprocess.call(call)#,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-        # TODO: DELME
-        #if self.clock_rise_time == 0.01 and self.signal_rise_time == 0.01:
-        #    output = process.stdout.read()
-        #    print "Output of parse_print_file for "+self.whats_my_name()+" in state "+self.state+"_"+str(self.state_cnt)
-        #    print output
-
-        #    #if self.state == 'hold' and self.state_cnt == 2:
-        #    #    print self.rising_edges
-        #    #    print self.falling_edges
+        if not returncode == 0:
+            return 1
 
         import pickle
         with open(self.get_printfile_name()+'_rising') as input:
@@ -565,6 +571,6 @@ class SetupHold_Char(CharBase):
 
         #self.logger_debug(str(self.rising_edges))
 
-        return
+        return 0
 
 

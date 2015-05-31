@@ -296,3 +296,5 @@ if __name__ == '__main__':
     with open(filename+'_falling', 'w') as output:
         pickle.dump(falling_edges,output,pickle.HIGHEST_PROTOCOL)
 
+    sys.exit(0)
+

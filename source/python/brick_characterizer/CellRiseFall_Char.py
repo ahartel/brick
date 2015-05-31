@@ -55,10 +55,15 @@ class CellRiseFall_Char(CharBase):
             self.state = 'delay'
 
             self.write_spice_file()
-            self.run()
+            if not self.run() == 0:
+                return 1
             self.check_timing()
 
             self.state = 'done'
+
+            return 0
+
+        return 0
 
     def get_current_filename(self):
         import os
@@ -295,11 +300,12 @@ class CellRiseFall_Char(CharBase):
             call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file_spectre.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
         else:
             call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
+
         self.logger_debug(" ".join(call))
-        process = subprocess.Popen(call,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-        process.wait()
-        #for line in process.stdout:
-        #    print line
+        returncode = subprocess.call(call)
+
+        if not returncode == 0:
+            return 1
 
         import pickle
         with open(self.get_printfile_name()+'_rising') as input:

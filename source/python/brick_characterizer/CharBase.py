@@ -77,7 +77,7 @@ class CharBase(object):
     def add_include_netlist(self,netlist):
         import os
         if not os.path.isfile(netlist):
-            raise Exception('include-netlist not found')
+            raise Exception('Netlist '+netlist+' to be included in '+self.whats_my_name()+' not found')
 
         self.include_netlists.append(netlist)
 
@@ -246,8 +246,8 @@ class CharBase(object):
         else:
             call = ['spectre', '-outdir', self.output_dir, '-format', 'sst2', '=log',self.get_current_logfile(), self.get_current_filename()]
         self.logger_debug(" ".join(call))
-        process = subprocess.Popen(call,stdout=subprocess.PIPE)
-        process.wait()
+        returncode = subprocess.call(call)
+        return returncode
 
     def get_current_filename(self):
         import os
