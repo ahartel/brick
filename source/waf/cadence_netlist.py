@@ -93,7 +93,7 @@ def add_cds_netlist_target(self):
 def get_cds_netlist_lvs_node(self):
 	lib,cell,view = self.get_cadence_lib_cell_view_from_cellview()
 	lvs_netlist_filename = lib+'_'+cell+'.src.net'
-	return self.bld.bldnode.find_node(self.env.BRICK_RESULTS).make_node(lvs_netlist_filename)
+	return self.get_resultdir_node().make_node(lvs_netlist_filename)
 
 @TaskGen.feature('cds_netlist_lvs')
 def add_cds_netlist_lvs_target(self):
