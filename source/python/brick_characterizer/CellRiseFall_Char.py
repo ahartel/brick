@@ -34,6 +34,12 @@ class CellRiseFall_Char(CharBase):
     def get_transitions(self):
         return self.transitions
 
+    def get_first_table_param(self):
+        return self.get_input_rise_time()
+
+    def get_second_table_param(self):
+        return self.get_load_capacitance()
+
     def get_input_rise_time(self):
         return self.input_rise_time
 
@@ -48,6 +54,9 @@ class CellRiseFall_Char(CharBase):
 
     def whats_my_name(self):
         return 'CellRiseFall_Char_inTr'+str(self.input_rise_time)+'_cap'+str(self.load_capacitance)
+
+    def log_my_name(self):
+        return self.state+'\tin'+str(self.input_rise_time)+'\tcap'+str(self.load_capacitance)
 
     def next_step(self):
         # this class has only one step
@@ -208,7 +217,8 @@ class CellRiseFall_Char(CharBase):
     def check_timing(self):
         # parse result file
         # after this step, all edges are identified
-        self.parse_print_file()
+        if not self.parse_print_file() == 0:
+            return 1
         # find clock edge
         clock_edges = {}
         for clock_name, clock_dir in self.clocks.iteritems():
@@ -293,6 +303,8 @@ class CellRiseFall_Char(CharBase):
             self.logger_debug('Delays for signal \''+probe+'\' are rising: '+str(self.delays[probe][0])+' and falling: '+str(self.delays[probe][1]))
             self.logger_debug('Transition times for signal \''+probe+'\' are rising: '+str(self.transitions[probe][0])+' and falling: '+str(self.transitions[probe][1]))
 
+        return 0
+
     def parse_print_file(self):
         import subprocess,os
         call = ''
@@ -313,3 +325,4 @@ class CellRiseFall_Char(CharBase):
         with open(self.get_printfile_name()+'_falling') as input:
             self.falling_edges = pickle.load(input)
 
+        return 0

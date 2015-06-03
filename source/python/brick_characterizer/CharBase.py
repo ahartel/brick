@@ -43,16 +43,16 @@ class CharBase(object):
 
     # logger bleiben
     def logger_debug(self,text):
-        logging.debug(self.whats_my_name()+' '+text)
+        logging.debug(self.log_my_name()+' '+text)
 
     def logger_warning(self,text):
-        logging.warning(self.whats_my_name()+' '+text)
+        logging.warning(self.log_my_name()+' '+text)
 
     def logger_error(self,text):
-        logging.error(self.whats_my_name()+' '+text)
+        logging.error(self.log_my_name()+' '+text)
 
     def logger_info(self,text):
-        logging.info(self.whats_my_name()+' '+text)
+        logging.info(self.log_my_name()+' '+text)
 
     def set_rise_threshold(self,value):
         if value > 1:
