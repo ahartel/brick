@@ -1,2 +1,15 @@
 \chapter{RTL simulation with Modeltech Modelsim}
 \label{chap:modelsim}
+\section{Modelsim HDL simulation workflow}
+
+The Modelsim tool chain implements a three-step\marginnote{3-step
+process} workflow for building \gls{HDL} simulations. The tool
+chain consists of four tools (of which two implement the same of the three
+steps but for different languages):
+\begin{itemize}
+	\item \tf{vlog}/\tf{vcom} for compiling design files
+	\item \tf{vopt} for optimizing a design hierarchy
+	\item \tf{vsim} for simulating an elaborated design hierarchy
+\end{itemize}
+
+These tools will be described in detail in the following subsecitons.
