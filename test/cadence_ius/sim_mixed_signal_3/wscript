@@ -50,18 +50,4 @@ class one(BuildContext):
     fun = 'run'
 
 
-#ELAB_OPTIONS'].extend([                                        
-# 95             '-amsfastspice',
-# 96             '-modelpath', os.environ['PROJECT_ROOT']+'/env/include_all_models.scs',
-# 97             #'-libverbose',
-# 98             '-iereport',
-# 99             'cds_globals',
-#100         ])
-#101 
-#102         conf.env['NCSIM_OPTIONS'].extend([
-#103             '-analogControl', '../amsControl.scs',
-#104         ])
-#105 
-
-
 

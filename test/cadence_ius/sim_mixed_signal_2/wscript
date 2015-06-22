@@ -40,12 +40,13 @@ def build(bld):
         name = 'compile_top',
         source = bld.convert_string_paths(
             [
-                '../../source/verilog/package.sv',
-                '../../source/verilog/tb.sv',
-                '../../source/verilog/top.sv',
-                '../../source/verilog-ams/inverter_array.vams',
+                '../../source/systemverilog/package.sv',
+                '../../source/systemverilog/tb.sv',
+                '../../source/systemverilog/top.sv',
+                '../../source/verilog-ams/inverter_array_supply.vams',
                 '../../source/verilog-ams/inverter.vams',
-                os.environ['BRICK_DIR']+'/source/verilog-ams/ConnRules12.vams'
+                os.environ['BRICK_DIR']+'/source/verilog-ams/ConnRules12.vams',
+                os.environ['BRICK_DIR']+'/source/verilog-ams/power_supplies.vams',
             ]),
         features = 'cds_compile_hdl',
         verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
@@ -69,20 +70,5 @@ from waflib.Build import BuildContext
 class one(BuildContext):
     cmd = 'run'
     fun = 'run'
-
-
-#ELAB_OPTIONS'].extend([                                        
-# 95             '-amsfastspice',
-# 96             '-modelpath', os.environ['PROJECT_ROOT']+'/env/include_all_models.scs',
-# 97             #'-libverbose',
-# 98             '-iereport',
-# 99             'cds_globals',
-#100         ])
-#101 
-#102         conf.env['NCSIM_OPTIONS'].extend([
-#103             '-analogControl', '../amsControl.scs',
-#104         ])
-#105 
-
 
 
