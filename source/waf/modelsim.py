@@ -1,8 +1,9 @@
+import os
+#import types
 from verilog_scanner import scan_verilog_task
 from vhdl_scanner import vhdl_scanner
-import os
-import types
 from waflib import Task,TaskGen,ConfigSet,Configure
+from brick_general import ChattyBrickTask
 
 def options(opt):
 	opt.add_option('--xilinxlib', action='store', help='Define the path to the xilinxlib')
@@ -21,11 +22,11 @@ def configure(conf):
 	]
 	conf.env.VSIM_OPTIONS = []
 	conf.env.MODELSIM_WORKLIBS = []
-	conf.env.MODELSIM_WORKLIB = 'worklib'
 
 	conf.find_program('vlog',var='MODEL_VLOG')
 	conf.find_program('vcom',var='MODEL_VCOM')
 	conf.find_program('vsim',var='MODEL_VSIM')
+	conf.find_program('vlib',var='MODEL_VLIB')
 
 #@Configure.conf
 #def check_create_worklib(self,name):
@@ -37,14 +38,20 @@ def configure(conf):
 #	self.env.MODELSIM_WORKLIBS.extend(['-L',worklib.abspath()])
 
 @TaskGen.taskgen_method
+def get_worklib_path_from_string(self,lib):
+	worklib = self.bld.bldnode.make_node(lib)
+	return worklib
+
+@TaskGen.taskgen_method
 def check_create_worklib_task(self,lib):
-	worklib = self.path.get_bld().find_node(lib+'/_info')
-	if not worklib and not getattr(self,'worklib_task',None):
-		worklib = self.path.get_bld().make_node(lib+'/_info')
-		worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
-		return worklib_task
+	worklib = self.get_worklib_path_from_string(lib)
+	worklib_gen_output = worklib.find_node('_info')
+	if worklib_gen_output is None and not getattr(self,'worklib_task',None):
+		worklib_gen_output = worklib.make_node('_info')
+		worklib_task = self.create_task('vlibTask',None,worklib_gen_output.get_bld())
+		return worklib,worklib_gen_output
 	else:
-		return None
+		return worklib,None
 
 
 #TaskGen.declare_chain(
@@ -135,20 +142,18 @@ TaskGen.declare_chain(
 
 class ModelsimSvlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${MODEL_VLOG} -l ${gen.logfile} -sv ${VLOG_SV_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.ncvlog_add_options} ${gen.source_string_sv}'
+	run_str = '${MODEL_VLOG} -l ${gen.logfile} -sv ${VLOG_SV_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
 
 class ModelsimVlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${MODEL_VLOG} -l ${gen.logfile} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${gen.ncvlog_add_options} ${gen.source_string_v}'
+	run_str = '${MODEL_VLOG} -l ${gen.logfile} ${VLOG_V_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
 
 
 @TaskGen.before('process_source')
 @TaskGen.feature('modelsim')
 def modelsim_vlog_prepare(self):
-	# save worklib to env
-	self.env.WORKLIB = getattr(self,'worklib',self.env.MODELSIM_WORKLIB)
 	# create task to generate worklib (if necessary)
-	self.check_create_worklib_task(self.env.WORKLIB)
+	self.WORKLIB,worklib_gen_output = self.check_create_worklib_task(getattr(self,'worklib','worklib'))
 	#
 	# transform search paths to the format used for ncvlog
 	#
@@ -188,10 +193,14 @@ def modelsim_vlog_prepare(self):
 	#print self.name
 	#print len(self.source_string_vams), len(self.source_string_v), len(self.source_string_sv)
 
-	if hasattr(self,'view'):
-		self.ncvlog_add_options = ['-VIEW',self.view]
-	else:
-		self.ncvlog_add_options = []
+	if not worklib_gen_output is None:
+		self.source_v.append(worklib_gen_output)
+		self.source_sv.append(worklib_gen_output)
+
+	#if hasattr(self,'view'):
+	#	self.ncvlog_add_options = ['-VIEW',self.view]
+	#else:
+	#	self.ncvlog_add_options = []
 
 	if len(self.source_string_v) > 0:
 		task = self.create_task("ModelsimVlogTask",self.source_v,[])
@@ -201,12 +210,12 @@ def modelsim_vlog_prepare(self):
 	self.source = []
 
 
-from waflib import Task
-class vlibTask(Task.Task):
-	def run(self):
-		run_str = 'vlib -unlocklib ${TGT[0].parent.abspath()}'
-		(f, dvars) = Task.compile_fun(run_str, False)
-		return f(self)
+class vlibTask(ChattyBrickTask):
+	run_str = '${MODEL_VLIB} ${TGT[0].parent.abspath()}'
+
+	def check_output(self,ret,out):
+
+		return ret
 
 #@TaskGen.feature('modelsim')
 #def modelsim_prepare(self):
@@ -236,12 +245,15 @@ class vlibTask(Task.Task):
 
 @Task.always_run
 class vsimTask(Task.Task):
-   run_str = '${MODEL_VSIM} -l ${VSIM_LOGFILE} -L ${WORKLIB} ${SIMULATION_TOPLEVEL} ${VSIM_OPTIONS}'
+   run_str = '${MODEL_VSIM} -l ${VSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${VSIM_OPTIONS}'
 
-from waflib.TaskGen import feature
-@feature('vsim')
+@TaskGen.feature('vsim')
 def modelsim_run(self):
-	self.env.VSIM_OPTIONS += self.env.MODELSIM_WORKLIBS
+	for lib in self.bld.env.MODELSIM_WORKLIBS:
+		self.env.VSIM_OPTIONS.append("-L")
+		self.env.VSIM_OPTIONS.append(self.get_worklib_path_from_string(lib).abspath())
+
+
 	self.env.SIMULATION_TOPLEVEL = self.toplevel
 	worklib = getattr(self,'worklib','worklib')
 	# create task to generate worklib (if necessary)
