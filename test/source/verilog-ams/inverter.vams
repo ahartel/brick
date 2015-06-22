@@ -11,6 +11,6 @@ module inverter(in,out);
 
 	analog begin
 		high = V(in);
-		V(out) <+ transition(high>supply_voltage/2.0?supply_voltage:0,0,100p,100p);
+		V(out) <+ transition(high<supply_voltage/2.0?supply_voltage:0,0,100p,100p);
 	end
 endmodule

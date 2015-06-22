@@ -1,7 +1,7 @@
 
 module top(
 	input logic clk,
-	input logic[1:0] a,
+	input wire[1:0] a,
 	output logic[1:0] b
 );
 	wire[1:0] not_a;

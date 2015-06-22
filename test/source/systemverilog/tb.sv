@@ -6,7 +6,7 @@ module tb();
 
 	initial begin
 		clk = 0;
-		$deposit(a,2'b00);
+		$deposit(tb.top_i.a,2'b00);
 		#(`WAIT_TIME);
 		$finish();
 	end

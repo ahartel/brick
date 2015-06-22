@@ -17,9 +17,9 @@ def build(bld):
         name = 'compile_top',
         source = bld.convert_string_paths(
             [
-                '../../source/verilog/package.sv',
-                '../../source/verilog/tb.sv',
-                '../../source/verilog/top.sv',
+                '../../source/systemverilog/package.sv',
+                '../../source/systemverilog/tb.sv',
+                '../../source/systemverilog/top.sv',
                 '../../source/verilog-ams/inverter.vams',
                 '../../source/verilog-ams/inverter_array.vams',
                 os.environ['BRICK_DIR']+'/source/verilog-ams/ConnRules12.vams'

@@ -3,6 +3,7 @@ def configure(conf):
     conf.load('cadence_ius')
     conf.env.CDS_LIBS = {'mywork':'./mywork'}
     conf.env.CDS_WORKLIB = 'mywork'
+    conf.env.NCELAB_OPTIONS.extend(['-access','+r'])
 
 def build(bld):
     bld ( features = 'cds_write_libs' )
@@ -11,11 +12,11 @@ def build(bld):
         name = 'compile_top',
         source = bld.convert_string_paths(
             [
-                '../../source/verilog/package.sv',
-                '../../source/verilog/tb.sv',
-                '../../source/verilog/top.sv',
-                '../../source/verilog/inverter.sv',
-                '../../source/verilog/inverter_array.sv',
+                '../../source/systemverilog/package.sv',
+                '../../source/systemverilog/tb.sv',
+                '../../source/systemverilog/top.sv',
+                '../../source/systemverilog/inverter.sv',
+                '../../source/systemverilog/inverter_array.sv',
             ]),
         features = 'cds_compile_hdl',
         verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])

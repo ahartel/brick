@@ -1,0 +1,64 @@
+`include "disciplines.vams"
+
+module power (vb_buf, vdd25d, vdd25a, vdd12a, vdd12d);
+	output vb_buf;
+	output vdd25d;
+	output vdd25a;
+	output vdd12d;
+	output vdd12a;
+	electrical vb_buf;
+	electrical vdd25a;
+	electrical vdd25d;
+	electrical vdd12a;
+	electrical vdd12d;
+
+	parameter real td=0.1 from [0:inf], tr=0.1 from [0:inf];
+
+	analog begin
+		V(vb_buf) <+ 1.8;
+		V(vdd25a) <+ 2.5;
+		V(vdd25d) <+ 2.5;
+		V(vdd12a) <+ 1.2;
+		V(vdd12d) <+ 1.2;
+	end
+endmodule
+
+module gnd_supply (
+    gnd
+  );
+
+  output gnd;
+  electrical gnd;
+  ground gnd;
+endmodule
+
+module power_supply (
+    rail
+  );
+
+  parameter real VOLTAGE=1.2;
+  output rail;
+  electrical rail, gnd;
+  ground gnd;
+  real power;
+  analog begin
+    V(rail) <+ VOLTAGE;
+    power = V(rail)*I(gnd,rail);
+  end
+
+endmodule
+
+module current_source (
+    out,rail
+  );
+
+  parameter real CURRENT=1.0e-6;
+  input rail;
+  output out;
+  electrical rail,out, gnd;
+  ground gnd;
+  analog begin
+    I(rail,out) <+ CURRENT;
+  end
+
+endmodule

@@ -1,0 +1,14 @@
+`include "disciplines.vams"
+
+module inverter_array(in,out);
+	input[1:0] in;
+	output[1:0] out;
+	electrical[1:0] in,out;
+
+	electrical gnd,vdd12;
+	ground gnd;
+	power_supply #(.VOLTAGE(1.2)) (vdd12);
+
+	inverter inv_0(.vdd(vdd12),.gnd(gnd),.in(in[0]),.out(out[0]));
+	inverter inv_1(.vdd(vdd12),.gnd(gnd),.in(in[1]),.out(out[1]));
+endmodule
