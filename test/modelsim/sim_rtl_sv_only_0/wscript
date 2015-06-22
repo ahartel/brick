@@ -1,19 +1,23 @@
+
 def configure(conf):
-    conf.load('brick_general')
     conf.load('modelsim')
+    conf.env.VSIM_OPTIONS = ['-vopt','-voptargs=+acc']
 
 def build(bld):
-    bld.load('brick_general')
 
     bld (
         name = 'compile_top',
         source = bld.convert_string_paths(
             [
-                'tb.sv',
-                'top.v',
+                '../../source/systemverilog/package.sv',
+                '../../source/systemverilog/tb.sv',
+                '../../source/systemverilog/top.sv',
+                '../../source/systemverilog/inverter.sv',
+                '../../source/systemverilog/inverter_array.sv',
             ])
             ,
         features = 'modelsim',
+        verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
     )
 
 
