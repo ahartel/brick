@@ -362,40 +362,43 @@ the \tf{ncvlog} calls.
 
 \subsection{Layout-Based Mixed-signal simulation}
 
-%\section{Simulating with Modelsim}
-%\subsection{Basic RTL simulation}
-%
-%\begin{lstwscript}
-%def configure(conf):
-%    conf.load('brick_general')
-%    conf.load('modelsim')
-%
-%def build(bld):
-%    bld.load('brick_general')
-%
-%    bld (
-%        name = 'compile_top',
-%        source = bld.convert_string_paths(
-%            [   
-%                'tb.sv',
-%                'top.sv',
-%            ])  
-%            ,   
-%        features = 'modelsim',
-%    )   
-%
-%
-%def run(bld):
-%    bld (
-%        features = 'vsim',
-%        toplevel = 'worklib.tb',
-%    )   
-%
-%from waflib.Build import BuildContext
-%class one(BuildContext):
-%    cmd = 'run'
-%    fun = 'run'
-%\end{lstwscript}
+\section{Simulating with Modelsim}
+\subsection{Basic RTL simulation}
+
+\begin{lstwscript}
+def configure(conf):
+    conf.load('modelsim')
+
+def build(bld):
+
+    bld (
+        name = 'compile_top',
+        features = 'modelsim',
+		source = bld.convert_string_paths(
+            [
+                'source_file0',
+                'source_file1',
+            ]),
+        verilog_search_paths = bld.convert_string_paths(
+            [
+                'search_path0',
+                'search_path1',
+            ]
+        ),
+    )   
+
+
+def run(bld):
+    bld (
+        features = 'vsim',
+        toplevel = 'worklib.tb',
+    )   
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+\end{lstwscript}
 
 \section{Checking and Extracting Layouts with Calibre}
 \label{sec:calibre_recipes}
