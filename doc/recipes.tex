@@ -364,6 +364,7 @@ the \tf{ncvlog} calls.
 
 \section{Simulating with Modelsim}
 \subsection{Basic RTL simulation}
+\label{sec:modelsim_basic_rtl}
 
 \begin{lstwscript}
 def configure(conf):
@@ -399,6 +400,44 @@ class one(BuildContext):
     cmd = 'run'
     fun = 'run'
 \end{lstwscript}
+
+\subsubsection{Changing the worklib's name}
+\begin{lstwscript}
+def configure(conf):
+    conf.load('modelsim')
+    conf.env.MODELSIM_WORKLIBS.append('mywork')
+
+def build(bld):
+
+    bld (
+        name = 'compile_top',
+        features = 'modelsim',
+        worklib = 'mywork',
+        ...
+    )   
+
+
+def run(bld):
+    bld (
+        features = 'vsim',
+        toplevel = 'mywork.tb',
+    )   
+
+...
+\end{lstwscript}
+In this listing, compared to the listing in \cref{sec:modelsim_basic_rtl},
+lines 3, 10 and 18 have been added and mark the important changes. The rest of
+the listing has remained unchanged. The additional lines' purposes are
+described next:
+\begin{description}
+    \item[Line 3:] Add the library to the global list of working libraries.
+		This is necessary to have the libraries available when running the
+		simulation.
+    \item[Line 10:] Tell the task generator to compile its source files to the
+		working library \ti{mywork}
+	\item[Line 18:] Select the design unit tb from working library \ti{mywork}
+		as the design top level.
+\end{description}
 
 \section{Checking and Extracting Layouts with Calibre}
 \label{sec:calibre_recipes}
