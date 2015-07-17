@@ -80,7 +80,7 @@ def check_create_worklib_task(self,lib):
 #)
 
 TaskGen.declare_chain(
-        rule         = '${MODEL_VLOG} -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+		rule         = '${MODEL_VLOG} -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.lib.src' ],
         ext_out      = ['.lib.src.out' ],
         reentrant    = False,
@@ -89,7 +89,7 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = '${MODEL_VLOG} -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${MODEL_VLOG} -l ${VLOG_LOGFILE} ${VLOG_V_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = ['.vp', ],
         ext_out      = ['.vp.out', ],
         reentrant    = False,
@@ -98,9 +98,8 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = '${MODEL_VCOM} -l ${VCOM_LOGFILE} ${VCOM_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${MODEL_VCOM} -l ${gen.get_logdir_node().make_node(gen.env.VCOM_LOGFILE).abspath()}${gen.name} ${VCOM_OPTIONS} -work ${gen.WORKLIB.abspath()} ${SRC}',
         ext_in       = ['.vhd'],
-        ext_out      = ['.vhd.out'],
         scan         = vhdl_scanner,
         reentrant    = False,
 )
@@ -182,13 +181,19 @@ def modelsim_vlog_prepare(self):
 	self.source_string_sv   = []
 	self.source_v    = []
 	self.source_string_v    = []
+	remove_sources = []
 	for src in getattr(self,'source',[]):
 		if src.suffix() == '.v':
 			self.source_string_v.append(src.abspath())
 			self.source_v.append(src)
+			remove_sources.append(src)
 		elif src.suffix() == '.sv':
 			self.source_string_sv.append(src.abspath())
 			self.source_sv.append(src)
+			remove_sources.append(src)
+
+	for src in remove_sources:
+		self.source.remove(src)
 
 	#print self.name
 	#print len(self.source_string_vams), len(self.source_string_v), len(self.source_string_sv)
@@ -206,8 +211,6 @@ def modelsim_vlog_prepare(self):
 		task = self.create_task("ModelsimVlogTask",self.source_v,[])
 	if len(self.source_string_sv) > 0:
 		task = self.create_task("ModelsimSvlogTask",self.source_sv,[])
-
-	self.source = []
 
 
 class vlibTask(ChattyBrickTask):
