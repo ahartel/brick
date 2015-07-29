@@ -54,7 +54,7 @@ def build(bld):
     )
 
     pex = bld (
-        name = 'xrc_inverter',
+        name = 'xrc_data_ffs',
         features = 'calibre_pex',
         cellname = bld.env.CELL_NAME_LAYOUT[1],
         layout_gds = ffs_streamout.get_cadence_strmout_gds_node(),

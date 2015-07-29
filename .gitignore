@@ -6,3 +6,5 @@ build
 *.cdslck*
 thumbnail*
 .cadence
+.abstract*
+.inca*
