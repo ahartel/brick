@@ -1,7 +1,13 @@
+import os
 
 def configure(conf):
     conf.load('cadence_ius')
     conf.env.NCELAB_OPTIONS.extend(['-access','+r'])
+
+    conf.env['CDS_LIBS'] = {
+            'ieee': os.environ['IUSDIR']+'/tools/inca/files/IEEE',
+            'std': os.environ['IUSDIR']+'/tools/inca/files/STD',
+            }
 
 def build(bld):
     bld ( features = 'cds_write_libs' )
@@ -15,6 +21,7 @@ def build(bld):
                 '../../source/systemverilog/top.sv',
                 '../../source/systemverilog/inverter.sv',
                 '../../source/systemverilog/inverter_array.sv',
+                '../../source/vhdl/empty.vhd',
             ]),
         features = 'cds_compile_hdl',
         verilog_search_paths = bld.convert_string_paths(['../../source/verilog'])
