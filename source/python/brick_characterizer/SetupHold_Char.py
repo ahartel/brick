@@ -572,9 +572,9 @@ class SetupHold_Char(CharBase):
         import subprocess,os
         call = ''
         if self.use_spectre:
-            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file_spectre.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
+            call = ['python', os.environ['BRICK_DIR']+'/source/python/brick_characterizer/parse_print_file_spectre.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
         else:
-            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
+            call = ['python', os.environ['BRICK_DIR']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold)]
         self.logger_debug(" ".join(call))
         returncode = subprocess.call(call)#,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
