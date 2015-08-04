@@ -348,7 +348,7 @@ class LibBackend:
                 gnd_cnt += 1
         return output
 
-    def iterate_inout_signals(self,pin_list,caps):
+    def iterate_inout_signals(self,pin_list,analogs,caps):
         output = []
         # write bus and pin definitions
         for signal in pin_list:
@@ -373,11 +373,14 @@ class LibBackend:
                     signal_name = m.group(1)+'['+str(i)+']'
                     output += self.indent(['pin ('+signal_name+') {'])
                     self.indentation +=1
-                    # here
-                    try:
-                        output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
-                    except:
-                        pass
+                    # Only attach a capacitance value if this is not an analog pin
+                    if signal in analogs or signal_name in analogs:
+                        output += self.indent(['is_analog : true;'])
+                    else:
+                        try:
+                            output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+                        except:
+                            pass
 
                     # end of pin block
                     self.indentation -= 1
@@ -392,11 +395,14 @@ class LibBackend:
                 output += self.indent(['pin ('+signal+') {'])
                 self.indentation +=1
                 output += self.indent(['direction : inout;'])
-                # here
-                try:
-                    output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
-                except:
-                    pass
+                # Only attach a capacitance value if this is not an analog pin
+                if signal in analogs:
+                    output += self.indent(['is_analog : true;'])
+                else:
+                    try:
+                        output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
+                    except:
+                        pass
 
                 # end of pin block
                 self.indentation -= 1
@@ -404,7 +410,7 @@ class LibBackend:
 
         return output
 
-    def iterate_output_signals(self,pin_list,timing_signals,delays,transitions):
+    def iterate_output_signals(self,pin_list,analogs,timing_signals,delays,transitions):
         output = []
         # write bus and pin definitions
         for signal in pin_list:
@@ -432,33 +438,11 @@ class LibBackend:
                     # here
                     output += self.indent(['max_capacitance : 0.010;'])
 
-                    output += self.write_delay_timing(timing_signals,delays,transitions,signal_name)
 
-                    #if m.group(1) == 'd_out_pst' or m.group(1) == 'd_out_pre':
-                    #    output += self.indent(['timing() {'])
-                    #    self.indentation += 1
-
-                    #    if m.group(1) == 'd_out_pst':
-                    #        output += self.indent(['related_pin : "clk_pst";'])
-                    #    elif m.group(1) == 'd_out_pre':
-                    #        output += self.indent(['related_pin : "clk_pre";'])
-
-                    #    output += self.indent(['cell_rise(scalar) {',
-                    #        '\tvalues( " 0.200 ");',
-                    #        '}'])
-                    #    output += self.indent(['cell_fall(scalar) {',
-                    #        '\tvalues( " 0.200 ");',
-                    #        '}'])
-                    #    output += self.indent(['rise_transition(scalar) {',
-                    #        '    values( " 0.100 ");',
-                    #        '}',
-                    #        'fall_transition(scalar) {',
-                    #        '    values( " 0.100 ");',
-                    #        '}'])
-
-                    #    # end of timing block
-                    #    self.indentation -= 1
-                    #    output += self.indent(['}'])
+                    if signal in analogs or signal_name in analogs:
+                        output += self.indent(['is_analog : true;'])
+                    else:
+                        output += self.write_delay_timing(timing_signals,delays,transitions,signal_name)
 
                     # end of pin block
                     self.indentation -= 1
@@ -476,7 +460,10 @@ class LibBackend:
                 # here
                 output += self.indent(['max_capacitance : 0.010;'])
 
-                output += self.write_delay_timing(timing_signals,delays,transitions,signal)
+                if signal in analogs:
+                    output += self.indent(['is_analog : true;'])
+                else:
+                    output += self.write_delay_timing(timing_signals,delays,transitions,signal)
 
                 # end of pin block
                 self.indentation -= 1
@@ -485,10 +472,11 @@ class LibBackend:
         return output
 
 
-    def iterate_input_signals(self,pin_list,caps,timing_signals,setups,holds):
+    def iterate_input_signals(self,pin_list,analogs,caps,timing_signals,setups,holds):
         output = []
         # write bus and pin definitions
         for signal in pin_list:
+            # is this a bus or a single pin?
             m = self.bus_reg.search(signal)
             if m:
                 #
@@ -510,20 +498,23 @@ class LibBackend:
                     signal_name = m.group(1)+'['+str(i)+']'
                     output += self.indent(['pin ('+signal_name+') {'])
                     self.indentation +=1
-                    # here
-                    try:
-                        output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
-                    except:
-                        pass
+                    # Only attach a capacitance value if this is not an analog pin
+                    if signal in analogs or signal_name in analogs:
+                        output += self.indent(['is_analog : true;'])
+                    else:
+                        try:
+                            output += self.indent(['capacitance : '+str(caps[signal_name]/1.e-12)+';'])
+                        except:
+                            pass
 
-                    try:
-                        if self.clocks.has_key(signal_name):
-                            output += self.indent(['clock : true;'])
-                    except:
-                        pass
+                        try:
+                            if self.clocks.has_key(signal_name):
+                                output += self.indent(['clock : true;'])
+                        except:
+                            pass
 
-                    output += self.write_setup_timing(timing_signals,setups,signal_name)
-                    output += self.write_hold_timing(timing_signals,holds,signal_name)
+                        output += self.write_setup_timing(timing_signals,setups,signal_name)
+                        output += self.write_hold_timing(timing_signals,holds,signal_name)
 
                     self.indentation -= 1
                     output += self.indent(['}'])
@@ -537,26 +528,30 @@ class LibBackend:
                 output += self.indent(['pin ('+signal+') {'])
                 self.indentation +=1
                 output += self.indent(['direction : input;'])
-                try:
-                    output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
-                except:
-                    pass
 
-                try:
-                    if self.clocks.has_key(signal):
-                        output += self.indent(['clock : true;'])
-                except:
-                    pass
+                if signal in analogs:
+                    output += self.indent(['is_analog : true;'])
+                else:
+                    try:
+                        output += self.indent(['capacitance : '+str(caps[signal]/1.e-12)+';'])
+                    except:
+                        pass
 
-                output += self.write_setup_timing(timing_signals,setups,signal)
-                output += self.write_hold_timing(timing_signals,holds,signal)
+                    try:
+                        if self.clocks.has_key(signal):
+                            output += self.indent(['clock : true;'])
+                    except:
+                        pass
+
+                    output += self.write_setup_timing(timing_signals,setups,signal)
+                    output += self.write_hold_timing(timing_signals,holds,signal)
 
                 self.indentation -= 1
                 output += self.indent(['}'])
 
         return output
 
-    def write(self,library,cell,filename,inputs,outputs,inouts,powers,caps,clocks,input_timing_signals,output_timing_signals,setups,holds,delays,transitions):
+    def write(self,library,cell,filename,inputs,outputs,inouts,analogs,powers,caps,clocks,input_timing_signals,output_timing_signals,setups,holds,delays,transitions):
         output = []
 
         self.clocks = clocks
@@ -617,9 +612,9 @@ class LibBackend:
         output += self.indent(['cell ('+cell+') {'])
         self.indentation += 1
 
-        output += self.iterate_input_signals(inputs,caps,input_timing_signals,setups,holds)
-        output += self.iterate_output_signals(outputs,output_timing_signals,delays,transitions)
-        output += self.iterate_inout_signals(inouts,caps)
+        output += self.iterate_input_signals(inputs,analogs,caps,input_timing_signals,setups,holds)
+        output += self.iterate_output_signals(outputs,analogs,output_timing_signals,delays,transitions)
+        output += self.iterate_inout_signals(inouts,analogs,caps)
         output += self.iterate_power_signals(powers)
 
         self.indentation -= 1

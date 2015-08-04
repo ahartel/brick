@@ -104,6 +104,7 @@ def do_characterization(
         inputs,
         outputs,
         inouts,
+        analogs,
         powers,
         static_signals,
         clocks,
@@ -290,7 +291,24 @@ def do_characterization(
         logging.info("Writing file "+output_lib_file+".")
         from brick_characterizer.LibBackend import LibBackend
         be = LibBackend(constraint_template,delay_template,default_max_transition)
-        be.write(lib_name,cell_name,output_lib_file,inputs,outputs,inouts,powers,caps,clocks,input_timing_signals,output_timing_signals,setups,holds,delays,transitions)
+        be.write(
+                lib_name,
+                cell_name,
+                output_lib_file,
+                inputs,
+                outputs,
+                inouts,
+                analogs,
+                powers,
+                caps,
+                clocks,
+                input_timing_signals,
+                output_timing_signals,
+                setups,
+                holds,
+                delays,
+                transitions
+            )
         return 0
     else:
         logging.error("Not writing .lib file because setup/hold or delay calculation had an error.")

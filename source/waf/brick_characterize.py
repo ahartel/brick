@@ -9,6 +9,9 @@ def configure(conf):
 
 @TaskGen.feature('brick_characterize')
 def create_brick_characterize_task(self):
+    # backwards compatibility
+    if not hasattr(self,'analogs'):
+        self.analogs = []
     self.create_task('brickCharacterizerTask',self.parasitics_report,self.output_lib_file)
 
 @Task.always_run
@@ -28,6 +31,7 @@ class brickCharacterizerTask(Task.Task):
             self.generator.inputs,
             self.generator.outputs,
             self.generator.inouts,
+            self.generator.analogs,
             self.generator.powers,
             self.generator.static_signals,
             self.generator.clocks,
