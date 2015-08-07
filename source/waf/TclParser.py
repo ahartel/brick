@@ -12,6 +12,7 @@ class Parser:
     def __init__(self, filename, **kw):
         self.filename = filename
         self.debug = kw.get('debug', 0)
+        self.logger = kw.get('logger',None)
         self.names = { }
         try:
             modname = os.path.split(os.path.splitext(__file__)[0])[1] + "_" + self.__class__.__name__
@@ -23,25 +24,25 @@ class Parser:
 
         # Build the lexer and parser
         self.lexer = lex.lex(module=self, debug=self.debug)
-        self.parser = yacc.yacc(module=self,
-                  debug=self.debug,
-                  debugfile=self.debugfile,
-                  tabmodule=self.tabmodule)
+        #self.parser = yacc.yacc(module=self,
+                  #debug=self.debug,
+                  #debugfile=self.debugfile,
+                  #tabmodule=self.tabmodule)
 
-    def run(self):
-        self.run_on_file(self.filename)
+    def run(self,debug=None):
+        return self.run_on_file(self.filename,debug=debug)
 
-    def run_on_file(self,filename):
-        print "Running on file:",filename
+    def run_on_file(self,filename,debug=None):
+        self.logger.debug("Running on file: "+filename)
         data = ''
         with open(filename) as f:
             for line in f:
                 data += line
 
-        self.run_on_string(data)
+        return self.run_on_string(data,debug=debug)
 
-    def run_on_string(self,data):
-        #print "Running on string",data
+    def run_on_string(self,data,debug=None):
+        self.logger.debug("Running on string "+data)
         lex  = self.lexer.clone()
         #lexer debugging
         lex.input(data)
@@ -51,10 +52,18 @@ class Parser:
             while tok:
                 print tok
                 tok = lex.token()
-            lex.lineno = 0
+            lex.lineno = 1
             lex.input(data)
 
-        self.parser.parse(lexer=lex)
+        parser = yacc.yacc(module=self,
+                  debug=self.debug,
+                  debugfile=self.debugfile,
+                  tabmodule=self.tabmodule)
+        #try:
+            #self.parser.restart()
+        #except AttributeError:
+            #pass
+        return parser.parse(lexer=lex,debug=debug)
 
         #while 1:
             #try:
@@ -78,7 +87,13 @@ class TclParser(Parser):
             'RBRACKET',
             'LBRACE',
             'RBRACE',
-            'TEXT',
+            'DOLLAR',
+            'LETTER',
+            'DIGIT',
+            'COLON',
+            'UNDER',
+            'BRACKET',
+            'OTHER'
         )
 
     t_WHITESPACE = r'[ \t]'
@@ -90,10 +105,17 @@ class TclParser(Parser):
     t_RBRACKET = r'\]'
     t_LBRACE = r'\{'
     t_RBRACE = r'\}'
-    t_TEXT = r'[\w\d\-\/\.\$\!\=\+\<\>]'
+    t_DOLLAR = r'\$'
+    t_LETTER = r'[a-zA-Z]'
+    t_DIGIT = r'\d'
+    t_COLON = r'\:+'
+    t_UNDER = r'\_'
+    t_BRACKET = r'[\(\)]'
+    t_OTHER = r'[\-\/\.\!\=\+\<\>]'
 
     def __init__(self,filename,**kw):
         Parser.__init__(self,filename,**kw)
+        self.logger = kw.get('logger', None)
         self.pp = pprint.PrettyPrinter()
         self.variables = {}
 
@@ -118,11 +140,13 @@ class TclParser(Parser):
         '''end : script
                | empty'''
         #self.pp.pprint(self.variables)
-        print p[1]
+        #print p[1]
+        p[0] = p[1]
 
     def p_script(self,p):
-        '''script : command
-                  | script script'''
+        '''script : script script
+                  | script command
+                  | command'''
         if len(p) == 3:
             p[0] = p[1] + p[2]
         else:
@@ -133,15 +157,17 @@ class TclParser(Parser):
                       | SEMICOLON'''
         p[0] = p[1]
 
-    def p_empty_command(self,p):
-        '''command : commandend
-                   | WHITESPACE'''
-        p[0] = []
 
     def p_string_text(self,p):
-        '''string : TEXT
-                  | string TEXT
-                  | string string'''
+        '''string : string string
+                  | string LETTER
+                  | string DIGIT
+                  | string OTHER
+                  | string UNDER
+                  | LETTER
+                  | DIGIT
+                  | OTHER
+                  | UNDER'''
         if len(p) == 3:
             p[0] = p[1] + p[2]
         else:
@@ -157,8 +183,9 @@ class TclParser(Parser):
         p[0] = p[1] + p[2]
 
     def p_backslash(self,p):
-        '''string : BACKSLASH TEXT
-                  | BACKSLASH LBRACKET'''
+        '''string : BACKSLASH LETTER
+                  | BACKSLASH LBRACKET
+                  | BACKSLASH UNDER'''
         p[0] = p[2]
 
     def p_subcommand(self,p):
@@ -173,19 +200,54 @@ class TclParser(Parser):
         '''string : subcommand RBRACKET'''
         p[0] = self.interpret(p,1)
 
+    def p_variable(self,p):
+        '''variable : variable LETTER
+                    | variable DIGIT
+                    | variable UNDER
+                    | variable BRACKET
+                    | variable COLON
+                    | DOLLAR LETTER
+                    | DOLLAR DIGIT
+                    | DOLLAR UNDER
+                    | DOLLAR COLON'''
+
+        if len(p) == 3:
+            p[0] = p[1] + p[2]
+        else:
+            p[0] = p[1]
+
+    def p_brace_variable(self,p):
+        '''bracevariable : bracevariable LBRACE
+                    | bracevariable LETTER
+                    | bracevariable DIGIT
+                    | bracevariable UNDER
+                    | bracevariable BRACKET
+                    | bracevariable COLON
+                    | DOLLAR LBRACE'''
+        p[0] = p[1] + p[2]
+
     def p_quotword_start(self,p):
         '''quotword : QUOT'''
         p[0] = ''
 
     def p_quotword_cont(self,p):
-        '''quotword : quotword TEXT
+        '''quotword : quotword LETTER
+                    | quotword DIGIT
                     | quotword commandend
-                    | quotword LBRACKET
                     | quotword WHITESPACE
-                    | quotword RBRACKET
                     | quotword LBRACE
+                    | quotword UNDER
+                    | quotword OTHER
                     | quotword RBRACE'''
         p[0] = p[1] + p[2]
+
+    def p_quotword_bracevariable(self,p):
+        '''quotword : quotword bracevariable RBRACE'''
+        p[0] = p[1] + self.replace_variable(p[2]+p[3])
+
+    def p_quotword_variable(self,p):
+        '''quotword : quotword variable'''
+        p[0] = p[1] + self.replace_variable(p[2])
 
     def p_quotword_end(self,p):
         '''word : quotword QUOT'''
@@ -197,13 +259,17 @@ class TclParser(Parser):
         p[0] = p[1]
 
     def p_braceword_cont(self,p):
-        '''bracestring : bracestring TEXT
-                     | bracestring commandend
-                     | bracestring WHITESPACE
-                     | bracestring longwhite
-                     | bracestring QUOT
-                     | bracestring BACKSLASH
-                     | bracestring braceword'''
+        '''bracestring : bracestring LETTER
+                       | bracestring DIGIT
+                       | bracestring commandend
+                       | bracestring WHITESPACE
+                       | bracestring longwhite
+                       | bracestring QUOT
+                       | bracestring BACKSLASH
+                       | bracestring OTHER
+                       | bracestring UNDER
+                       | bracestring DOLLAR
+                       | bracestring braceword'''
         p[0] = p[1] + p[2]
         #print "bracestring",p[0]
 
@@ -220,24 +286,39 @@ class TclParser(Parser):
         p[0] = re.sub(r'\}$','',p[0])
 
     def p_command_word(self,p):
-        '''command : wordlist commandend'''
+        '''command : wordlist commandend
+                   | wordlist'''
+
         p[0] = p[1]
         self.interpret(p,0)
 
+    def p_empty_command(self,p):
+        '''command : commandend
+                   | WHITESPACE'''
+        p[0] = []
+
     def p_word_list(self,p):
-        '''wordlist : word
-                    | wordlist word'''
+        '''wordlist : wordlist word
+                    | word'''
         if len(p) == 3:
             p[0] = p[1] + [p[2]]
         else:
             p[0] = [p[1]]
 
+    def p_sring_bracevariable(self,p):
+        '''string : bracevariable RBRACE'''
+        p[0] = self.replace_variable(p[1]+p[2])
+
+    def p_string_variable(self,p):
+        '''string : variable'''
+        p[0] = self.replace_variable(p[1])
+
     def p_word_string(self,p):
-        '''word : string
+        '''word : word longwhite
+                | word WHITESPACE
                 | string WHITESPACE
                 | string longwhite
-                | word WHITESPACE
-                | word longwhite'''
+                | string'''
         p[0] = p[1]
 
     def p_empty(self,p):
@@ -249,42 +330,35 @@ class TclParser(Parser):
             #print("Syntax error at token", p.type)
             # Just discard the token and tell the parser it's okay.
             #self.parser.errok()
-            raise TypeError("Syntax error at token %s at line %d" % (p.type,p.lineno))
+            raise TypeError("Syntax error at token %s(%s) at line %d, pos %d" % (p.type,p.value,p.lineno,p.lexpos))
         else:
             print("Syntax error at EOF")
 
-    def replace_variables(self,command):
-        variable_re = re.compile(r'\$\{?(\w+)\}?',flags=re.MULTILINE)
-        for pos,word in enumerate(command):
-            try:
-                m = variable_re.search(word)
-            except TypeError:
-                pass
-            while m:
-                try:
-                    print "Replacing variable",m.group(1),"to",self.variables[m.group(1)]
-                    print "In word",command[pos]
-                    command[pos] = variable_re.sub(self.variables[m.group(1)],command[pos],1)
-                    print "Replaced version",command[pos]
-                    m = variable_re.search(command[pos])
-                except KeyError:
-                    raise Exception("You have to define variable %s first" % (word[1:]))
-                    #print "You have to define variable %s first" % (m.group(1))
+    def replace_variable(self,name):
+        try:
+            if name.find('{') == 1:
+                self.logger.debug("Replacing Variable "+name[2:-1]+" to "+self.variables[name[2:-1]])
+                return self.variables[name[2:-1]]
+            else:
+                self.logger.debug("Replacing Variable "+name[1:]+" to "+self.variables[name[1:]])
+                return self.variables[name[1:]]
+        except KeyError:
+            raise Exception("You have to define variable %s first" % (name[1:]))
+            #print "You have to define variable %s first" % (m.group(1))
 
-        return command
 
     def evaluate_condition(self,cond):
-        return True
+        self.logger.debug("Condition "+cond)
+        self.logger.debug("Evaluates to "+str(eval(cond)))
+        return eval(cond)
 
     def interpret(self,p,commandpos):
-        command = self.replace_variables(p[commandpos])
-        #command = self.replace_bracket_words(command)
+        command = p[commandpos]
 
         if command[0] == 'set':
             assert(len(command) == 3)
             self.variables[command[1]] = command[2]
             print "Setting variable",command[1],"to",command[2]
-            #self.pp.pprint(self.variables)
         elif command[0] == 'getenv':
             assert(len(command) == 2)
             return os.environ[command[1]]
@@ -292,9 +366,10 @@ class TclParser(Parser):
             assert(len(command) == 2)
             self.run_on_file(command[1])
         elif command[0] == 'if':
-            #print "Condition:",command[1]
-            if self.evaluate_condition(command[1]):
-                #print command[2]
+            condition = self.run_on_string(command[1])[0]
+            self.logger.debug(condition)
+            condition = "".join(self.run_on_string(command[1])[0])
+            if self.evaluate_condition(condition):
                 self.run_on_string(command[2])
             else:
                 if command[3] == 'else':
@@ -307,8 +382,8 @@ class EncounterTclParser(TclParser):
         self.output_files = []
 
     def interpret(self,p,commandpos):
-        command = self.replace_variables(p[commandpos])
-        #print command
+        command = p[commandpos]
+        self.logger.debug(command)
 
         if command[0] == 'saveDesign':
             for word in command[1:]:
