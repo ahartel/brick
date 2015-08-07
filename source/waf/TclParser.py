@@ -33,7 +33,7 @@ class Parser:
         return self.run_on_file(self.filename,debug=debug)
 
     def run_on_file(self,filename,debug=None):
-        self.logger.debug("Running on file: "+filename)
+        self.logger.info("Running on file: "+filename)
         data = ''
         with open(filename) as f:
             for line in f:
@@ -63,7 +63,9 @@ class Parser:
             #self.parser.restart()
         #except AttributeError:
             #pass
-        return parser.parse(lexer=lex,debug=debug)
+        script = parser.parse(lexer=lex,debug=debug)
+        #print script
+        return script
 
         #while 1:
             #try:
@@ -148,7 +150,7 @@ class TclParser(Parser):
                   | script command
                   | command'''
         if len(p) == 3:
-            p[0] = p[1] + p[2]
+            p[0] = p[1] + [p[2]]
         else:
             p[0] = [p[1]]
 
@@ -348,9 +350,17 @@ class TclParser(Parser):
 
 
     def evaluate_condition(self,cond):
+        not_re = re.compile(r'\!\s*([\w\d])')
+        m = not_re.search(cond)
+        if m:
+            cond = not_re.sub(' not '+m.group(1),cond)
+        #cond = cond.replace(r'!\s?([\w\d])',' not \g1')
         self.logger.debug("Condition "+cond)
-        self.logger.debug("Evaluates to "+str(eval(cond)))
-        return eval(cond)
+        try:
+            self.logger.debug("Evaluates to "+str(eval(cond)))
+            return eval(cond)
+        except:
+            return False
 
     def interpret(self,p,commandpos):
         command = p[commandpos]
@@ -359,6 +369,9 @@ class TclParser(Parser):
             assert(len(command) == 3)
             self.variables[command[1]] = command[2]
             print "Setting variable",command[1],"to",command[2]
+        elif command[0] == 'puts':
+            if len(command) == 2:
+                print command[2]
         elif command[0] == 'getenv':
             assert(len(command) == 2)
             return os.environ[command[1]]
@@ -372,7 +385,7 @@ class TclParser(Parser):
             if self.evaluate_condition(condition):
                 self.run_on_string(command[2])
             else:
-                if command[3] == 'else':
+                if len(command) > 3 and command[3] == 'else':
                     self.run_on_string(command[4])
 
 
@@ -383,7 +396,7 @@ class EncounterTclParser(TclParser):
 
     def interpret(self,p,commandpos):
         command = p[commandpos]
-        self.logger.debug(command)
+        self.logger.info(command)
 
         if command[0] == 'saveDesign':
             for word in command[1:]:
