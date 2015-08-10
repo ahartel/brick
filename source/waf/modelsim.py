@@ -187,7 +187,7 @@ def modelsim_vlog_prepare(self):
 			self.source_string_v.append(src.abspath())
 			self.source_v.append(src)
 			remove_sources.append(src)
-		elif src.suffix() == '.sv':
+		elif src.suffix() == '.sv' or src.suffix() == '.svh':
 			self.source_string_sv.append(src.abspath())
 			self.source_sv.append(src)
 			remove_sources.append(src)
