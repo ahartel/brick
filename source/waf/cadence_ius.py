@@ -50,6 +50,7 @@ def configure(conf):
 	conf.find_program('ncsim',var='CDS_NCSIM')
 	conf.find_program('ncelab',var='CDS_NCELAB')
 	conf.find_program('ncvlog',var='CDS_NCVLOG')
+	conf.find_program('ncvhdl',var='CDS_NCVHDL')
 
 
 TaskGen.declare_chain(
@@ -67,17 +68,15 @@ TaskGen.declare_chain(
         scan         = scan_verilog_task
 )
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVHDL} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()+env.NCVHDL_LOGFILE+gen.name} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC}',
         ext_in       = ['.vhd'],
-        ext_out      = ['.vhd.out'],
         scan         = vhdl_scanner,
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncvhdl -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVHDL_LOGFILE}_${TGT[0]} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVHDL} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()+env.NCVHDL_LOGFILE+gen.name} ${NCVHDL_OPTIONS} -work ${WORKLIB} ${SRC}',
         ext_in       = ['.vhdl'],
-        ext_out      = ['.vhdl.out'],
         scan         = vhdl_scanner,
         reentrant    = False,
 )
@@ -148,17 +147,23 @@ def cds_ius_prepare(self):
 	self.source_string_sv   = []
 	self.source_v    = []
 	self.source_string_v    = []
+	remove_sources = []
 	for src in getattr(self,'source',[]):
 		if src.suffix() == '.vams' or src.suffix() == '.va':
 			self.source_string_vams.append(src.abspath())
 			self.source_vams.append(src)
+			remove_sources.append(src)
 		elif src.suffix() == '.v':
 			self.source_string_v.append(src.abspath())
 			self.source_v.append(src)
+			remove_sources.append(src)
 		elif src.suffix() == '.sv':
 			self.source_string_sv.append(src.abspath())
 			self.source_sv.append(src)
+			remove_sources.append(src)
 
+	for src in remove_sources:
+		self.source.remove(src)
 	#print self.name
 	#print len(self.source_string_vams), len(self.source_string_v), len(self.source_string_sv)
 
@@ -174,7 +179,6 @@ def cds_ius_prepare(self):
 	if len(self.source_string_sv) > 0:
 		task = self.create_task("CadenceSvlogTask",self.source_sv,[])
 
-	self.source = []
 
 #
 # Elaboration and Simulation tasks

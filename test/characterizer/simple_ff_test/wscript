@@ -1,0 +1,153 @@
+import os, datetime
+
+def options(opt):
+    pass
+
+def configure(conf):
+    conf.load('brick_general')
+    conf.load('brick_characterize')
+    conf.load('cadence_base')
+    conf.load('cadence_absgen')
+    conf.load('cadence_strmout')
+    conf.load('cadence_netlist')
+    conf.load('calibre_lvs')
+    conf.load('calibre_pex')
+
+    # CHANGE USED LIBRARIES HERE
+    conf.env['CDS_LIBS'] = {
+        'brick_test': '../../cdslib/'
+    }
+    conf.env.CDS_LIB_INCLUDES = [
+        '$TSMC_DIR/oa/cds.lib',
+    ]
+    # CHANGE CELL NAMES HERE
+    conf.env.CELL_NAME_LAYOUT = ('brick_test','sr_data_ffs','layout')
+    conf.env.CELL_NAME_SOURCE = ('brick_test','sr_data_ffs','schematic')
+
+def build(bld):
+    bld ( features = 'cds_write_libs' )
+
+    ffs_streamout = bld (
+        name = 'streamout_ffs',
+        features = 'cds_strmout',
+        cellview = bld.env.CELL_NAME_LAYOUT[0]+'.'+bld.env.CELL_NAME_LAYOUT[1]+':'+bld.env.CELL_NAME_LAYOUT[2]
+    )
+
+    ffs_netlist = bld (
+        name = 'cds_netlist_ffs',
+        features = 'cds_netlist_lvs',
+        cellview = bld.env.CELL_NAME_SOURCE[0]+'.'+bld.env.CELL_NAME_SOURCE[1]+':'+bld.env.CELL_NAME_SOURCE[2],
+        include = os.environ['BRICK_DIR']+'/source/spice/tsmc_special_cells.net'
+    )
+
+
+    bld (
+        features = 'calibre_lvs',
+        layout_cellname = bld.env.CELL_NAME_LAYOUT[1],
+        source_cellname = bld.env.CELL_NAME_SOURCE[1],
+        layout_gds = ffs_streamout.get_cadence_strmout_gds_node(),
+        source_netlist = ffs_netlist.get_cds_netlist_lvs_node(),
+        includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
+        mixins = [
+                'LVS RECOGNIZE GATES ALL',
+        ]
+    )
+
+    pex = bld (
+        name = 'xrc_data_ffs',
+        features = 'calibre_pex',
+        cellname = bld.env.CELL_NAME_LAYOUT[1],
+        layout_gds = ffs_streamout.get_cadence_strmout_gds_node(),
+        includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
+        only_extract_nets = [
+                'd_in?',
+                'd_out?'
+            ],
+    )
+
+    bld (
+        name = 'char_ffs',
+        features = 'brick_characterize',
+        lib_name = bld.env.CELL_NAME_SOURCE[0],
+        cell_name = bld.env.CELL_NAME_SOURCE[1],
+
+        rise_threshold = 0.5,
+        fall_threshold = 0.5,
+
+        default_max_transition = 0.2,
+
+        inputs = [
+            'd_in[1:0]',
+            'd_out_ff[1:0]',
+            ],
+
+        inouts = [
+            ],
+
+        outputs = [
+            'd_in_ff[1:0]',
+            'd_out[1:0]',
+            ],
+
+        static_signals = {
+            #'pc_confb[3:0]': 0,
+            #'w_conf[7:0]': 0,
+            },
+
+        powers = {
+            'vdd': 1.2,
+            'gnd': 0,
+            },
+
+        clocks = {
+            'clk': 'R'
+        },
+
+        input_timing_signals = {
+            'd_in[1:0]': ['clk','d_in_ff[=index=]','positive_unate'],
+            'd_out_ff[1:0]': ['clk','d_out[=index=]','positive_unate'],
+            #'write_mask_data[0:63]'   : ['clk', 'N_XI12[=index=]_wd_int_q_XI12[=index=]_MM2_g', 'positive_unate'],
+            #'write_mask_config[0:63]' : ['clk', 'N_XI12[=index=]_wc_int_q_XI12[=index=]_MM27_g', 'positive_unate'],
+            #'addr[6:0]' : ['clk', 'XI1_XI15_q[=index=]', 'positive_unate'],
+            #'d_in[0:511]' : ['clk', 'XI12[=index/8=]_Xdriver_pre[=index%8=]_net047', 'positive_unate'],
+            },
+
+        output_timing_signals = {
+            'd_out[1:0]' : ['clk', 'd_out_ff[=index=]', 'positive_unate'],
+            'd_in_ff[1:0]' : ['clk', 'd_in[=index=]', 'positive_unate'],
+            },
+
+
+        # input files
+        circuit_netlist_path = pex.get_calibre_pex_output_file_node('.pex.netlist').abspath(),
+        model_netlist_path = os.environ['BRICK_DIR']+'/source/spice/include_all_models_tsmc.scs',
+        # output files
+        output_netlist_file = './netlists/char_data_ffs.sp',
+        output_lib_file = bld.bldnode.make_node('./brick_test_data_ffs.lib'),
+
+
+        # templates for lib file
+        constraint_template = [
+            # related_pin_tranisition (ns)
+            [0.01,0.05,0.5],
+            # constrainted_pin_tranisition (ns)
+            [0.01,0.05,0.5],
+        ],
+
+        delay_template = [
+            # input_net_transition (ns)
+            [0.0049, 0.0125, 0.0277, 0.0582, 0.1192, 0.2412, 0.4851],
+            # total_output_net_capacitance;
+            [0.00077, 0.0017, 0.00355, 0.00725, 0.01466, 0.02947, 0.0591],
+        ],
+
+        parasitics_report = pex.get_calibre_pex_output_file_node('.pex.report'),
+        logfile = './logfiles/brick_characterize_data_ffs_'+str(datetime.datetime.now())+'.log',
+
+        # debugging switch
+        only_rewrite_lib_file = False,
+        skip_setup_hold = False,
+        skip_delays = False,
+    )
+
+

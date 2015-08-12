@@ -309,9 +309,9 @@ class CellRiseFall_Char(CharBase):
         import subprocess,os
         call = ''
         if self.use_spectre:
-            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file_spectre.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
+            call = ['python', os.environ['BRICK_DIR']+'/source/python/brick_characterizer/parse_print_file_spectre.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
         else:
-            call = ['python', os.environ['BRICK_PATH']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
+            call = ['python', os.environ['BRICK_DIR']+'/source/python/brick_characterizer/parse_print_file.py', self.get_printfile_name(), str(self.high_value*self.rise_threshold), str(self.high_value*self.fall_threshold), str(self.high_value*self.slew_lower_rise), str(self.high_value*self.slew_upper_rise), str(self.high_value*self.slew_lower_fall), str(self.high_value*self.slew_upper_fall)]
 
         self.logger_debug(" ".join(call))
         returncode = subprocess.call(call)
