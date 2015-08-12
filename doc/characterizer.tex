@@ -1,0 +1,42 @@
+\chapter{Timing Characterizer}
+\label{chap:timing_characterizer}
+
+This chapter describes the automatic timing characterizer for full-custom
+digital blocks.
+
+It uses the following input data:
+\begin{enumerate}
+	\item Parasitics net list of the design that has to be characterized
+	\item Output file of the Calibre parasitics extractor that contains input
+		capacitances of the input pins of the design
+	\item A Python data structure that defines which pins have to be
+		characterized
+\end{enumerate}
+
+\begin{figure}
+	\centering
+	\input{img/workflow_timing_characterizer.tex}
+	\caption{Figure taken from Hartel, 2015, PhD thesis}
+	\label{fig:workflow_characterizer}
+\end{figure}
+
+The work flow can be seen in \cref{fig:workflow_characterizer}.
+The tool will split up the simulations that have to be done to fill a timing
+table into separate threads. For example, setup and hold timing for a single
+combination of clock and signal rise times and for all pins of the design will
+be extracted by one thread. The next thread will simulate the design with a
+different pair of clock and signal rise times.
+
+Every thread performs a binary search for the setup and hold timing by varying
+the individual time differences of the input signals and the clock signal. This
+can be seen in \cref{fig:binary_search_characterizer}.
+
+\begin{figure}
+	\centering
+	\input{img/binary_search_setup_hold.tex}
+	\caption{Figure taken from Hartel, 2015, PhD thesis}
+	\label{fig:binary_search_characterizer}
+\end{figure}
+
+An example \tf{wscript} for using the timing characterizer can be seen in
+\cref{sec:recipe_characterizer}.
