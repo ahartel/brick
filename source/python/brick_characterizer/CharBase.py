@@ -2,7 +2,8 @@ import os, logging
 
 class CharBase(object):
 
-    def __init__(self,use_spectre=False):
+    def __init__(self,temperature,use_spectre=False):
+        self.__temperature = temperature
         self.rise_threshold = 0.501
         self.fall_threshold = 0.499
         self.high_value = 1.2
@@ -76,8 +77,12 @@ class CharBase(object):
 
     def add_include_netlist(self,netlist):
         import os
-        if not os.path.isfile(netlist):
-            raise Exception('Netlist '+netlist+' to be included in '+self.whats_my_name()+' not found')
+        try:
+            if not os.path.isfile(netlist['filename']):
+                raise Exception('Netlist '+netlist['filename']+' to be included in '+self.whats_my_name()+' not found')
+        except TypeError:
+            if not os.path.isfile(netlist):
+                raise Exception('Netlist '+netlist+' to be included in '+self.whats_my_name()+' not found')
 
         self.include_netlists.append(netlist)
 
@@ -112,7 +117,11 @@ class CharBase(object):
 
     def write_include_netlists(self):
         for netlist in self.include_netlists:
-            self.append_out('.include '+netlist+'')
+            try:
+                self.append_out('include "'+netlist['filename']+'" section='+netlist['section'])
+            except TypeError:
+                self.append_out('include "'+netlist+'"')
+
         self.append_out('')
 
     def add_static_signals(self,signals):
@@ -211,13 +220,13 @@ class CharBase(object):
         self.append_out('simulator lang=spectre')
         self.append_out('parameters tran_tend='+str(self.simulation_length)+'000000e-09')
         self.append_out('tran tran step=1.00e-12 stop=tran_tend')
-        self.append_out('simulatorOptions options temp=27 tnom=27 scale=1.0 scalem=1.0')
+        self.append_out('simulatorOptions options temp='+str(self.__temperature))#+' tnom=27 scale=1.0 scalem=1.0')
         #self.append_out('usim_opt sim_mode=a subckt=synapse')
         #self.append_out('usim_opt sim_mode=s')
+        self.write_include_netlists()
         self.append_out('')
         self.append_out('simulator lang=spice')
         self.append_out('')
-        self.write_include_netlists()
 
 
     def oom(self,exp):

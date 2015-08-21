@@ -50,6 +50,8 @@ class brickCharacterizerTask(Task.Task):
             self.generator.delay_template,
             # logfile
             self.generator.logfile,
+            # temperature
+            self.generator.temperature,
             # capacitance file
             self.generator.parasitics_report,
             # flow settings
@@ -59,6 +61,6 @@ class brickCharacterizerTask(Task.Task):
             getattr(self.generator,'use_spectre',False),
             # other stuff
             getattr(self.generator,'additional_probes',{}),
-            getattr(self.generator,'default_max_transition',0.2)
+            getattr(self.generator,'default_max_transition',0.2),
         )
 

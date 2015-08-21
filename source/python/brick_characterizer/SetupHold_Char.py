@@ -10,7 +10,7 @@ from brick_characterizer.CharBase import CharBase
 # setup and hold timing values for negative_unate signals!
 
 class SetupHold_Char(CharBase):
-    def __init__(self,toplevel,output_filename,use_spectre=False):
+    def __init__(self,toplevel,output_filename,temperature,use_spectre=False):
         self.toplevel = toplevel
         self.output_filename = output_filename
         # store probe signals and their related inputs
@@ -44,7 +44,7 @@ class SetupHold_Char(CharBase):
         self.max_setup_steps = 9
         self.max_hold_steps = 9
 
-        super(SetupHold_Char,self).__init__(use_spectre)
+        super(SetupHold_Char,self).__init__(temperature,use_spectre)
 
     def whats_my_name(self):
         return 'SetupHold_Char_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)

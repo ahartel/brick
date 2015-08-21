@@ -1,0 +1,71 @@
+\begin{tikztimingtable}[timing/slope=0.1,
+		%timing/name/.style={font=\ttfamily,align=center},
+		timing/coldist=2pt,xscale=6.0,yscale=1,
+		]
+		{clock sig.} & L N(CK) 1.0H\\
+		{input \#0} & 0.5L N(n0) 1.5H\\
+		{output \#0} & 1.25L 0.75H\\
+		{input \#1} & 0.75L N(n1) 1.25H\\
+		{output \#1} & 1.25L 0.75H\\
+		{input \#2} & 1.0L N(n2) 1.0H\\
+		{output \#2} & 1.25L 0.75H\\
+		{input \#3} & 1.25L N(n3) 0.75H\\
+		{output \#3} & 1.25L 0.5M [black] 0.25L\\
+		{input \#4} & 1.125L N(n4) 0.875H\\
+		{output \#4} & 1.25L 0.5M [black] 0.25L\\
+		{input \#5} & 1.0625L N(n5) 1H\\
+		{output \#5} & 1.25L 0.75H\\
+	\extracode
+	\makeatletter
+	\begin{pgfonlayer}{background}
+		\begin{scope}[ gray , semithick ]
+			\horlines {1,3,5,7,9,11,13}
+			\begin{scope}[dashed]
+                        \vertlines{1.05}
+			\end{scope}
+
+                        \node [ anchor=south west , inner sep=0pt]
+                        at ($(row2.east) + (0.1,0)$) {\small
+                          $\Delta t = \SI{0.5}{\nano\second}$ };
+
+					    \node [anchor=south west , inner sep=0pt]
+					    at ($(row3.east) + (0.1,0)$) {\small $\downarrow$};
+
+                        \node [ anchor = south west , inner sep=0pt]
+                        at ($(row4.east) + (0.1,0)$) {\small
+                          $\Delta t = \SI{0.25}{\nano\second}$ };
+
+					    \node [anchor=south west , inner sep=0pt]
+					    at ($(row5.east) + (0.1,0)$) {\small $\downarrow$};
+
+                        \node [ anchor = south west , inner sep=0pt ]
+                        at ($(row6.east) + (0.1,0)$) {\small
+                          $\Delta t = \SI{0.0}{\nano\second}$ };
+
+					    \node [anchor=south west , inner sep=0pt]
+					    at ($(row7.east) + (0.1,0)$) {\small $\downarrow$};
+
+                        \node [ anchor = south west , inner sep=0pt ]
+                        at ($(row8.east) + (0.1,0)$) {\small
+                          $\Delta t = \SI{-0.25}{\nano\second}$ };
+
+					    \node [anchor=south west , inner sep=0pt]
+					    at ($(row9.east) + (0.1,0)$) {\small $\uparrow$};
+
+                        \node [ anchor = south west , inner sep=0pt ]
+                        at ($(row10.east) + (0.1,0)$) {\small
+                          $\Delta t = \SI{-0.125}{\nano\second}$ };
+
+					    \node [anchor=south west , inner sep=0pt]
+					    at ($(row11.east) + (0.1,0)$) {\small $\uparrow$};
+
+                        \node [ anchor = south west , inner sep=0pt ]
+                        at ($(row12.east) + (0.1,0)$) {\small
+                          $\Delta t = \SI{-0.0625}{\nano\second}$ };
+
+					    \node [anchor=south west , inner sep=0pt]
+					    at ($(row13.east) + (0.1,0)$) {\small $\surd$};
+
+		\end{scope}
+	\end{pgfonlayer}
+\end{tikztimingtable}%

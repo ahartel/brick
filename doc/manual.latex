@@ -9,6 +9,7 @@
 \usepackage{todonotes}
 \usepackage{tikz}
 \usepackage{tikz-timing}
+\usetikzlibrary{graphs}
 %\usepackage{makeidx}                              % index of key words
 \usepackage{csquotes}
 \usepackage{minted}
@@ -19,6 +20,7 @@
 \usepackage[round,authoryear,sort&compress]{natbib}
 \usepackage{cleveref}
 \usepackage[toc]{glossaries}
+\usepackage{siunitx}
 \setglossarystyle{listgroup}
 \makeglossaries
 \input{glossary.tex}
@@ -79,6 +81,7 @@
 \include{incisive}
 \include{modelsim}
 \include{calibre}
+\include{characterizer}
 \include{waf_usage}
 \include{recipes}
 \begin{appendix}
