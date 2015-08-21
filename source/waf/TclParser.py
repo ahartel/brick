@@ -14,6 +14,7 @@ class Parser:
         self.debug = kw.get('debug', 0)
         self.logger = kw.get('logger',None)
         self.names = { }
+        self.include_stack = []
         try:
             modname = os.path.split(os.path.splitext(__file__)[0])[1] + "_" + self.__class__.__name__
         except:
@@ -29,24 +30,45 @@ class Parser:
                   #debugfile=self.debugfile,
                   #tabmodule=self.tabmodule)
 
-    def run(self,debug=None):
-        return self.run_on_file(self.filename,debug=debug)
+    def setcwd(self,path):
+        os.chdir(path)
 
-    def run_on_file(self,filename,debug=None):
-        self.logger.info("Running on file: "+filename)
+    def try_log_debug(self,*args):
+        try:
+            self.logger.debug(args)
+        except AttributeError:
+            pass
+
+    def run(self):
+        return self.run_on_file(self.filename)
+
+    def run_on_file(self,filename):
+        self.include_stack.append(filename)
+        self.current_filename = filename
+        try:
+            self.logger.info("==== Running on file: %s",filename)
+        except AttributeError:
+            pass
         data = ''
         with open(filename) as f:
             for line in f:
                 data += line
 
-        return self.run_on_string(data,debug=debug)
+        ret_value = self.run_on_string(data)
+        self.include_stack.pop()
+        if len(self.include_stack) > 0:
+            self.current_filename = self.include_stack[-1]
 
-    def run_on_string(self,data,debug=None):
-        self.logger.debug("Running on string "+data)
+        return ret_value
+
+    def run_on_string(self,data):
+
+        self.try_log_debug("==== Running on string\n%s...\n",data[:200])
+
         lex  = self.lexer.clone()
+
         #lexer debugging
         lex.input(data)
-
         if 0:
             tok = lex.token()
             while tok:
@@ -63,7 +85,7 @@ class Parser:
             #self.parser.restart()
         #except AttributeError:
             #pass
-        script = parser.parse(lexer=lex,debug=debug)
+        script = parser.parse(lexer=lex,debug=self.logger)
         #print script
         return script
 
@@ -78,14 +100,12 @@ class Parser:
 class TclParser(Parser):
 
     tokens = (
-            'COMMENT',
             'WHITESPACE',
             'NEWLINE',
             'SEMICOLON',
             'BACKSLASH',
             'LBRACKET',
             'QUOT',
-            'RPAREN',
             'RBRACKET',
             'LBRACE',
             'RBRACE',
@@ -103,7 +123,7 @@ class TclParser(Parser):
     t_BACKSLASH = r'\\'
     t_LBRACKET = r'\['
     t_QUOT = r'"'
-    t_RPAREN = r'\)'
+    #t_RPAREN = r'\)'
     t_RBRACKET = r'\]'
     t_LBRACE = r'\{'
     t_RBRACE = r'\}'
@@ -113,10 +133,11 @@ class TclParser(Parser):
     t_COLON = r'\:+'
     t_UNDER = r'\_'
     t_BRACKET = r'[\(\)]'
-    t_OTHER = r'[\-\/\.\!\=\+\<\>]'
+    t_OTHER = r'[@\&\|\-\/\.\!\=\+\<\>\*\)\,]'
 
-    def __init__(self,filename,**kw):
+    def __init__(self,filename,waf_env,**kw):
         Parser.__init__(self,filename,**kw)
+        self.waf_env = waf_env
         self.logger = kw.get('logger', None)
         self.pp = pprint.PrettyPrinter()
         self.variables = {}
@@ -162,19 +183,31 @@ class TclParser(Parser):
 
     def p_string_text(self,p):
         '''string : string string
+                  | string replace
                   | string LETTER
                   | string DIGIT
                   | string OTHER
                   | string UNDER
+                  | string COLON
                   | LETTER
                   | DIGIT
                   | OTHER
-                  | UNDER'''
+                  | UNDER
+                  | COLON
+                  | string BRACKET
+                  | BRACKET'''
         if len(p) == 3:
             p[0] = p[1] + p[2]
         else:
             p[0] = p[1]
 
+    def p_backslashreplace(self,p):
+        '''replace : BACKSLASH LETTER
+                   | BACKSLASH LBRACKET
+                   | BACKSLASH RBRACKET
+                   | BACKSLASH UNDER
+                   | BACKSLASH DIGIT'''
+        p[0] = self.replace_backslash(p[2])
 
     def p_longwhitespace(self,p):
         '''longwhite : BACKSLASH NEWLINE'''
@@ -183,12 +216,6 @@ class TclParser(Parser):
     def p_longwhitespace_cont(self,p):
         '''longwhite : longwhite WHITESPACE'''
         p[0] = p[1] + p[2]
-
-    def p_backslash(self,p):
-        '''string : BACKSLASH LETTER
-                  | BACKSLASH LBRACKET
-                  | BACKSLASH UNDER'''
-        p[0] = p[2]
 
     def p_subcommand(self,p):
         '''subcommand : LBRACKET
@@ -206,12 +233,12 @@ class TclParser(Parser):
         '''variable : variable LETTER
                     | variable DIGIT
                     | variable UNDER
-                    | variable BRACKET
                     | variable COLON
                     | DOLLAR LETTER
                     | DOLLAR DIGIT
                     | DOLLAR UNDER
                     | DOLLAR COLON'''
+#                    | variable BRACKET
 
         if len(p) == 3:
             p[0] = p[1] + p[2]
@@ -223,9 +250,9 @@ class TclParser(Parser):
                     | bracevariable LETTER
                     | bracevariable DIGIT
                     | bracevariable UNDER
-                    | bracevariable BRACKET
                     | bracevariable COLON
                     | DOLLAR LBRACE'''
+#                    | bracevariable BRACKET
         p[0] = p[1] + p[2]
 
     def p_quotword_start(self,p):
@@ -240,6 +267,9 @@ class TclParser(Parser):
                     | quotword LBRACE
                     | quotword UNDER
                     | quotword OTHER
+                    | quotword longwhite
+                    | quotword replace
+                    | quotword COLON
                     | quotword RBRACE'''
         p[0] = p[1] + p[2]
 
@@ -263,14 +293,18 @@ class TclParser(Parser):
     def p_braceword_cont(self,p):
         '''bracestring : bracestring LETTER
                        | bracestring DIGIT
+                       | bracestring LBRACKET
+                       | bracestring RBRACKET
                        | bracestring commandend
                        | bracestring WHITESPACE
                        | bracestring longwhite
                        | bracestring QUOT
+                       | bracestring BRACKET
                        | bracestring BACKSLASH
                        | bracestring OTHER
                        | bracestring UNDER
                        | bracestring DOLLAR
+                       | bracestring COLON
                        | bracestring braceword'''
         p[0] = p[1] + p[2]
         #print "bracestring",p[0]
@@ -332,20 +366,30 @@ class TclParser(Parser):
             #print("Syntax error at token", p.type)
             # Just discard the token and tell the parser it's okay.
             #self.parser.errok()
-            raise TypeError("Syntax error at token %s(%s) at line %d, pos %d" % (p.type,p.value,p.lineno,p.lexpos))
+            error_string = "Syntax error at token %s(%s)" % (p.type,p.value)
+            error_string += " at line %d, pos %d in" % (p.lineno,p.lexpos)
+            error_string += " in file %s" % (self.current_filename)
+            if len(self.include_stack) > 1:
+                for file in self.include_stack[:-1]:
+                    error_string += "\n included from file %s" % (file)
+            raise TypeError(error_string)
         else:
             print("Syntax error at EOF")
 
     def replace_variable(self,name):
         try:
             if name.find('{') == 1:
-                self.logger.debug("Replacing Variable "+name[2:-1]+" to "+self.variables[name[2:-1]])
+                self.try_log_debug("Replacing Variable "+name[2:-1]+" to "+
+                        str(self.variables[name[2:-1]]))
                 return self.variables[name[2:-1]]
             else:
-                self.logger.debug("Replacing Variable "+name[1:]+" to "+self.variables[name[1:]])
+                self.try_log_debug("Replacing Variable "+name[1:]+" to "+
+                        str(self.variables[name[1:]]))
                 return self.variables[name[1:]]
         except KeyError:
-            raise Exception("You have to define variable %s first" % (name[1:]))
+            error_string = "You have to define variable %s first" % (name[1:])
+            error_string += " in file %s" % (self.current_filename)
+            raise Exception(error_string)
             #print "You have to define variable %s first" % (m.group(1))
 
 
@@ -355,50 +399,75 @@ class TclParser(Parser):
         if m:
             cond = not_re.sub(' not '+m.group(1),cond)
         #cond = cond.replace(r'!\s?([\w\d])',' not \g1')
-        self.logger.debug("Condition "+cond)
+        self.try_log_debug("Condition "+cond)
         try:
-            self.logger.debug("Evaluates to "+str(eval(cond)))
+            self.try_log_debug("Evaluates to "+str(eval(cond)))
             return eval(cond)
         except:
             return False
+
+    def replace_backslash(self,afterslash):
+        return afterslash
 
     def interpret(self,p,commandpos):
         command = p[commandpos]
 
         if command[0] == 'set':
             assert(len(command) == 3)
-            self.variables[command[1]] = command[2]
-            print "Setting variable",command[1],"to",command[2]
+            if command[2] is None:
+                self.variables[command[1]] = ""
+            else:
+                self.variables[command[1]] = command[2]
+            self.try_log_debug("Setting variable %s to %s",command[1],command[2])
         elif command[0] == 'puts':
             if len(command) == 2:
                 print command[2]
         elif command[0] == 'getenv':
             assert(len(command) == 2)
-            return os.environ[command[1]]
+            if command[1] in os.environ:
+                return os.environ[command[1]]
+            elif command[1] in self.waf_env:
+                return self.waf_env[command[1]]
+            else:
+                raise Exception("Environment variable "+command[1]+" not found in getenv")
         elif command[0] == 'source':
             assert(len(command) == 2)
             self.run_on_file(command[1])
         elif command[0] == 'if':
             condition = self.run_on_string(command[1])[0]
-            self.logger.debug(condition)
+            self.try_log_debug(condition)
             condition = "".join(self.run_on_string(command[1])[0])
             if self.evaluate_condition(condition):
                 self.run_on_string(command[2])
             else:
                 if len(command) > 3 and command[3] == 'else':
                     self.run_on_string(command[4])
-
+        elif command[0] == 'expr':
+            try:
+                return str(eval("".join(command[1:])))
+            except:
+                return ""
+        else:
+            return ""
 
 class EncounterTclParser(TclParser):
-    def __init__(self,filename,**kw):
-        TclParser.__init__(self,filename,**kw)
+    def __init__(self,filename,waf_env,**kw):
+        TclParser.__init__(self,filename,waf_env,**kw)
         self.output_files = []
 
     def interpret(self,p,commandpos):
         command = p[commandpos]
-        self.logger.info(command)
+        try:
+            self.logger.info(command)
+        except AttributeError:
+            pass
 
-        if command[0] == 'saveDesign':
+        if command[0] in [
+                'saveDesign',
+                'writeSdf',
+                'rcOut',
+                'saveNetlist',
+                'write_sdc']:
             for word in command[1:]:
                 if word[0] == '-':
                     continue
@@ -406,10 +475,12 @@ class EncounterTclParser(TclParser):
                     self.output_files.append(word)
         elif command[0] == 'list':
             assert(len(command[1:]) > 0)
-            ret_string = ""
+            #ret_string = ""
+            ret_list = []
             for word in command[1:]:
-                ret_string += word
-            return ret_string
+                #ret_string += word
+                ret_list.append(word)
+            return ret_list
         elif command[0] == 'append':
             assert(len(command) >= 3)
             ret_string = command[1]
