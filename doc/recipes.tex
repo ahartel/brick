@@ -721,3 +721,201 @@ def build(bld):
 
 This example assumes that there is a circuit called synapse that you want to
 extract hierarchically.
+
+\section{Timing characterization using brICk}
+\label{sec:recipe_characterizer}
+
+Before running the timing characterization you will probably want to run an
+extraction with source names as described in \label{sec:calibre_recipes_pex}.
+You should use the option\\ \tf{only\_extract\_nets} to extract all nets that are
+needed for the characterization. These include obviously the input and output
+pins, but also the nets that are connected to the other terminal of the
+flip-flops you want to characterize, for example the outputs of all flip-flops
+that are connected to input pins of your design.
+
+The most basic \tf{wscript} for characterization of four flip-flop will be described in the following listing. A running example of it can be found in the
+folder \tf{test/characterizer/simple\_ff\_test}.
+
+\begin{minted}[tabsize=2,mathescape,linenos,numbersep=5pt,frame=lines,framesep=2mm]{python}
+def configure(conf):
+	conf.load('brick_general')
+	conf.load('brick_characterize')
+	# if you want to extract your design first
+	conf.load('cadence_base')
+	conf.load('cadence_absgen')
+	conf.load('cadence_strmout')
+	conf.load('cadence_netlist')
+	conf.load('calibre_lvs')
+	conf.load('calibre_pex')
+
+	conf.env.CELL_NAME_LAYOUT = ('brick_test','sr_data_ffs','layout')
+	conf.env.CELL_NAME_SOURCE = ('brick_test','sr_data_ffs','schematic')
+
+def build(bld):
+	# Put extraction of layout and schematic here
+	# Also extraction has to be defined here
+	pex = bld (
+		features = 'calibre_pex',
+		...
+	)	
+
+	bld (
+		name = 'char_ffs',
+		features = 'brick_characterize',
+		lib_name = bld.env.CELL_NAME_SOURCE[0],
+		cell_name = bld.env.CELL_NAME_SOURCE[1],
+
+		rise_threshold = 0.5,
+		fall_threshold = 0.5,
+		default_max_transition = 0.2,
+
+		inputs = [
+			'd_in[1:0]',
+			'd_out_ff[1:0]',
+			],
+
+		inouts = [],
+
+		outputs = [
+			'd_in_ff[1:0]',
+			'd_out[1:0]',
+			],
+
+		static_signals = {
+			#'pc_confb[3:0]': 0,
+			},
+
+		powers = {
+			'vdd': 1.2,
+			'gnd': 0,
+			},
+
+		clocks = {
+			'clk': 'R'
+		},
+
+		input_timing_signals = {
+			'd_in[1:0]': [
+				'clk',
+				'd_in_ff[=index=]',
+				'positive_unate'
+			],
+            'd_out_ff[1:0]': [
+				'clk',
+				'd_out[=index=]',
+				'positive_unate'
+			],
+		},
+
+		output_timing_signals = {
+			'd_out[1:0]' : [
+				'clk',
+				'd_out_ff[=index=]',
+				'positive_unate'
+			],
+			'd_in_ff[1:0]' : [
+				'clk',
+				'd_in[=index=]',
+				'positive_unate'
+			],
+		},
+
+		# input files
+		circuit_netlist_path = \
+		pex.get_calibre_pex_output_file_node('.pex.netlist').abspath(),
+		model_netlist_path = \
+		os.environ['BRICK_DIR']+'/source/spice/include_all_models_tsmc.scs',
+		# output files
+		output_netlist_file = './netlists/char_data_ffs.sp',
+		output_lib_file = bld.bldnode.make_node('./brick_test_data_ffs.lib'),
+
+		# templates for lib file
+		constraint_template = [
+			# related_pin_tranisition (ns)
+			[0.01,0.05,0.5],
+			# constrainted_pin_tranisition (ns)
+			[0.01,0.05,0.5],
+		],
+
+		delay_template = [
+			# input_net_transition (ns)
+			[0.0049, 0.0125, 0.0277, 0.0582, 0.1192, 0.2412, 0.4851],
+			# total_output_net_capacitance;
+			[0.00077, 0.0017, 0.00355, 0.00725, 0.01466, 0.02947, 0.0591],
+		],
+
+		parasitics_report = \
+		pex.get_calibre_pex_output_file_node('.pex.report'),
+		logfile = 'some_logfile.log'
+
+		# debugging switch
+		only_rewrite_lib_file = False,
+		skip_setup_hold = False,
+		skip_delays = False,
+	)
+\end{minted}
+
+The last task generator in this \tf{wscript} defines the timing
+characterization.
+It demonstrates which information is needed in addition to
+the circuit net list to run a characterization. The most interesting piece of
+information is given in lines 62-86. In particular, lines 62-73 specify for the
+input signals with a timing constraint their clock signal, their related signal
+(i.e. the signal that is connected to the output of the flip-flop that will be
+measured) and the edge relationship of input and output signals at the
+flip-flop. Here, \texttt{positive\_unate} means, that if the input of a
+flip-flop sees a legal transition from 0 to 1 at the next clock edge, the
+relevant output of the same flip-flop will transition in the same direction.
+The term \texttt{negative\_unate} is used for the opposite relationship.
+
+In the same sense, lines 75-86 specify for the output signals with timing
+constraints their clock signal, related signal (i.e. the signal that is
+connected to the input of the flip-flop) and their transition relationship.
+
+Since both, the input signals and the output signals, are buses the related
+signal names will differ for every single bit of the bus. Therefore, as can be
+seen in line 61, the related signal \tf{d\_in\_ff} for the input signal
+\tf{d\_in} is named using the \tf{=index=} placeholder. This placeholder will
+always be expanded to the current index of the bus' signal.
+You can also apply some mathematics to this placeholder, this can be seen in
+the next subsection.
+
+\subsection{More complicated net names}
+
+This code example also demonstrates the syntax that has been chosen to specify
+the related signal for an input or output signal conveniently. It has to be
+kept in mind that the circuit that will be simulated has been automatically
+generated off a layout description file and therefore contains net names that
+can be lengthy and hardly readable. These net names usually emerge when
+instance names across several layers of hierarchy are concatenated (as in the
+example). Therefore, mathematical operations can be specified to calculate the
+net names from the index of the currently investigated input signal. For
+example \texttt{=index/8=} evaluates to the index of the current input signal
+(in the bus) divided by 8.
+
+\begin{lstwscript}
+clocks = { 'clk': 'R' }
+input_timing_signals = {
+	'write': [
+		'clk',
+		'N_XI1_write_int_XI1_MM123_g',
+		'positive_unate'
+	],
+	...
+	'd_in[0:511]' : [
+		'clk',
+		'XI12[=index/8=]_Xdriver_pre[=index%8=]_net047',
+		'positive_unate'
+	],
+}
+
+output_timing_signals = {
+	'd_out[0:511]' : [
+		'clk',
+		'XI12[=index/8=]_Xdriver_pre[=7-index%8=]_out',
+		'positive_unate'
+	],
+}
+\end{lstwscript}
+
+

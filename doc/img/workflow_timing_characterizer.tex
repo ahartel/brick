@@ -1,0 +1,94 @@
+\begin{tikzpicture}[
+	yes loop/.style={to path={-- node[above]{Yes} ++(#1,0) |- (\tikztotarget)}},
+	vh path/.style={to path={|- node[above right]{} (\tikztotarget)}},
+	nonterminal/.style={
+		% The shape:
+		rectangle,
+		% The size:
+		%minimum size=6mm,
+		% The border:
+		very thick,
+		draw=black!50,
+		 % 50% red and 50% black,
+		% and that mixed with 50% white
+		% The filling:
+		top color=white,
+		 % a shading that is white at the top...
+		bottom color=black!20, % and something else at the bottom
+		% shape
+		font=\itshape
+		},
+	terminal/.style={
+		% The shape:
+		%rectangle,minimum size=6mm,
+		rounded corners,%=3mm,
+		% The rest
+		very thick, draw=black!50,
+		top color=white,bottom color=black!20,
+		font=\ttfamily
+	},
+	]
+
+\colorlet{graphbg}{black!20}
+
+\matrix[row sep=3.0mm,column sep =1.5mm]
+{
+%First row
+\node (in1) [nonterminal] {Signal specification data}; &
+\node (in2) [nonterminal] {Parasitics net list}; &
+\node (in3) [nonterminal] {Parasitic capacitances};\\
+& \node (start) [terminal] {Split LUT entries}; & \\
+% Second row
+\node (nlwr1) [terminal] {Generate Netlist}; &
+\node (nlwr2) [] {\ldots}; &
+\node (nlwr3) [terminal] {Generate Netlist};\\
+\node (usim1) [terminal] {Ultrasim}; &
+\node (usim2) [] {\ldots}; &
+\node (usim3) [terminal] {Ultrasim};\\
+\node (result1) [terminal] {Analyze Waveform}; &
+\node (result2) [] {\ldots}; &
+\node (result3) [terminal] {Analyze Waveform};\\
+\node (repeat1) [terminal] {Repeat?}; &
+\node (repeat2) [] {\ldots}; &
+\node (repeat3) [terminal] {Repeat?};\\
+\node (done1) [terminal] {Extract Results}; &
+\node (done2) [] {\ldots}; &
+\node (done3) [terminal] {Extract Results};\\
+ & \node (merge) [terminal] {Merge}; & \\
+ & \node (append) [terminal] {Append input cap.}; & \\
+ & \node (write) [terminal] {Write library file}; & \\
+};
+
+\graph{
+(in1) -> (start); (in2) -> (start); (in3) -> (start);
+};
+\graph{
+(merge) -> (append); (append) -> (write);
+};
+\foreach \i in {1,3}
+	\graph [edge quotes=near start]{
+		(start) -> (nlwr\i) -> (usim\i) -> (result\i) ->
+		(repeat\i);% -> (done\i);
+	};
+
+\graph{ (repeat1) -> [yes loop=-20mm] (nlwr1);
+%	(done2) -> [no loop=-12mm](nlwr2);
+	(repeat3) -> [yes loop=+20mm](nlwr3);
+};
+\graph[edge label=No]{
+	(repeat1) -> (done1);
+	(repeat3) -> (done3);
+};
+
+\graph[]{
+	(done1) -> [vh path] (merge);
+	(done3) -> [vh path] (merge);
+};
+\begin{pgfonlayer}{background}
+\fill[color=graphbg] ($(done3) + (2.2,-0.5)$) rectangle ($(nlwr1) +
+(-2.2,0.8)$);
+\node[anchor=north west,inner sep=0.2em]
+at ($(nlwr1) + (-2.2,0.8)$) {Parallel Threads };
+\end{pgfonlayer}
+
+\end{tikzpicture}
