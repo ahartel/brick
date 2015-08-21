@@ -113,6 +113,7 @@ def do_characterization(
         constraint_template,
         delay_template,
         logfile,
+        temperature,
         parasitics_report=None,
         only_rewrite_lib_file=False,
         skip_setup_hold=False,
@@ -211,7 +212,7 @@ def do_characterization(
 
             for i in range(len(constraint_template[0])):
                 for j in range(len(constraint_template[1])):
-                    setup_hold_runs.append(SetupHold_Char(cell_name,output_netlist_file,use_spectre))
+                    setup_hold_runs.append(SetupHold_Char(cell_name,output_netlist_file,temperature,use_spectre))
                     setup_hold_runs[len(setup_hold_runs)-1].set_powers(powers)
                     for netlist in inc_netlists:
                         setup_hold_runs[len(setup_hold_runs)-1].add_include_netlist(netlist)
@@ -235,7 +236,7 @@ def do_characterization(
 
             for i in range(len(delay_template[0])):
                 for j in range(len(delay_template[1])):
-                    delay_runs.append(CellRiseFall_Char(cell_name,output_netlist_file,use_spectre))
+                    delay_runs.append(CellRiseFall_Char(cell_name,output_netlist_file,temperature,use_spectre))
                     delay_runs[len(delay_runs)-1].set_powers(powers)
                     for netlist in inc_netlists:
                         delay_runs[len(delay_runs)-1].add_include_netlist(netlist)

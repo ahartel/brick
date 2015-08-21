@@ -2,7 +2,7 @@ from brick_characterizer.CharBase import CharBase
 
 class CellRiseFall_Char(CharBase):
 
-    def __init__(self,toplevel,output_filename,use_spectre=False):
+    def __init__(self,toplevel,output_filename,temperature,use_spectre=False):
 
         self.toplevel = toplevel
         self.output_filename = output_filename
@@ -26,7 +26,7 @@ class CellRiseFall_Char(CharBase):
         self.delays = {}
         self.transitions = {}
 
-        super(CellRiseFall_Char,self).__init__(use_spectre)
+        super(CellRiseFall_Char,self).__init__(temperature,use_spectre)
 
     def get_delays(self):
         return self.delays
