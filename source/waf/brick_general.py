@@ -9,6 +9,7 @@ def configure(conf):
 	# This is interpreted relative to the build path
 	if not conf.env.BRICK_RESULTS:
 		conf.env.BRICK_RESULTS = './results'
+	os.environ['BRICK_RESULTS'] = conf.env.BRICK_RESULTS
 
 	conf.env['PROJECT_ROOT'] = conf.srcnode.abspath()
 	os.environ['PROJECT_ROOT'] = conf.srcnode.abspath()

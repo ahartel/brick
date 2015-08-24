@@ -218,8 +218,8 @@ class TclParser(Parser):
         p[0] = p[1] + p[2]
 
     def p_subcommand(self,p):
-        '''subcommand : LBRACKET
-                      | subcommand word'''
+        '''subcommand : subcommand word
+                      | LBRACKET'''
         if len(p) == 2:
             p[0] = []
         else:
@@ -421,7 +421,7 @@ class TclParser(Parser):
             self.try_log_debug("Setting variable %s to %s",command[1],command[2])
         elif command[0] == 'puts':
             if len(command) == 2:
-                print command[2]
+                print command[1]
         elif command[0] == 'getenv':
             assert(len(command) == 2)
             if command[1] in os.environ:
@@ -482,11 +482,24 @@ class EncounterTclParser(TclParser):
                 ret_list.append(word)
             return ret_list
         elif command[0] == 'append':
-            assert(len(command) >= 3)
-            ret_string = command[1]
-            for word in command[2:]:
-                ret_string += command[2]
-            return ret_string
+            assert(len(command) == 3)
+
+            first = self.replace_variable('$'+command[1])
+            ret = None
+            if isinstance(first,basestring) \
+            and isinstance(command[2],basestring):
+                    ret = first + " " +command[2]
+            elif isinstance(first,list) \
+             and isinstance(command[2],list):
+                    ret = first + command[2]
+            elif isinstance(first,list) \
+             and isinstance(command[2],basestring):
+                    ret = " ".join(first) + " " + command[2]
+            elif isinstance(first,basestring) \
+             and isinstance(command[2],list):
+                    ret = first+" "+ " ".join(command[2])
+
+            return ret
         else:
             return TclParser.interpret(self,p,commandpos)
 

@@ -1,6 +1,6 @@
-import os,re,subprocess
+import os,re,subprocess,logging
 from waflib import Task,Errors,TaskGen,Configure,Node,Logs
-from TclParser import *
+from TclParser import EncounterTclParser
 from brick_general import ChattyBrickTask
 
 def configure(conf):
@@ -22,15 +22,23 @@ def configure(conf):
 	conf.env['ENCOUNTER_OPTIONS'] = ['-nowin','-overwrite','-exitOnError']
 
 @TaskGen.taskgen_method
-def read_additional_enc_files(self,attr):
-	input_list = getattr(self,attr,[])
-	return_string = '" '
-	for item in input_list:
-		return_string += self.path.make_node(item).abspath()+' '
+def read_additional_enc_files(self,attr,key=None):
+	return_string = ''
 
-	return_string += '"'
+	if key is None:
+		input_list = getattr(self,attr,[])
+		for item in input_list:
+			return_string += self.path.make_node(item).abspath()+' '
+	else:
+		input_dict = getattr(self,attr,{})
+		if key in input_dict:
+			for item in input_dict[key]:
+				return_string += self.path.make_node(item).abspath()+' '
 
-	return return_string
+	if len(return_string) > 0:
+		return '" '+return_string+' "'
+	else:
+		return '""'
 
 @TaskGen.taskgen_method
 def get_encounter_step_name(self):
@@ -41,6 +49,7 @@ def get_encounter_step_name(self):
 def create_encounter_task(self):
 	# get a node object for the main tcl script
 	self.main_tcl_script = self.get_encounter_main_tcl_script()
+	brick_tcl_script = self.bld.bldnode.make_node('brick_'+os.path.basename(self.main_tcl_script.abspath()))
 
 	self.do_run = getattr(self,'do_run',True)
 
@@ -54,19 +63,53 @@ def create_encounter_task(self):
 		Logs.error(e.msg)
 		return 1
 
-	# read additional lef/gds/lib
-	self.encounter_additional_lef = self.read_additional_enc_files('additional_physical_libraries')
-	self.encounter_additional_gds = self.read_additional_enc_files('additional_gds_files')
-	self.encounter_additional_lib = self.read_additional_enc_files('additional_timing_libraries')
-
 	# define input list
 	inputs = [self.main_tcl_script]
-	if hasattr(self,'netlist'):
-		inputs.extend(self.to_nodes(self.netlist))
-	if hasattr(self,'constraints'):
-		inputs.extend(self.to_nodes(self.constraints))
 	if hasattr(self,'previous_state'):
 		inputs.extend(self.to_nodes(self.previous_state))
+
+	# read additional lef/gds/lib
+	with open(brick_tcl_script.abspath(),'w') as fh:
+		self.write_encounter_tcl_variable(fh,'BRICK_RESULTS',self.results_dir.path_from(self.bld.bldnode))
+
+		encounter_additional_lef = self.read_additional_enc_files('additional_physical_libraries')
+		self.write_encounter_tcl_variable(fh,'ENCOUNTER_ADDITIONAL_LEF',encounter_additional_lef)
+		encounter_additional_gds = self.read_additional_enc_files('additional_gds_files')
+		self.write_encounter_tcl_variable(fh,'ENCOUNTER_ADDITIONAL_GDS',encounter_additional_gds)
+
+		encounter_additional_lib_typ = self.read_additional_enc_files('additional_timing_libraries',
+																	  'typ')
+		self.write_encounter_tcl_variable(fh,
+										  'ENCOUNTER_ADDITIONAL_LIB_TYP',
+										  encounter_additional_lib_typ)
+
+		encounter_additional_lib_min = self.read_additional_enc_files('additional_timing_libraries',
+																	  'min')
+		self.write_encounter_tcl_variable(fh,
+										  'ENCOUNTER_ADDITIONAL_LIB_MIN',
+										  encounter_additional_lib_min)
+
+		encounter_additional_lib_max = self.read_additional_enc_files('additional_timing_libraries',
+																	  'max')
+		self.write_encounter_tcl_variable(fh,
+										  'ENCOUNTER_ADDITIONAL_LIB_MAX',
+										  encounter_additional_lib_max)
+
+		if hasattr(self,'netlist'):
+			netlist = self.to_nodes(self.netlist)
+			inputs.extend(netlist)
+			netlist_string = " ".join([c.abspath() for c in netlist])
+			self.write_encounter_tcl_variable(fh,'ENCOUNTER_NETLIST','"'+netlist_string+'"')
+		else:
+			self.write_encounter_tcl_variable(fh,'ENCOUNTER_NETLIST','""')
+		if hasattr(self,'constraints'):
+			constraints = self.to_nodes(self.constraints)
+			print constraints
+			inputs.extend(constraints)
+			constraints_string = " ".join([c.abspath() for c in constraints])
+			self.write_encounter_tcl_variable(fh,'ENCOUNTER_CONSTRAINTS','"'+constraints_string+'"')
+		else:
+			self.write_encounter_tcl_variable(fh,'ENCOUNTER_CONSTRAINTS','""')
 
 	# declare output list
 	outputs = []
@@ -134,19 +177,9 @@ def get_encounter_state(self):
 	return self.get_or_create_enc_results_dir().find_dir(self.design_name+'_enc').make_node(self.design_name+'_'+tcl_basename+'.enc')
 
 @TaskGen.taskgen_method
-def get_encounter_environment_string(self):
-	ret_string = ''
-	if hasattr(self,'netlist'):
-		ret_string += ' ENCOUNTER_NETLIST='+self.netlist.abspath()
-	if hasattr(self,'constraints'):
-		ret_string += ' ENCOUNTER_CONSTRAINTS='+self.constraints.abspath()
-	if hasattr(self,'encounter_additional_lef'):
-		ret_string += ' ENCOUNTER_ADDITIONAL_LEF='+self.encounter_additional_lef
-	if hasattr(self,'encounter_additional_gds'):
-		ret_string += ' ENCOUNTER_ADDITIONAL_GDS='+self.encounter_additional_gds
-	if hasattr(self,'encounter_additional_lib'):
-		ret_string += ' ENCOUNTER_ADDITIONAL_LIB='+self.encounter_additional_lib
-	return ret_string
+def write_encounter_tcl_variable(self,filehandle,name,value):
+	assert isinstance(value,basestring)
+	filehandle.write('set '+name+' '+value+'\n')
 
 @TaskGen.taskgen_method
 def get_encounter_flat_options(self):
@@ -156,7 +189,7 @@ def get_encounter_flat_options(self):
 class encounterTask(ChattyBrickTask):
 	vars = ['ENCOUNTER','ENCOUNTER_OPTIONS']
 	shell = True
-	run_str = 'BRICK_RESULTS=${gen.results_dir.abspath()} ${gen.get_encounter_environment_string()} ${env.ENCOUNTER} ${gen.get_encounter_flat_options()} -init ${gen.main_tcl_script.abspath()} -log ${gen.get_encounter_logfile_node().abspath()}'
+	run_str = '${env.ENCOUNTER} ${gen.get_encounter_flat_options()} -init ${gen.main_tcl_script.abspath()} -log ${gen.get_encounter_logfile_node().abspath()}'
 
 	def check_output(self,ret,out):
 		for num,line in enumerate(out.split('\n')):
