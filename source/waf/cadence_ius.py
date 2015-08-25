@@ -54,14 +54,14 @@ def configure(conf):
 
 
 TaskGen.declare_chain(
-        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()+env.NCVLOG_LOGFILE+gen.name} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.lib.src',],
         ext_out      = [ '.lib.src.out',],
         reentrant    = False,
         scan         = scan_verilog_task
 )
 TaskGen.declare_chain(
-        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCVLOG_LOGFILE}_${TGT[0]} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
+        rule         = '${CDS_NCVLOG} -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()+env.NCVLOG_LOGFILE+gen.name} ${NCVLOG_OPTIONS} -work ${WORKLIB} ${VERILOG_INC_DIRS} ${SRC} && echo "${TGT}" > ${TGT}',
         ext_in       = [ '.vp', ],
         ext_out      = [ '.vp.out', ],
         reentrant    = False,
@@ -82,14 +82,14 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()+env.NCSDFC_LOGFILE+gen.name} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
         ext_in       = ['.sdf'],
         ext_out       = ['.sdf.compiled'],
         reentrant    = False,
 )
 
 TaskGen.declare_chain(
-        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()}${NCSDFC_LOGFILE} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
+        rule         = 'ncsdfc -cdslib ${CDS_LIB_PATH} -hdlvar ${CDS_HDLVAR_PATH} -logfile ${gen.get_logdir_node().abspath()+env.NCSDFC_LOGFILE+gen.name} ${NCSDFC_OPTIONS} ${SRC} -output ${TGT}',
         ext_in       = ['.sdf.gz'],
         ext_out       = ['.sdf.compiled'],
         reentrant    = False,
