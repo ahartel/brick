@@ -468,8 +468,13 @@ class EncounterTclParser(TclParser):
                 'rcOut',
                 'saveNetlist',
                 'write_sdc']:
+            skip_next = False
             for word in command[1:]:
-                if word[0] == '-':
+                if skip_next is True:
+                    skip_next = False
+                    continue
+                elif word[0] == '-':
+                    skip_next = True
                     continue
                 else:
                     self.output_files.append(word)
