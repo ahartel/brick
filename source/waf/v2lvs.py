@@ -1,12 +1,13 @@
+import os
+from brick_general import ChattyBrickTask
 from waflib import Task,Errors,Node,TaskGen,Configure,Node,Logs,Context
 
 def configure(conf):
+	"""This function gets called by waf upon loading of this module in a configure method"""
+
 	conf.load('brick_general')
 
-	"""This function gets called by waf upon loading of this module in a configure method"""
-	if not conf.env.BRICK_LOGFILES:
-		conf.env.BRICK_LOGFILES = './logfiles'
-	conf.env['V2LVS'] = 'v2lvs'
+	conf.find_program('v2lvs',var='MENTOR_V2LVS')
 	conf.env['V2LVS_OPTIONS'] = [
 		]
 
@@ -21,39 +22,28 @@ def create_v2lvs_task(self):
 		return
 
 	inputs = [self.verilog_netlist]
-	inputs += getattr(self,'include_netlists',[])
+
+	self.include_string = ''
+	for filename in getattr(self,'include_netlists',[]):
+		inputs.append(filename)
+		if filename.suffix() == '.v':
+			self.include_string += ' -v '+filename.abspath()
+		elif filename.suffix() == '.net' or filename.suffix() == '.sp':
+			self.include_string += ' -s '+filename.abspath()
+		else:
+			Logs.error('You have given a file as include_netlist for which I can not tell whether it\'s spice or verilog (I only know .v, .net and .sp). Filename '+filename.abspath()+' in tool v2lvs')
+			return
+
+	self.logfile = self.env['BRICK_LOGFILES']+'/'+os.path.basename(self.verilog_netlist.abspath())+'_v2lvs.log'
 
 	t = self.create_task('v2lvsTask', inputs, self.target_netlist)
 
-@Task.always_run
-class v2lvsTask(Task.Task):
-	vars = ['V2LVS','V2LVS_OPTIONS']
-
-	def run(self):
-		import os
-
-		run_str = '%s %s -v %s -log %s -o %s' % (self.env.V2LVS, ' '.join(self.env.V2LVS_OPTIONS), self.inputs[0].abspath(),os.environ['BRICK_LOGFILES']+'/'+os.path.basename(self.generator.verilog_netlist.abspath())+'_v2lvs.log',self.generator.target_netlist.abspath())
-
-		if hasattr(self.generator,'include_netlists'):
-			for filename in self.generator.include_netlists:
-				if filename.suffix() == '.v':
-					run_str += ' -v '+filename.abspath()
-				elif filename.suffix() == '.net' or filename.suffix() == '.sp':
-					run_str += ' -s '+filename.abspath()
-				else:
-					Logs.error('You have given a file as include_netlist for which I can not tell whether it\'s spice or verilog (I only know .v, .net and .sp). Filename '+filename.abspath()+' in tool v2lvs')
-					return
-
-		try:
-			out = self.generator.bld.cmd_and_log(run_str, quiet=Context.STDOUT)
-		except Exception as e:
-			out = e.stderr
+#@Task.always_run
+class v2lvsTask(ChattyBrickTask):
+	vars = ['MENTOR_V2LVS','V2LVS_OPTIONS']
+	shell = True
+	run_str = '${env.MENTOR_V2LVS} ${env.V2LVS_OPTIONS} -v ${SRC[0].abspath()} -log ${gen.logfile} -o ${gen.target_netlist.abspath()} ${gen.include_string}'
 
 
-# for convenience
-@Configure.conf
-def v2lvs(bld,*k,**kw):
-	set_features(kw,'v2lvs')
-	return bld(*k,**kw)
 
 # vim: noexpandtab
