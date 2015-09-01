@@ -50,7 +50,7 @@ def create_cds_strmin_task(self):
 
 @TaskGen.taskgen_method
 def get_cds_strmin_logfile_node(self):
-	return self.bld.bldnode.find_node(self.env.BRICK_LOGFILES).make_node(self.libname+'_'+self.cellname+'_strmin.log')
+	return self.get_logdir_node().make_node(self.libname+'_'+self.cellname+'_strmin.log')
 
 class cdsStrminTask(ChattyBrickTask):
 	vars = ['CDS_STRMIN']
