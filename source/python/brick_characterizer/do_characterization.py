@@ -126,11 +126,14 @@ def do_characterization(
     import logging
     import datetime
 
-    logging.basicConfig(filename=logfile,level=logging.DEBUG,format='%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(filename=logfile.abspath(),
+                        level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
     logging.info("####################################")
     logging.info("BrickCharacterizer")
     logging.info("####################################")
-    logging.info("Logging to "+logfile)
+    logging.info("Logging to "+logfile.abspath())
     logging.info("Working directory is "+os.getcwd())
     logging.info("Invoked with the following parameters:")
     logging.info(" only_rewrite_lib_file = "+str(only_rewrite_lib_file))

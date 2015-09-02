@@ -2,7 +2,11 @@ import re
 
 class LibBackend:
 
-    def __init__(self,constr_templ,del_templ,default_max_transition=0.2):
+    def __init__(self,
+                 constr_templ,
+                 del_templ,
+                 default_max_transition=0.2,
+                 default_max_capacitance=0.02):
         self.indentation = 0
         self.constraint_template = constr_templ
         self.delay_template = del_templ
@@ -15,6 +19,7 @@ class LibBackend:
         self.max_voltage = None
         self.time_base_unit = 1.0e-9 # i.e. ns
         self.default_max_transition = default_max_transition
+        self.default_max_capacitance = default_max_capacitance
 
     def write_templates(self):
         dim1 = len(self.constraint_template[0])
@@ -194,7 +199,8 @@ class LibBackend:
 
         return output
 
-
+    def get_max_capacitance(self,signal):
+        return self.default_max_capacitance
 
     def write_setup_timing(self,timing_signals,setups,signal):
         output = []
@@ -436,7 +442,8 @@ class LibBackend:
                     output += self.indent(['pin ('+signal_name+') {'])
                     self.indentation +=1
                     # here
-                    output += self.indent(['max_capacitance : 0.010;'])
+                    output += self.indent(['max_capacitance : ' \
+                        +str(self.get_max_capacitance(signal_name))+';'])
 
 
                     if signal in analogs or signal_name in analogs:
@@ -458,7 +465,8 @@ class LibBackend:
                 self.indentation +=1
                 output += self.indent(['direction : output;'])
                 # here
-                output += self.indent(['max_capacitance : 0.010;'])
+                output += self.indent(['max_capacitance : ' \
+                        +str(self.get_max_capacitance(signal))+';'])
 
                 if signal in analogs:
                     output += self.indent(['is_analog : true;'])

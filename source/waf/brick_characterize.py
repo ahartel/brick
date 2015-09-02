@@ -17,6 +17,15 @@ def create_brick_characterize_task(self):
     else:
         self.create_task('brickCharacterizerTask',[],self.output_lib_file)
 
+    if not hasattr(self,'temperature'):
+        self.bld.start_msg('No temperature given in task generator %s'%(self.name))
+        self.bld.end_msg('Assuming %d degrees'%(25))
+        self.temperature = 25
+
+    self.logfile = self.get_logdir_node().make_node(getattr(self,
+                                                            'logfile',
+                                                            'brick_characterizer_'+self.name+'.log'))
+
 @Task.always_run
 class brickCharacterizerTask(Task.Task):
     def run(self):
@@ -25,6 +34,7 @@ class brickCharacterizerTask(Task.Task):
             self.generator.parasitics_report = self.generator.parasitics_report.abspath()
         else:
             self.generator.parasitics_report = None
+
 
         return do_characterization(
             # names
