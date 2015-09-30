@@ -1,4 +1,6 @@
 import os
+import random
+import string
 #import types
 from verilog_scanner import scan_verilog_task
 from vhdl_scanner import vhdl_scanner
@@ -248,7 +250,7 @@ class vlibTask(ChattyBrickTask):
 
 @Task.always_run
 class vsimTask(Task.Task):
-   run_str = '${MODEL_VSIM} -l ${VSIM_LOGFILE} ${SIMULATION_TOPLEVEL} ${VSIM_OPTIONS}'
+   run_str = '${MODEL_VSIM} -l ${gen.log_file} ${SIMULATION_TOPLEVEL} ${VSIM_OPTIONS} ${gen.vsim_options}'
 
 @TaskGen.feature('vsim')
 def modelsim_run(self):
@@ -256,6 +258,9 @@ def modelsim_run(self):
 		self.env.VSIM_OPTIONS.append("-L")
 		self.env.VSIM_OPTIONS.append(self.get_worklib_path_from_string(lib).abspath())
 
+	self.vsim_options = getattr(self,'vsim_options',[])
+	random_string = ''.join(random.choice(string.lowercase) for i in range(10))
+	self.log_file = self.env.VSIM_LOGFILE+'.'+random_string
 
 	self.env.SIMULATION_TOPLEVEL = self.toplevel
 	worklib = getattr(self,'worklib','worklib')
