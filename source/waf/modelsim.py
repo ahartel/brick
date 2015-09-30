@@ -100,7 +100,7 @@ TaskGen.declare_chain(
 )
 
 TaskGen.declare_chain(
-        rule         = '${MODEL_VCOM} -l ${gen.get_logdir_node().make_node(gen.env.VCOM_LOGFILE).abspath()}${gen.name} ${VCOM_OPTIONS} -work ${gen.WORKLIB.abspath()} ${SRC}',
+        rule         = '${MODEL_VCOM} -l ${gen.get_logdir_node().make_node(gen.env.VCOM_LOGFILE).abspath()+gen.name} ${VCOM_OPTIONS} -work ${gen.WORKLIB.abspath()} ${SRC}',
         ext_in       = ['.vhd'],
         scan         = vhdl_scanner,
         reentrant    = False,
