@@ -1,4 +1,5 @@
 import os,re
+from brick_general import ChattyBrickTask
 from waflib import Task,Errors,Node,TaskGen,Configure,Node
 
 def configure(conf):
@@ -13,9 +14,18 @@ def configure(conf):
 def scan_synplify_project_file(self):
 	"""This function extracts the output file and inputs files for synthesis from a synplify project (i.e. tcl) file."""
 
+	result_file = None
+
 	self.project_file_node = self.path.find_node(getattr(self,'project_file',None))
 	if not self.project_file_node:
 		raise Errors.ConfigurationError('Project file for synplify not found: '+getattr(self,'project_file',''))
+
+	# help file
+	project_file_name = os.path.split(self.project_file_node.abspath())[1]
+	help_file = self.bld.bldnode.make_node('brick_'+project_file_name)
+	with open(help_file.abspath(),'w') as hf:
+		hf.write('set results_dir ./results')
+
 	# open the project file template
 	input = open(self.project_file_node.abspath(),'r')
 	inputs = [self.project_file_node]
@@ -56,12 +66,12 @@ def scan_synplify_project_file(self):
 				except KeyError:
 					print "Variable "+m0_1.group(1)+" not found in "+self.project_file
 
-				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),result_file)))
+				outputs.append(self.bld.bldnode.make_node(result_file))
 			else:
 				# if the result path is given as a relative path,
 				# synplify save the results relative to the project_file path,
 				# not relative to the path where the program is executed in
-				outputs.append(self.path.get_bld().make_node(os.path.join(self.path.bld_dir(),m0.group(1))))
+				outputs.append(self.bld.bldnode.make_node(m0.group(1)))
 
 
 		# look for variables
@@ -84,6 +94,8 @@ def scan_synplify_project_file(self):
 			output.write('add_file -verilog "'+node.abspath()+'"\n')
 		elif node.suffix() == '.sv' or node.suffix() == '.svh':
 			output.write('add_file -verilog -vlog_std sysv "'+node.abspath()+'"\n')
+		elif node.suffix() == '.vhd' or node.suffix() == '.vhdl':
+			output.write('add_file -vhdl "'+node.abspath()+'"\n')
 		elif node.suffix() == '.sdc':
 			output.write('add_file -constraint "'+node.abspath()+'"\n')
 		else:
@@ -104,38 +116,26 @@ def scan_synplify_project_file(self):
 	outputs.append(outputs[0].change_ext('.ncf'))
 	outputs.append(outputs[0].parent.make_node('synplicity.ucf'))
 
+	self.logfile = self.env.BRICK_LOGFILES+'/'+Node.split_path(self.project_file_node.abspath())[-1]
+
 	# generate synthesis task
 	self.synplify_task = self.create_task('synplifyTask', inputs, outputs)
 
-class synplifyTask(Task.Task):
+class synplifyTask(ChattyBrickTask):
 	"""This task runs synplify with a project file and redirects it's STDOUT to a logfile"""
 	vars = ['SYNPLIFY']
+	run_str = '${SYNPLIFY} -batch ${gen.project_file_node.abspath()} -log ${gen.logfile}'
 
-	def run(self):
-		"""Checking logfile for critical warnings line by line"""
-
-		logfile = self.env.BRICK_LOGFILES+'/'+Node.split_path(self.generator.project_file_node.abspath())[-1]
-
-		run_str = '%s -batch %s -log %s' % (self.env.SYNPLIFY,self.generator.project_file_node.abspath(),logfile)
-
-		out = ""
-		try:
-			out = self.generator.bld.cmd_and_log(run_str)#, quiet=Context.STDOUT)
-		except Exception as e:
-			out = e.stdout + e.stderr
-
-		#(f, dvars) = Task.compile_fun(run_str, False)
-		#return_value = f(self)
-
+	def check_output(self,ret,out):
 		#found_error = return_value
 		found_error = 0
 		errors = []
-		with open(self.generator.logfile.abspath(),'r') as logfile_handle:
-			for line in logfile_handle:
+		for num,line in enumerate(out.split('\n')):
+			for line in out:
 				# always_ff does not infer sequential logic
 				if re.match("@W: CL216",line):
 					errors.append(line)
-					found_error = 1
+					# found_error = 1
 				# always_comb does not infer combinatorial logic
 				elif re.match("@W: CL217",line):
 					errors.append(line)
@@ -152,8 +152,8 @@ class synplifyTask(Task.Task):
 		#if len(errors) > 0:
 			#raise Errors.WafError("Found critical warning in logfile:\n"+"\n".join(errors))
 
-		#return found_error
-		return 0
+		ret = ret | (found_error>0)
+		return ret
 
 
 # for convenience

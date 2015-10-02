@@ -17,7 +17,15 @@ def scan_planAhead_script(self):
 
 	inputs = [self.tcl_file_node]
 	outputs = []
-	variables = {}
+	variables = {'BRICK_RESULTS': './results',
+				'PROJECT_ROOT': self.env.PROJECT_ROOT}
+
+	# help file
+	project_file_name = os.path.split(self.tcl_file_node.abspath())[1]
+	help_file = self.bld.bldnode.make_node('brick_'+project_file_name)
+	with open(help_file.abspath(),'w') as hf:
+		hf.write('set BRICK_RESULTS ./results\n')
+		hf.write('set PROJECT_ROOT '+self.env.PROJECT_ROOT+'\n')
 
 	#
 	# Project file parsing

@@ -73,7 +73,7 @@ class ChattyBrickTask(Task.Task):
 		Combination of TaskBase.exec_command and Context.exec_command with
 		modifications to get real-time output from Subprocess.Popen
 		"""
-
+		ret = 0
 		bld = self.generator.bld
 		try:
 			if not kw.get('cwd', None):
@@ -106,7 +106,7 @@ class ChattyBrickTask(Task.Task):
 					line = p.stdout.readline()
 				#(out, err) = p.communicate()
 				err = ''
-				ret = p.returncode
+				ret = p.wait()
 			else:
 				out, err = (None, None)
 				ret = subprocess.Popen(cmd, **kw).wait()
