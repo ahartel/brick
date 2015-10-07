@@ -1,4 +1,5 @@
 from copy import copy
+from timingsignal import SetupHoldTimingSignal
 from brick_characterizer.CharBase import CharBase
 
 # IMPORTANT NOTE: according to Bhasker & Chadha (page 64), the
@@ -50,7 +51,7 @@ class SetupHold_Char(CharBase):
         return 'SetupHold_Char_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)
 
     def log_my_name(self):
-        return self.state+'\ts'+str(self.clock_rise_time)+'\tc'+str(self.signal_rise_time)+'\t#'+str(self.state_cnt)
+        return self.state+'\tc'+str(self.clock_rise_time)+'\ts'+str(self.signal_rise_time)+'\t#'+str(self.state_cnt)
 
     def get_holds(self):
         return self.holds
@@ -146,8 +147,10 @@ class SetupHold_Char(CharBase):
 
     def set_initial_condition(self,signal):
         if self.probe_signal_directions[signal] == 'positive_unate':
+            self.append_out('.IC V('+signal+')='+str(self.low_value))
             self.append_out('.NODESET V('+signal+')='+str(self.low_value))
         elif self.probe_signal_directions[signal] == 'negative_unate':
+            self.append_out('.IC V('+signal+')='+str(self.high_value))
             self.append_out('.NODESET V('+signal+')='+str(self.high_value))
         else:
             raise Exception('Probe signal '+signal+' has unknown unate-ness. Please specify \'positive_unate\' or \'negative_unate\'')
@@ -401,56 +404,64 @@ class SetupHold_Char(CharBase):
             if self.probe_signal_directions[signal] == 'positive_unate':
                 r_edges_signal = self.get_rising_edges(signal)
                 if r_edges_signal and len(r_edges_signal) > 0:
-                    delta_t[0] = r_edges_signal.pop(0)
-                    self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
-                    delta_t[0] -= clock_edges[self.signal_to_clock[related]][0]
-                    if delta_t[0] > self.timing_offset*1.e-9:
-                        self.logger_debug("Rising edge for signal "+signal+" too far away from clock edge")
-                        delta_t[0] = self.infinity
-                    else:
-                        self.logger_debug( "Delay: "+str(delta_t[0]))
+                    for r_edge in r_edges_signal:
+                        delta_t[0] = r_edge
+                        self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
+                        delta_t[0] -= clock_edges[self.signal_to_clock[related]][0]
+                        if delta_t[0] < 0 or delta_t[0] > self.timing_offset*1.e-9:
+                            self.logger_debug("Rising edge for signal "+signal+" too far away from clock edge")
+                            delta_t[0] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[0]))
+                            break
                 else:
                     self.logger_debug("Rising edge for signal "+signal+" not found but expected")
                     delta_t[0] = self.infinity
 
                 f_edges_signal = self.get_falling_edges(signal)
                 if f_edges_signal and len(f_edges_signal) > 0:
-                    delta_t[1] = f_edges_signal.pop(0)
-                    self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
-                    delta_t[1] -= clock_edges[self.signal_to_clock[related]][1]
-                    if delta_t[1] > self.timing_offset*1.e-9:
-                        self.logger_debug("Falling edge for signal "+signal+" too far away from clock edge")
-                        delta_t[1] = self.infinity
-                    else:
-                        self.logger_debug( "Delay: "+str(delta_t[1]))
+                    for f_edge in f_edges_signal:
+                        delta_t[1] = f_edge
+                        self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
+                        delta_t[1] -= clock_edges[self.signal_to_clock[related]][1]
+                        if delta_t[1] < 0 or delta_t[1] > self.timing_offset*1.e-9:
+                            self.logger_debug("Falling edge for signal "+signal+" too far away from clock edge")
+                            delta_t[1] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            break
                 else:
                     self.logger_debug("Falling edge for signal "+signal+" not found but expected")
                     delta_t[1] = self.infinity
             elif self.probe_signal_directions[signal] == 'negative_unate':
                 f_edges_signal = self.get_falling_edges(signal)
                 if f_edges_signal and len(f_edges_signal) > 0:
-                    delta_t[1] = f_edges_signal.pop(0)
-                    self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
-                    delta_t[1] -= clock_edges[self.signal_to_clock[related]][0]
-                    if delta_t[1] > self.timing_offset*1.e-9:
-                        self.logger_debug("Falling edge for signal "+signal+" too far away from clock edge")
-                        delta_t[1] = self.infinity
-                    else:
-                        self.logger_debug( "Delay: "+str(delta_t[1]))
+                    for f_edge in f_edges_signal:
+                        delta_t[1] = f_edge
+                        self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
+                        delta_t[1] -= clock_edges[self.signal_to_clock[related]][0]
+                        if delta_t[1] < 0 or delta_t[1] > self.timing_offset*1.e-9:
+                            self.logger_debug("Falling edge for signal "+signal+" too far away from clock edge")
+                            delta_t[1] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            break
                 else:
                     self.logger_debug("Falling edge for signal "+signal+" not found but expected")
                     delta_t[1] = self.infinity
 
                 r_edges_signal = self.get_rising_edges(signal)
                 if r_edges_signal and len(r_edges_signal) > 0:
-                    delta_t[0] = r_edges_signal.pop(0)
-                    self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
-                    delta_t[0] -= clock_edges[self.signal_to_clock[related]][1]
-                    if delta_t[0] > self.timing_offset*1.e-9:
-                        self.logger_debug("Rising edge for signal "+signal+" too far away from clock edge")
-                        delta_t[0] = self.infinity
-                    else:
-                        self.logger_debug( "Delay: "+str(delta_t[0]) )
+                    for r_edge in r_edges_signal:
+                        delta_t[0] = r_edge
+                        self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
+                        delta_t[0] -= clock_edges[self.signal_to_clock[related]][1]
+                        if delta_t[0] < 0 or delta_t[0] > self.timing_offset*1.e-9:
+                            self.logger_debug("Rising edge for signal "+signal+" too far away from clock edge")
+                            delta_t[0] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[0]) )
+                            break
                 else:
                     self.logger_debug("Rising edge for signal "+signal+" not found but expected")
                     delta_t[0] = self.infinity

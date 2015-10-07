@@ -1,3 +1,4 @@
+import re
 import os, logging
 
 class CharBase(object):
@@ -125,47 +126,27 @@ class CharBase(object):
         self.append_out('')
 
     def add_static_signals(self,signals):
-        import re
-        for name,value in signals.iteritems():
-            bus = re.compile(r"\[(\d+):(\d+)\]")
-            m = bus.search(name)
-            if m:
-                smaller = int(m.group(1))
-                larger = int(m.group(2))
-                if smaller >= larger:
-                    larger,smaller = smaller,larger
-
-                for index in range(smaller,larger+1):
-                    cur_sig = re.sub(r"\[\d+:\d+\]","["+str(index)+"]",name)
-                    self.static_signals[cur_sig] = value
-                    if self.added_timing_signals:
-                        if self.timing_signals.has_key(cur_sig) or self.source_signals.has_key(name) or self.clocks.has_key(cur_sig):
-                            raise Exception('Static signal '+cur_sig+' has already been defined as a timing or clock signal.')
-
-            else:
-                self.static_signals[name] = value
-                if self.added_timing_signals:
-                    if self.timing_signals.has_key(name) or self.source_signals.has_key(name) or self.clocks.has_key(name):
-                        raise Exception('Static signal '+name+' has already been defined as a timing or clock signal.')
+        for signal,related in self.itersignals(signals):
+            if self.added_timing_signals:
+                if self.timing_signals.has_key(signal) or self.source_signals.has_key(signal) or self.clocks.has_key(signal):
+                    raise Exception('Static signal '+signal+' has already been defined as a timing or clock signal.')
+            self.static_signals[signal] = value
 
         self.added_static_signals = True
 
     def generate_instance(self):
+        # spectre needs an extra instantiation of the circuit
+        # ultrasim is fine with only the circuit definition
         if self.use_spectre:
             self.append_out('X'+self.toplevel)
-            self.append_out('''+ vdd gnd en clk_int w_conf[7] w_conf[5] w_conf[3] w_conf[1] wen
-    + bl_w w_conf[6] w_conf[4] w_conf[2] w_conf[0] write pc_confb[3] bl_pc_out
-    + pc_confb[2] pc_confb[1] pc_confb[0] str clk bl_pc_in clk_intb pc sense
-    + write_en w_a[0] w_ab[0] w_ab[1] w_a[1] w_a[2] w_ab[2] w_ab[3] w_a[3] w_a[4]
-    + w_ab[4] w_ab[5] w_a[5] w_a[6] w_ab[6] addr[5] addr[0] addr[1] addr[3] addr[2]
-    + addr[4] addr[6]''')
+            self.append_out('''+ VDD CP VSS D Q QN''')
 
-            #for (signal,value) in self.static_signals.iteritems():
-            #    self.append_out('+ '+signal)
-            #for signal,value in self.timing_signals.iteritems():
-            #    self.append_out('+ '+signal)
-            #for signal,value in self.output_filename.iteritems():
-            #    self.append_out('+ '+signal)
+            # for (signal,value) in self.static_signals.iteritems():
+                # self.append_out('+ '+signal)
+            # for signal,value in self.timing_signals.iteritems():
+                # self.append_out('+ '+signal)
+            # for signal,value in self.output_signals.iteritems():
+                # self.append_out('+ '+signal)
 
             self.append_out('+ '+self.toplevel)
 
@@ -191,7 +172,6 @@ class CharBase(object):
         self.append_out('+ 5.0000000e-09 '+value+'000000e+00)')
 
     def generate_static_signals(self):
-        import re
         for power_name,power_value in self.powers.iteritems():
             self.append_out('V'+power_name+' '+power_name+'_ideal 0 '+str(power_value))
             self.append_out('R'+power_name+' '+power_name+'_ideal '+power_name+' 0.1')
@@ -302,3 +282,59 @@ class CharBase(object):
             return self.output_dir+'/'+os.path.splitext(os.path.basename(self.get_current_filename()))[0]+'.print0'
         else:
             return self.output_dir+'/'+os.path.splitext(os.path.basename(self.get_current_filename()))[0]+'.print'
+
+    def itersignals(self,signals,eval_index_expression=False):
+        """This is a generator function that iterates over the signals in the
+        input dict. The input dict can contain multiple signals or buses. For
+        buses the individual signal bits will be yielded. If
+        eval_index_expression is set to True, the item at position 1 of the
+        list that is associated with each signals is checked for index
+        expressions.
+
+        It can be used like::
+
+            for signal in filter(function,self.itersignals(signals)):
+                # do something
+
+        """
+        # The following loop used to appear often in this program.
+        # The way I chose to generalize it was to make a generator out of it.
+        # So now it can be used like
+        # for signal in filter(function,self.itersignals(signals)):
+        #     # do something
+
+        assert type(signals) is dict
+        for name,related in signals.iteritems():
+            bus = re.compile(r"\[(\d+):(\d+)\]")
+            m = bus.search(name)
+            if m:
+                smaller = int(m.group(1))
+                larger = int(m.group(2))
+                if smaller >= larger:
+                    larger,smaller = smaller,larger
+
+                for index in range(smaller,larger+1):
+                    cur_sig = re.sub(r"\[\d+:\d+\]","["+str(index)+"]",name)
+                    if eval_index_expression is True:
+                        cur_probe = related[1]
+                        tests = []
+                        tests.append(re.compile(r"=(index)="))
+                        tests.append(re.compile(r"=([\*\d\%\+\/\-]*index[\*\d\%\+\/\-]*)="))
+
+                        match = None
+                        for test in tests:
+                            match = test.search(related[1])
+                            while match:
+                                cur_probe = test.sub(str(int(eval(match.group(1)))),cur_probe,count=1)
+                                match = test.search(cur_probe)
+
+                    yield cur_sig,related
+
+            else:
+                yield name,related
+
+
+    def set_initial_condition(self,signal_name,value):
+        self.append_out('.IC V('+signal_name+')='+str(value))
+        self.append_out('.NODESET V('+signal_name+')='+str(value))
+

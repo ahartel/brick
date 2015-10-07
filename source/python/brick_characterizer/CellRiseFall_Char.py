@@ -1,4 +1,6 @@
+from timingsignal import TimingSignal
 from brick_characterizer.CharBase import CharBase
+
 
 class CellRiseFall_Char(CharBase):
 
@@ -19,9 +21,7 @@ class CellRiseFall_Char(CharBase):
         self.slew_lower_fall = 0.3
         self.slew_upper_fall = 0.7
 
-        self.signal_to_clock = {}
-        self.source_signals = {}
-        self.probe_signal_directions = {}
+        self.stimulus_signals = []
 
         self.delays = {}
         self.transitions = {}
@@ -80,7 +80,6 @@ class CellRiseFall_Char(CharBase):
         return name+'_inTr'+str(self.input_rise_time)+'_cap'+str(self.load_capacitance)+'_'+self.state+ext
 
     def add_timing_signals(self,clocks,tim_sig):
-        import re
 
         self.clocks = clocks
 
@@ -89,83 +88,89 @@ class CellRiseFall_Char(CharBase):
                 if self.static_signals.has_key(name):
                     raise Exception('Clock signal '+name+' has already been defined as a static signal.')
 
-        for sig,related in tim_sig.iteritems():
-            bus = re.compile(r"\[(\d+):(\d+)\]")
-            m = bus.search(sig)
-            if m:
-                smaller = int(m.group(1))
-                larger = int(m.group(2))
-                if smaller >= larger:
-                    larger,smaller = smaller,larger
-
-                for index in range(smaller,larger+1):
-                    cur_sig = re.sub(r"\[\d+:\d+\]","["+str(index)+"]",sig)
-                    cur_probe = related[1]
-                    tests = []
-                    tests.append(re.compile(r"=(index)="))
-                    tests.append(re.compile(r"=([\*\d\%\+\/\-]*index[\*\d\%\+\/\-]*)="))
-
-                    match = None
-                    for test in tests:
-                        match = test.search(related[1])
-                        while match:
-                            cur_probe = test.sub(str(int(eval(match.group(1)))),cur_probe,count=1)
-                            match = test.search(cur_probe)
-
-                    self.signal_to_clock[cur_sig] = related[0]
-                    self.source_signals[cur_probe] = cur_sig
-                    self.probe_signal_directions[cur_probe] = related[2]
-                    self.delays[cur_sig] = []
-                    self.transitions[cur_sig] = []
-            else:
+        for signal,related in self.itersignals(tim_sig,
+                                               eval_index_expression=True):
                 if self.added_static_signals:
-                    if self.static_signals.has_key(sig):
-                        raise Exception('Timing signal '+sig+' has already been defined as a static signal.')
+                    if self.static_signals.has_key(signal):
+                        raise Exception('Timing signal '+signal+' has already been defined as a static signal.')
 
-                self.signal_to_clock[sig] = related[0]
-                self.source_signals[related[1]] = sig
-                self.probe_signal_directions[related[1]] = related[2]
-                self.delays[sig] = []
-                self.transitions[sig] = []
+                t = TimingSignal(signal,related)
+                self.timing_signals[signal] = t
+                # The following list stores a unique list of the stimulus
+                # signals for later pulse source generation in the net list
+                self.stimulus_signals.append(t.stimulus())
 
+                self.delays[signal] = []
+                self.transitions[signal] = []
 
+        self.stimulus_signals = set(self.stimulus_signals)
         self.added_timing_signals = True
 
 
     def generate_timing_signals(self):
-        import re
 
         for name,direction in self.clocks.iteritems():
             self.generate_clock_edge(name,direction)
             self.add_probe(name)
 
-        for signal,related in self.source_signals.iteritems():
+        for signal in self.stimulus_signals:
             self.generate_two_edges(signal,self.signal_rise_time,self.initial_delay,self.initial_delay)
             #self.logger_debug("Generating edge for "+signal+" with rising delay "+str(self.initial_delay)+ " and falling delay "+str(self.initial_delay))
-
-            self.add_probe(related)
             self.add_probe(signal)
-            self.add_capacitance(related,self.load_capacitance)
+            self.set_initial_condition(signal,self.low_value)
+
+        for signal_name,signal_obj in self.timing_signals.iteritems():
+            self.add_probe(signal_name)
+            self.add_capacitance(signal_name,self.load_capacitance)
+            if signal_obj.unateness() == 'positive_unate':
+                self.set_initial_condition(signal_name,self.low_value)
+            elif signal_obj.unateness() == 'negative_unate':
+                self.set_initial_condition(signal_name,self.high_value)
+            else:
+                raise Exception('Probe signal '+signal_name+' has unknown unate-ness. Please specify \'positive_unate\' or \'negative_unate\'')
 
 
     def generate_clock_edge(self,name,direction):
         self.append_out('V'+name+' '+name+' 0 pwl(')
         if direction == 'R':
             self.append_out('+ 0.0000000e+00 0.0000000e+00')
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*0.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
+
             self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
             self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*2 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*0.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.5 + self.clock_rise_time)+'e-09 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*2.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*2.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.high_value))
+
         else:
             self.append_out('+ 0.0000000e+00 '+str(self.high_value)+'000000e+00')
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset-self.clock_period*0.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
+
             self.append_out('+ '+str(self.timing_offset - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
             self.append_out('+ '+str(self.timing_offset + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*1.5)+'e-9 '+str(self.low_value))
-            self.append_out('+ '+str(self.timing_offset*1.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*2 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
-            self.append_out('+ '+str(self.timing_offset*2 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*0.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*0.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
+
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.5)+'e-9 '+str(self.low_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*1.5 + self.clock_rise_time)+'e-09 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*2.0 - self.clock_rise_time*0.5)+'e-9 '+str(self.high_value))
+            self.append_out('+ '+str(self.timing_offset+self.clock_period*2.0 + self.clock_rise_time*0.5)+'e-09 '+str(self.low_value))
 
 
     def generate_two_edges(self,signal,transition_time,rising_delay,falling_delay):
@@ -186,31 +191,19 @@ class CellRiseFall_Char(CharBase):
         self.append_out('C'+signal_name+' '+signal_name+' 0 '+str(capacitance)+'pf')
 
     def add_pseudo_static_signals(self,signals):
+        """Pseudo-Static signals in the case of an Output timing
+        characterization are the input timing signals. The function
+        *do_characterization* passes the input timing signals to this function.
+        It assigns zero to all of them during simulation."""
+
         if not self.added_timing_signals:
             raise Exception('Cannot add pseudo-static signals before timing_signals have been added. Please call this function afterwards.')
 
-        import re
-        for name,value in signals.iteritems():
-            bus = re.compile(r"\[(\d+):(\d+)\]")
-            m = bus.search(name)
-            if m:
-                smaller = int(m.group(1))
-                larger = int(m.group(2))
-                if smaller >= larger:
-                    larger,smaller = smaller,larger
+        not_known = lambda name: not name in self.stimulus_signals and not self.clocks.has_key(name)
+        for signal,related in self.itersignals(signals):
+            if not_known(signal):
+                self.static_signals[signal] = 0
 
-                for index in range(smaller,larger+1):
-                    cur_sig = re.sub(r"\[\d+:\d+\]","["+str(index)+"]",name)
-                    if self.source_signals.has_key(cur_sig) or self.clocks.has_key(cur_sig):
-                        pass
-                    else:
-                        self.static_signals[cur_sig] = 0
-
-            else:
-                if self.source_signals.has_key(name) or self.clocks.has_key(name):
-                    pass
-                else:
-                    self.static_signals[name] = 0
         self.added_static_signals = True
 
 
@@ -225,77 +218,126 @@ class CellRiseFall_Char(CharBase):
             if not clock_edges.has_key(clock_name):
                 clock_edges[clock_name] = []
             if (clock_dir == 'R'):
-                cnt = 0
-                for edge in self.get_rising_edges(clock_name):
-                    if cnt == 1:
-                        clock_edges[clock_name].append(edge)
-                    cnt = cnt + 1 if cnt < 2 else 0
+                clock_edges[clock_name].append(self.get_rising_edges(clock_name)[1*3+1])
+                clock_edges[clock_name].append(self.get_rising_edges(clock_name)[3*3+1])
+                # cnt = 0
+                # for edge in self.get_rising_edges(clock_name)[1,4,2]:
+                    # if cnt == 1:
+                        # clock_edges[clock_name].append(edge)
+                    # cnt = cnt + 1 if cnt < 2 else 0
                 self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
             else:
-                cnt = 0
-                for edge in self.get_falling_edges(clock_name):
-                    if cnt == 1:
-                        clock_edges[clock_name].append(edge)
-                    cnt = cnt + 1 if cnt < 2 else 0
+                clock_edges[clock_name].append(self.get_falling_edges(clock_name)[1*3+1])
+                clock_edges[clock_name].append(self.get_falling_edges(clock_name)[3*3+1])
+                # cnt = 0
+                # for edge in self.get_falling_edges(clock_name):
+                    # if cnt == 1:
+                        # clock_edges[clock_name].append(edge)
+                    # cnt = cnt + 1 if cnt < 2 else 0
                 self.logger_debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
 
 
 
-        for source,probe in self.source_signals.iteritems():
+        for timing_signal in self.timing_signals.itervalues():
+            # some alias pointers
+            stimulus = timing_signal.stimulus()
+            probe = timing_signal.name()
+            probe_lc = probe
+            if not self.use_spectre:
+                probe_lc = probe.lower()
+            # initial timing values
             delta_t = [0,0]
             tran = [0,0]
-            probe_lc = probe.lower()
 
-            if self.probe_signal_directions[source] == 'positive_unate':
+            self.logger_debug( "Rising edges of "+probe+" at "+" ".join([str(x) for x in self.get_rising_edges(probe_lc)]))
+            self.logger_debug( "Falling edges of "+probe+" at "+" ".join([str(x) for x in self.get_falling_edges(probe_lc)]))
+
+            if timing_signal.unateness() == 'positive_unate':
                 r_edges_probe = self.get_rising_edges(probe_lc)
-                if r_edges_probe and len(r_edges_probe) > 0:
-                    # get threshold time for rising transition lower
-                    tran[0] = r_edges_probe.pop(0)
-                    # get threshold time for switching point
-                    delta_t[0] = r_edges_probe.pop(0)
-                    delta_t[0] -= clock_edges[self.signal_to_clock[probe]][0]
-                    # get threshold time for rising transition upper
-                    tran[0] = r_edges_probe.pop(0) - tran[0]
+                if r_edges_probe:
+                    while len(r_edges_probe) > 0:
+                        lower  = r_edges_probe.pop(0)
+                        middle = r_edges_probe.pop(0)
+                        upper  = r_edges_probe.pop(0)
+                        # get switching point
+                        delta_t[0] = middle - clock_edges[timing_signal.clock()][0]
+                        # get rising transition
+                        tran[0] = upper - lower
+                        if delta_t[0] < 0 or delta_t[0] > self.timing_offset*1.e-9:
+                            self.logger_debug("Rising edge at "+str(middle)+" for signal " \
+                                              +probe+" too far away from clock edge")
+                            delta_t[0] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[0]))
+                            break
                 else:
-                    self.logger_debug("Rising edge for signal "+probe_lc+" not found but expected.")
+                    self.logger_error("Rising edge for signal "+probe+" not found but expected.")
+                    return 1
 
                 f_edges_probe = self.get_falling_edges(probe_lc)
-                if f_edges_probe and len(f_edges_probe) > 0:
-                    # get threshold time for rising transition lower
-                    tran[1] = f_edges_probe.pop(0)
-                    # get threshold time for switching point
-                    delta_t[1] = f_edges_probe.pop(0)
-                    delta_t[1] -= clock_edges[self.signal_to_clock[probe]][1]
-                    # get threshold time for falling transition upper
-                    tran[1] = f_edges_probe.pop(0) - tran[1]
+                if f_edges_probe:
+                    while len(f_edges_probe) > 0:
+                        lower  = f_edges_probe.pop(0)
+                        middle = f_edges_probe.pop(0)
+                        upper  = f_edges_probe.pop(0)
+                        # get threshold time for switching point
+                        delta_t[1] = middle - clock_edges[timing_signal.clock()][1]
+                        # get threshold time for falling transition upper
+                        tran[1] = upper-lower
+                        if delta_t[1] < 0 or delta_t[1] > self.timing_offset*1.e-9:
+                            self.logger_debug("Falling edge at "+str(middle)+" for signal " \
+                                              +probe+" too far away from clock edge")
+                            delta_t[1] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            break
                 else:
-                    self.logger_debug("Falling edge for signal "+probe_lc+" not found but expected.")
+                    self.logger_error("Falling edge for signal "+probe+" not found but expected.")
+                    return 1
 
 
-            elif self.probe_signal_directions[source] == 'negative_unate':
+            elif timing_signal.unateness() == 'negative_unate':
                 f_edges_probe = self.get_falling_edges(probe_lc)
-                if f_edges_probe and len(f_edges_probe) > 0:
-                    # get threshold time for falling transition lower
-                    tran[1] = f_edges_probe.pop(0)
-                    # get threshold time for switching point
-                    delta_t[1] = f_edges_probe.pop(0)
-                    delta_t[1] -= clock_edges[self.signal_to_clock[probe]][0]
-                    # get threshold time for rising transition upper
-                    tran[1] = f_edges_probe.pop(0) - tran[1]
+                if f_edges_probe:
+                    while len(f_edges_probe) > 0:
+                        lower  = f_edges_probe.pop(0)
+                        middle = f_edges_probe.pop(0)
+                        upper  = f_edges_probe.pop(0)
+                        # get threshold time for switching point
+                        delta_t[1] = middle - clock_edges[timing_signal.clock()][0]
+                        # get threshold time for rising transition upper
+                        tran[1] = upper - lower
+                        if delta_t[1] < 0 or delta_t[1] > self.timing_offset*1.e-9:
+                            self.logger_debug("Falling edge at "+str(middle)+" for signal " \
+                                              +probe+" too far away from clock edge")
+                            delta_t[1] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            break
                 else:
-                    self.logger_debug("Falling edge for signal "+probe_lc+" not found but expected.")
+                    self.logger_error("Falling edge for signal "+probe_lc+" not found but expected.")
+                    return 1
 
                 r_edges_probe = self.get_rising_edges(probe_lc)
-                if r_edges_probe and len(r_edges_probe) > 0:
-                    # get threshold time for rising transition lower
-                    tran[0] = r_edges_probe.pop(0)
-                    # get threshold time for switching point
-                    delta_t[0] = r_edges_probe.pop(0)
-                    delta_t[0] -= clock_edges[self.signal_to_clock[probe]][1]
-                    # get threshold time for rising transition upper
-                    tran[0] = r_edges_probe.pop(0) - tran[0]
+                if r_edges_probe:
+                    while len(r_edges_probe) > 0:
+                        lower  = r_edges_probe.pop(0)
+                        middle = r_edges_probe.pop(0)
+                        upper  = r_edges_probe.pop(0)
+                        # get threshold time for switching point
+                        delta_t[0] = middle - clock_edges[timing_signal.clock()][1]
+                        # get threshold time for rising transition upper
+                        tran[0] = upper - lower
+                        if delta_t[0] < 0 or delta_t[0] > self.timing_offset*1.e-9:
+                            self.logger_debug("Rising edge at "+str(middle)+" for signal " \
+                                              +probe+" too far away from clock edge")
+                            delta_t[0] = self.infinity
+                        else:
+                            self.logger_debug( "Delay: "+str(delta_t[0]))
+                            break
                 else:
-                    self.logger_debug("Rising edge for signal "+probe_lc+" not found but expected.")
+                    self.logger_error("Rising edge for signal "+probe_lc+" not found but expected.")
+                    return 1
 
             self.delays[probe] = delta_t
             self.transitions[probe] = tran

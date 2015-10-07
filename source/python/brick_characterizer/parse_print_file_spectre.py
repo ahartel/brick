@@ -55,10 +55,10 @@ def parse_print_file(filename,rise_th,fall_th):
                     current_signal_name = m.group(1)
                     signal_value = 0
                     read_numbers = True
-                    print "Found signal name "+current_signal_name
+                    # print "Found signal name "+current_signal_name
                 else:
-                    print "No signal name found"
-                    print line
+                    # print "No signal name found"
+                    # print line
                     #m = signal_name_wrap.match(line)
                     #if m:
                     #    current_signal_name += m.group(1)
@@ -72,7 +72,7 @@ def parse_print_file(filename,rise_th,fall_th):
             if comment.match(line):
                 continue
             elif start_value.match(line):
-                print "Found start"
+                # print "Found start"
                 found_start = 1
 
         if read_numbers:
@@ -178,8 +178,8 @@ def parse_print_file(filename,rise_th,fall_th):
 
     f.close()
 
-    print rising_edges
-    print falling_edges
+    # print rising_edges
+    # print falling_edges
 
     return rising_edges,falling_edges
 
@@ -208,10 +208,10 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
                     current_signal_name = m.group(1)
                     signal_value = 0
                     read_numbers = True
-                    print "Found signal name "+current_signal_name
+                    # print "Found signal name "+current_signal_name
                 else:
-                    print "No signal name found"
-                    print line
+                    # print "No signal name found"
+                    # print line
                     #m = signal_name_wrap.match(line)
                     #if m:
                     #    current_signal_name += m.group(1)
@@ -225,7 +225,7 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
             if comment.match(line):
                 continue
             elif start_value.match(line):
-                print "Found start"
+                # print "Found start"
                 found_start = 1
 
         if read_numbers:
