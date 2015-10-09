@@ -1,2 +1,4 @@
 INCLUDE $TSMC_DIR/oa/cds.lib
+INCLUDE /cad/libs/tsmc_cern/65nm_vcad/digital/Back_End/cdk/tcbn65lp_200a_oa/1p9m6x1z1u/cds.lib
+
 DEFINE brick_test /superfast/home/ahartel/brick-devel/test/cdslib

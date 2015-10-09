@@ -1,0 +1,4 @@
+
+simulator lang=spectre insensitive=yes
+include "/afs/kip.uni-heidelberg.de/cad/libs/tsmc/PDK_CRN65LP_v1.7a_Official_IC61_20120914/models/spectre/toplevel.scs" section=tt_lib
+include "./build/results/DFD1_wrapper.pex.netlist"
