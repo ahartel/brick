@@ -135,13 +135,17 @@ class synplifyTask(ChattyBrickTask):
 				# always_ff does not infer sequential logic
 				if re.match("@W: CL216",line):
 					errors.append(line)
-					# found_error = 1
+					found_error = 1
 				# always_comb does not infer combinatorial logic
 				elif re.match("@W: CL217",line):
 					errors.append(line)
 					found_error = 1
 				# always_latch does not infer latch logic
 				elif re.match("@W: CL218",line):
+					errors.append(line)
+					found_error = 1
+				# clock source not found
+				elif re.match("@W: MT511",line):
 					errors.append(line)
 					found_error = 1
 				# error
