@@ -9,17 +9,9 @@ class CellRiseFall_Char(CharBase):
         self.toplevel = toplevel
         self.output_filename = output_filename
 
-        self.input_rise_time = 0.1
         self.load_capacitance = 0.01
         self.clock_rise_time = 0.1 #ns
         self.signal_rise_time = 0.1 #ns
-        self.initial_delay = 0.4 #ns
-        self.simulation_length = 12.0 #ns
-
-        self.slew_lower_rise = 0.3
-        self.slew_upper_rise = 0.7
-        self.slew_lower_fall = 0.3
-        self.slew_upper_fall = 0.7
 
         self.stimulus_signals = []
 
@@ -27,6 +19,10 @@ class CellRiseFall_Char(CharBase):
         self.transitions = {}
 
         super(CellRiseFall_Char,self).__init__(temperature,use_spectre)
+        # The following assignments have to be after the super constructor
+        self.initial_delay = self.clock_period/2.0
+        self.simulation_length = 9.0 #ns
+
 
     def get_delays(self):
         return self.delays
@@ -35,16 +31,16 @@ class CellRiseFall_Char(CharBase):
         return self.transitions
 
     def get_first_table_param(self):
-        return self.get_input_rise_time()
+        return round(self.get_clock_rise_time(),5)
 
     def get_second_table_param(self):
         return self.get_load_capacitance()
 
-    def get_input_rise_time(self):
-        return self.input_rise_time
+    def get_clock_rise_time(self):
+        return self.clock_rise_time*self.slew_derate_factor
 
-    def set_input_rise_time(self,value):
-        self.input_rise_time = value
+    def set_clock_rise_time(self,value):
+        self.clock_rise_time = value/self.slew_derate_factor
 
     def get_load_capacitance(self):
         return self.load_capacitance
@@ -53,10 +49,10 @@ class CellRiseFall_Char(CharBase):
         self.load_capacitance = value
 
     def whats_my_name(self):
-        return 'CellRiseFall_Char_inTr'+str(self.input_rise_time)+'_cap'+str(self.load_capacitance)
+        return 'CellRiseFall_Char_inTr'+str(self.get_clock_rise_time())+'_cap'+str(self.load_capacitance)
 
     def log_my_name(self):
-        return self.state+'\tin'+str(self.input_rise_time)+'\tcap'+str(self.load_capacitance)
+        return self.state+'\tin'+str(self.get_clock_rise_time())+'\tcap'+str(self.load_capacitance)
 
     def next_step(self):
         # this class has only one step
@@ -66,7 +62,8 @@ class CellRiseFall_Char(CharBase):
             self.write_spice_file()
             if not self.run() == 0:
                 return 1
-            self.check_timing()
+            if not self.check_timing() == 0:
+                return 1
 
             self.state = 'done'
 
@@ -77,7 +74,7 @@ class CellRiseFall_Char(CharBase):
     def get_current_filename(self):
         import os
         name,ext = os.path.splitext(self.output_filename)
-        return name+'_inTr'+str(self.input_rise_time)+'_cap'+str(self.load_capacitance)+'_'+self.state+ext
+        return name+'_inTr'+str(self.get_clock_rise_time())+'_cap'+str(self.load_capacitance)+'_'+self.state+ext
 
     def add_timing_signals(self,clocks,tim_sig):
 
@@ -177,18 +174,19 @@ class CellRiseFall_Char(CharBase):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
 
         start_time = self.timing_offset - rising_delay
-        start_time_2 = self.timing_offset*2 - falling_delay
+        start_time_2 = self.timing_offset+self.clock_period - falling_delay
         first_value = self.low_value
         second_value = self.high_value
 
         self.append_out('+ 0.0000000e+00 '+str(first_value)+'e+00')
         self.append_out('+ '+str(start_time)+'e-9 '+str(first_value)+'e+0')
-        self.append_out('+ '+str(start_time+transition_time)+'e-09 '+str(second_value)+'e+00)')
+        self.append_out('+ '+str(start_time+transition_time)+'e-09 '+str(second_value)+'e+00')
         self.append_out('+ '+str(start_time_2)+'e-9 '+str(second_value)+'e+00')
         self.append_out('+ '+str(start_time_2+transition_time)+'e-09 '+str(first_value)+'e+00)')
 
     def add_capacitance(self,signal_name,capacitance):
-        self.append_out('C'+signal_name+' '+signal_name+' 0 '+str(capacitance)+'pf')
+        self.append_out('C'+signal_name+' '+signal_name \
+                       +' 0 '+str(capacitance)+'e-12')
 
     def add_pseudo_static_signals(self,signals):
         """Pseudo-Static signals in the case of an Output timing
@@ -214,29 +212,32 @@ class CellRiseFall_Char(CharBase):
             return 1
         # find clock edge
         clock_edges = {}
-        for clock_name, clock_dir in self.clocks.iteritems():
-            if not clock_edges.has_key(clock_name):
-                clock_edges[clock_name] = []
-            if (clock_dir == 'R'):
-                clock_edges[clock_name].append(self.get_rising_edges(clock_name)[1*3+1])
-                clock_edges[clock_name].append(self.get_rising_edges(clock_name)[3*3+1])
-                # cnt = 0
-                # for edge in self.get_rising_edges(clock_name)[1,4,2]:
-                    # if cnt == 1:
-                        # clock_edges[clock_name].append(edge)
-                    # cnt = cnt + 1 if cnt < 2 else 0
-                self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
-            else:
-                clock_edges[clock_name].append(self.get_falling_edges(clock_name)[1*3+1])
-                clock_edges[clock_name].append(self.get_falling_edges(clock_name)[3*3+1])
-                # cnt = 0
-                # for edge in self.get_falling_edges(clock_name):
-                    # if cnt == 1:
-                        # clock_edges[clock_name].append(edge)
-                    # cnt = cnt + 1 if cnt < 2 else 0
-                self.logger_debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
-
-
+        try:
+            for clock_name, clock_dir in self.clocks.iteritems():
+                if not clock_edges.has_key(clock_name):
+                    clock_edges[clock_name] = []
+                self.logger_debug(str(self.get_rising_edges(clock_name)))
+                if (clock_dir == 'R'):
+                    clock_edges[clock_name].append(self.get_rising_edges(clock_name)[1*3+1])
+                    clock_edges[clock_name].append(self.get_rising_edges(clock_name)[2*3+1])
+                    # cnt = 0
+                    # for edge in self.get_rising_edges(clock_name)[1,4,2]:
+                        # if cnt == 1:
+                            # clock_edges[clock_name].append(edge)
+                        # cnt = cnt + 1 if cnt < 2 else 0
+                    self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
+                else:
+                    clock_edges[clock_name].append(self.get_falling_edges(clock_name)[1*3+1])
+                    clock_edges[clock_name].append(self.get_falling_edges(clock_name)[2*3+1])
+                    # cnt = 0
+                    # for edge in self.get_falling_edges(clock_name):
+                        # if cnt == 1:
+                            # clock_edges[clock_name].append(edge)
+                        # cnt = cnt + 1 if cnt < 2 else 0
+                    self.logger_debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
+        except:
+            self.logger_debug("Died")
+            return 1
 
         for timing_signal in self.timing_signals.itervalues():
             # some alias pointers
@@ -268,7 +269,7 @@ class CellRiseFall_Char(CharBase):
                                               +probe+" too far away from clock edge")
                             delta_t[0] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[0]))
+                            self.logger_debug("Rising Delay: "+str(delta_t[0]))
                             break
                 else:
                     self.logger_error("Rising edge for signal "+probe+" not found but expected.")
@@ -289,7 +290,7 @@ class CellRiseFall_Char(CharBase):
                                               +probe+" too far away from clock edge")
                             delta_t[1] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            self.logger_debug( "Falling Delay: "+str(delta_t[1]))
                             break
                 else:
                     self.logger_error("Falling edge for signal "+probe+" not found but expected.")
@@ -312,7 +313,7 @@ class CellRiseFall_Char(CharBase):
                                               +probe+" too far away from clock edge")
                             delta_t[1] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            self.logger_debug( "Falling Delay: "+str(delta_t[1]))
                             break
                 else:
                     self.logger_error("Falling edge for signal "+probe_lc+" not found but expected.")
@@ -333,7 +334,7 @@ class CellRiseFall_Char(CharBase):
                                               +probe+" too far away from clock edge")
                             delta_t[0] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[0]))
+                            self.logger_debug( "Rising Delay: "+str(delta_t[0]))
                             break
                 else:
                     self.logger_error("Rising edge for signal "+probe_lc+" not found but expected.")
@@ -359,6 +360,7 @@ class CellRiseFall_Char(CharBase):
         returncode = subprocess.call(call)
 
         if not returncode == 0:
+            self.logger_error("Error in Parse print file")
             return 1
 
         import pickle
@@ -366,5 +368,8 @@ class CellRiseFall_Char(CharBase):
             self.rising_edges = pickle.load(input)
         with open(self.get_printfile_name()+'_falling') as input:
             self.falling_edges = pickle.load(input)
+
+        # self.logger_debug(str(self.rising_edges))
+        # self.logger_debug(str(self.falling_edges))
 
         return 0

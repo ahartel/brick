@@ -11,7 +11,8 @@ from brick_characterizer.CharBase import CharBase
 # setup and hold timing values for negative_unate signals!
 
 class SetupHold_Char(CharBase):
-    def __init__(self,toplevel,output_filename,temperature,use_spectre=False):
+    def __init__(self,toplevel,output_filename,temperature,output_cap,
+                 use_spectre=False):
         self.toplevel = toplevel
         self.output_filename = output_filename
         # store probe signals and their related inputs
@@ -30,6 +31,7 @@ class SetupHold_Char(CharBase):
         self.setups = { }
         self.holds = { }
 
+        self.output_capacitance = output_cap
         self.initial_delay = 0.5 #ns
         self.initial_stepsize = 0.25 #ns
         self.current_delay = {}
@@ -48,10 +50,14 @@ class SetupHold_Char(CharBase):
         super(SetupHold_Char,self).__init__(temperature,use_spectre)
 
     def whats_my_name(self):
-        return 'SetupHold_Char_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)
+        name = 'SetupHold_Char_clk'+str(self.get_clock_rise_time())
+        name += '_sig'+str(self.get_signal_rise_time())
+        return name
 
     def log_my_name(self):
-        return self.state+'\tc'+str(self.clock_rise_time)+'\ts'+str(self.signal_rise_time)+'\t#'+str(self.state_cnt)
+        name = self.state+'\tc'+str(self.get_clock_rise_time())
+        name += '\ts'+str(self.get_signal_rise_time())+'\t#'+str(self.state_cnt)
+        return name
 
     def get_holds(self):
         return self.holds
@@ -60,22 +66,22 @@ class SetupHold_Char(CharBase):
         return self.setups
 
     def get_first_table_param(self):
-        return self.get_clock_rise_time()
+        return round(self.get_clock_rise_time(),5)
 
     def get_second_table_param(self):
-        return self.get_signal_rise_time()
+        return round(self.get_signal_rise_time(),5)
 
     def get_clock_rise_time(self):
-        return self.clock_rise_time
+        return self.clock_rise_time*self.slew_derate_factor
 
     def set_clock_rise_time(self,value):
-        self.clock_rise_time = value
+        self.clock_rise_time = value/self.slew_derate_factor
 
     def get_signal_rise_time(self):
-        return self.signal_rise_time
+        return self.signal_rise_time*self.slew_derate_factor
 
     def set_signal_rise_time(self,value):
-        self.signal_rise_time = value
+        self.signal_rise_time = value/self.slew_derate_factor
 
     def update_lower_th_to_current_delay(self,signal,edge_type):
         self.logger_debug("Setting lower threshold of signal "+signal+" to "+str(self.current_delay[signal][edge_type]))
@@ -88,7 +94,16 @@ class SetupHold_Char(CharBase):
     def generate_two_edges(self,signal,transition_time,rising_delay,falling_delay,unateness):
         self.append_out('V'+signal+' '+signal+' 0 pwl(')
 
-        if self.state == 'delay' or self.state == 'setup':
+        if self.state == 'delay':
+            start_time   = self.timing_offset - self.clock_period/2.0
+            start_time_2 = self.timing_offset + self.clock_period*1.5
+
+            self.append_out('+ 0.0000000e+00 '+str(self.low_value)+'e+00')
+            self.add_output_rise_edge(start_time,transition_time)
+            self.add_output_fall_edge(start_time_2,transition_time)
+            self.append_out(')')
+
+        elif self.state == 'setup':
             start_time   = self.timing_offset
             start_time_2 = self.timing_offset + self.clock_period*2
 
@@ -108,6 +123,8 @@ class SetupHold_Char(CharBase):
             self.append_out('+ '+str(start_time_2-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
             self.append_out('+ '+str(start_time_2+transition_time*0.5)+'e-09 '+str(first_value)+'e+00)')
 
+
+
         elif self.state == 'hold':
             start_time   = self.timing_offset
             start_time_2 = self.timing_offset + self.clock_period*2
@@ -124,25 +141,19 @@ class SetupHold_Char(CharBase):
 
             mid_time = self.timing_offset + self.clock_period - self.initial_delay
             mid_time_2 = self.timing_offset + self.clock_period + self.initial_delay
-            first_value = self.high_value
-            second_value = self.low_value
 
-            self.append_out('+ 0.0000000e+00 '+str(second_value)+'e+00')
-            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 - self.clock_period*0.1)+'e-09 '+str(second_value)+'e+00')
-            self.append_out('+ '+str(self.timing_offset - self.clock_period*0.5 + self.clock_period*0.1)+'e-09 '+str(first_value)+'e+00')
-
-            self.append_out('+ '+str(start_time-transition_time*0.5)+'e-9 '+str(first_value)+'e+00')
-            self.append_out('+ '+str(start_time+transition_time*0.5)+'e-09 '+str(second_value)+'e+00')
+            self.append_out('+ 0.0000000e+00 '+str(self.low_value)+'e+00')
+            self.add_output_rise_edge(self.timing_offset \
+                                      - self.clock_period*0.5,
+                                      transition_time)
+            self.add_output_fall_edge(start_time, transition_time)
 
             if mid_time > 0 and mid_time_2 > 0:
-                self.append_out('+ '+str(mid_time - self.clock_period*0.1)+'e-9 '+str(second_value)+'e+00')
-                self.append_out('+ '+str(mid_time + self.clock_period*0.1)+'e-09 '+str(first_value)+'e+00')
+                self.add_output_rise_edge(mid_time,transition_time)
+                self.add_output_fall_edge(mid_time_2, transition_time)
 
-                self.append_out('+ '+str(mid_time_2 - self.clock_period*0.1)+'e-9 '+str(first_value)+'e+00')
-                self.append_out('+ '+str(mid_time_2 + self.clock_period*0.1)+'e-09 '+str(second_value)+'e+00')
-
-            self.append_out('+ '+str(start_time_2-transition_time*0.5)+'e-9 '+str(second_value)+'e+00')
-            self.append_out('+ '+str(start_time_2+transition_time*0.5)+'e-09 '+str(first_value)+'e+00)')
+            self.add_output_rise_edge(start_time_2,transition_time)
+            self.append_out(')')
 
 
     def set_initial_condition(self,signal):
@@ -216,19 +227,29 @@ class SetupHold_Char(CharBase):
 
         self.logger_debug("Generating "+str(len(self.probe_signals))+" edges.")
         for probe,signal in self.probe_signals.iteritems():
-            self.generate_two_edges(signal,self.signal_rise_time,self.current_delay[signal][0],self.current_delay[signal][1],self.probe_signal_directions[probe])
+            self.generate_two_edges(signal,
+                                    self.signal_rise_time,
+                                    self.current_delay[signal][0],
+                                    self.current_delay[signal][1],
+                                    self.probe_signal_directions[probe])
             #self.logger_debug("Generating edge for "+signal+" with rising delay "+str(self.current_delay[signal][0])+ " and falling delay "+str(self.current_delay[signal][1]))
             self.add_probe(signal)
 
         #for signal in self.probe_signals.iterkeys():
             self.add_probe(probe)
             self.set_initial_condition(probe)
+            self.add_output_cap(probe)
 
+    def add_output_cap(self,out):
+        self.append_out('C'+out+' '+out+' 0 ' \
+                        +str(self.output_capacitance)+'e-12')
 
     def get_current_filename(self):
         import os
         name,ext = os.path.splitext(self.output_filename)
-        return name+'_clk'+str(self.clock_rise_time)+'_sig'+str(self.signal_rise_time)+'_'+self.state+'_'+str(self.state_cnt)+ext
+        name += '_clk'+str(self.get_clock_rise_time())+'_sig'
+        name += str(self.get_signal_rise_time())+'_'+self.state+'_'+str(self.state_cnt)+ext
+        return name
 
 
     def add_timing_signals(self,clocks,tim_sig):
@@ -314,7 +335,6 @@ class SetupHold_Char(CharBase):
 
             if self.state_cnt == self.max_setup_steps-1:
                 self.state_cnt = 0
-                self.state = 'hold'
                 for probe,sig in self.probe_signals.iteritems():
                     # be conservative!
                     # in the case of setup timing this means to take the lower threshold
@@ -334,6 +354,8 @@ class SetupHold_Char(CharBase):
                     self.current_delay[sig] = [self.initial_delay,self.initial_delay]
                     self.current_stepsize[sig] = [self.initial_stepsize,self.initial_stepsize]
                     self.direction[sig] = [-1.,-1.]
+
+                self.state = 'hold'
 
             else:
                 self.state_cnt += 1
@@ -382,22 +404,32 @@ class SetupHold_Char(CharBase):
         # after this step, all edges are identified
         if not self.parse_print_file() == 0:
             return 1
-        self.logger_info('Continuing to interpret edges from parse_print_file()')
+
         # find clock edge
         clock_edges = {}
         for clock_name, clock_dir in self.clocks.iteritems():
             if not clock_edges.has_key(clock_name):
                 clock_edges[clock_name] = []
+            self.logger_debug('Clock edges for '+clock_name \
+                             +': '+str(self.get_rising_edges(clock_name)))
             if (clock_dir == 'R'):
                 clock_edges[clock_name] = self.get_rising_edges(clock_name)
-                # remove middle clock edge, since it is not relevant for the calculations
+                # remove first and middle clock edges, since it is not relevant
+                # for the calculations
+                del clock_edges[clock_name][0]
+                # here, we actually delete entry 2, but since 0 is already
+                # dropped
                 del clock_edges[clock_name][1]
-                self.logger_debug( "Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
+                self.logger_debug("Rising edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
             else:
                 clock_edges[clock_name] = self.get_falling_edges(clock_name)
-                # remove middle clock edge, since it is not relevant for the calculations
+                # remove first and middle clock edges, since it is not relevant
+                # for the calculations
+                del clock_edges[clock_name][0]
+                # here, we actually delete entry 2, but since 0 is already
+                # dropped
                 del clock_edges[clock_name][1]
-                self.logger_debug( "Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
+                self.logger_debug("Falling edge of "+clock_name+" at "+" ".join([str(x) for x in clock_edges[clock_name]]))
 
         for signal,related in self.probe_signals.iteritems():
             delta_t = [0,0]
@@ -408,11 +440,11 @@ class SetupHold_Char(CharBase):
                         delta_t[0] = r_edge
                         self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
                         delta_t[0] -= clock_edges[self.signal_to_clock[related]][0]
-                        if delta_t[0] < 0 or delta_t[0] > self.timing_offset*1.e-9:
+                        if delta_t[0] < 0 or delta_t[0] > self.clock_period*1.e-9:
                             self.logger_debug("Rising edge for signal "+signal+" too far away from clock edge")
                             delta_t[0] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[0]))
+                            self.logger_debug("Rising edge delay is: "+str(delta_t[0]))
                             break
                 else:
                     self.logger_debug("Rising edge for signal "+signal+" not found but expected")
@@ -424,11 +456,11 @@ class SetupHold_Char(CharBase):
                         delta_t[1] = f_edge
                         self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
                         delta_t[1] -= clock_edges[self.signal_to_clock[related]][1]
-                        if delta_t[1] < 0 or delta_t[1] > self.timing_offset*1.e-9:
+                        if delta_t[1] < 0 or delta_t[1] > self.clock_period*1.e-9:
                             self.logger_debug("Falling edge for signal "+signal+" too far away from clock edge")
                             delta_t[1] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            self.logger_debug("Falling edge delay is: "+str(delta_t[1]))
                             break
                 else:
                     self.logger_debug("Falling edge for signal "+signal+" not found but expected")
@@ -440,11 +472,11 @@ class SetupHold_Char(CharBase):
                         delta_t[1] = f_edge
                         self.logger_debug( "Falling edge for "+signal+" at "+str(delta_t[1]))
                         delta_t[1] -= clock_edges[self.signal_to_clock[related]][0]
-                        if delta_t[1] < 0 or delta_t[1] > self.timing_offset*1.e-9:
+                        if delta_t[1] < 0 or delta_t[1] > self.clock_period*1.e-9:
                             self.logger_debug("Falling edge for signal "+signal+" too far away from clock edge")
                             delta_t[1] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[1]))
+                            self.logger_debug("Falling edge delay is: "+str(delta_t[1]))
                             break
                 else:
                     self.logger_debug("Falling edge for signal "+signal+" not found but expected")
@@ -456,11 +488,11 @@ class SetupHold_Char(CharBase):
                         delta_t[0] = r_edge
                         self.logger_debug( "Rising edge for "+signal+" at "+str(delta_t[0]))
                         delta_t[0] -= clock_edges[self.signal_to_clock[related]][1]
-                        if delta_t[0] < 0 or delta_t[0] > self.timing_offset*1.e-9:
+                        if delta_t[0] < 0 or delta_t[0] > self.clock_period*1.e-9:
                             self.logger_debug("Rising edge for signal "+signal+" too far away from clock edge")
                             delta_t[0] = self.infinity
                         else:
-                            self.logger_debug( "Delay: "+str(delta_t[0]) )
+                            self.logger_debug("Rising edge delay is: "+str(delta_t[0]) )
                             break
                 else:
                     self.logger_debug("Rising edge for signal "+signal+" not found but expected")
@@ -486,7 +518,7 @@ class SetupHold_Char(CharBase):
             elif self.state == 'setup' or self.state == 'hold':
                 # iterate over rising and falling constraint
                 for edge_type in [0,1]:
-                    self.logger_debug("Checking "+("rising" if edge_type==0 else 'falling')+" edge of signal "+signal+".")
+                    self.logger_debug("Checking delay of "+("rising" if edge_type==0 else 'falling')+" edge of signal "+signal+".")
                     # currently searching in negative direction
                     # (i.e.) signal edge delay getting smaller (or more negative) compared to clock edge
                     if self.direction[related][edge_type] < 0 and delta_t[edge_type] < self.delays[related][edge_type]*self.point_of_failure:
@@ -501,7 +533,8 @@ class SetupHold_Char(CharBase):
                             self.current_delay[related][edge_type] -= self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
 
                     elif self.direction[related][edge_type] < 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
-                        self.logger_debug("Delay is too large, switching to pos. direction")
+                        self.logger_debug("Delay of %e is too large"%(delta_t[edge_type]) \
+                                         +", switching to pos. direction")
                         self.update_upper_th_to_current_delay(related,edge_type)
                         self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
                         self.direction[related][edge_type] = +1.
@@ -516,8 +549,13 @@ class SetupHold_Char(CharBase):
                         self.current_stepsize[related][edge_type] = self.current_stepsize[related][edge_type]/2.
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
 
-                    elif self.direction[related][edge_type] > 0 and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
-                        self.logger_debug("Delay is too large, keeping pos. direction")
+                    elif self.direction[related][edge_type] > 0 \
+                        and delta_t[edge_type] > self.delays[related][edge_type]*self.point_of_failure:
+                        debug_string = "Delay of %e is "%(delta_t[edge_type])
+                        debug_string += "larger than %e,"%(self.delays[related][edge_type]*self.point_of_failure)
+                        debug_string += "keeping pos. direction"
+                        self.logger_debug(debug_string)
+
                         self.update_upper_th_to_current_delay(related,edge_type)
                         self.current_delay[related][edge_type] += self.direction[related][edge_type] * self.current_stepsize[related][edge_type]
                         # don't check points twice, step back a bit instead

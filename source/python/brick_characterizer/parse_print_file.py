@@ -186,7 +186,7 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
     stop_value = re.compile(r"^y")
     signal_name = re.compile(r"\s+([\w\[\]\(\)]+)\s+$")
     signal_name_wrap = re.compile(r"\s+\+\s+\+\s+([\w\[\]\(\)]+)")
-    numbers = re.compile(r"([\d\.]+)([TGMkmunpfazy]?)\s+([\d\.]+)([TGMkmunpfazy]?)")
+    numbers = re.compile(r"([\d\.]+)([TGMkmunpfazy]?)\s+([\d\.]+)([TGMkmunpfazy]?)(e[+-]\d+)?")
     found_start = 0
     current_signal_name = ''
     signal_value = 0
@@ -229,8 +229,14 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
                     if m.group(2):
                         time = time*oom(m.group(2))
                     voltage = float(m.group(3))
-                    if m.group(4):
-                        voltage = voltage*oom(m.group(4))
+                    if m.group(5):
+                        voltage = float(m.group(3)+m.group(5))
+                    elif m.group(4):
+                        voltage = float(m.group(3))*oom(m.group(4))
+                    # if time>1.100e-9 and time < 1.110e-9:
+                        # print m.groups()
+                        # print voltage
+
                     if signal_value == 0:
                         if not rising_edges.has_key(current_signal_name):
                             rising_edges[current_signal_name] = []
@@ -239,33 +245,41 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
 
                         if voltage < fall_th:
                             signal_value = 'R'
+                            # print time,signal_value
                         elif voltage > rise_th:
                             signal_value = 'F'
+                            # print time,signal_value
                     elif signal_value == 'R':
                         if voltage > slew_lower_rise:
                             rising_edges[current_signal_name].append(time)
                             signal_value = 'R1'
+                            # print time,signal_value
                     elif signal_value == 'R1':
                         if voltage > rise_th:
                             rising_edges[current_signal_name].append(time)
                             signal_value = 'R2'
+                            # print time,signal_value
                     elif signal_value == 'R2':
                         if voltage > slew_upper_rise:
                             rising_edges[current_signal_name].append(time)
                             signal_value = 'F'
+                            # print time,signal_value
 
                     elif signal_value == 'F':
                         if voltage < slew_upper_fall:
                             falling_edges[current_signal_name].append(time)
                             signal_value = 'F1'
+                            # print time,signal_value
                     elif signal_value == 'F1':
                         if voltage < fall_th:
                             falling_edges[current_signal_name].append(time)
                             signal_value = 'F2'
+                            # print time,signal_value
                     elif signal_value == 'F2':
                         if voltage < slew_lower_fall:
                             falling_edges[current_signal_name].append(time)
                             signal_value = 'R'
+                            # print time,signal_value
 
     f.close()
     return rising_edges,falling_edges

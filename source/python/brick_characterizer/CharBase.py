@@ -7,11 +7,16 @@ class CharBase(object):
         self.__temperature = temperature
         self.rise_threshold = 0.501
         self.fall_threshold = 0.499
+        self.slew_lower_rise = 0.3
+        self.slew_upper_rise = 0.7
+        self.slew_lower_fall = 0.3
+        self.slew_upper_fall = 0.7
+        self.slew_derate_factor = 0.8
         self.high_value = 1.2
         self.low_value = 0.0
         self.timing_offset = 4.0 #ns
-        self.clock_period = 2.0 #ns
-        self.simulation_length = 10.0 #ns
+        self.clock_period = 3.0 #ns
+        self.simulation_length = 12.0 #ns
         self.epsilon = 1.e-6
         self.infinity = 1000.
         self.added_static_signals = False
@@ -45,15 +50,23 @@ class CharBase(object):
 
     # logger bleiben
     def logger_debug(self,text):
+        """Debugging output wrapper that prepends *self.log_my_name()* to the
+        output"""
         logging.debug(self.log_my_name()+' '+text)
 
     def logger_warning(self,text):
+        """Warning output wrapper that prepends *self.log_my_name()* to the
+        output"""
         logging.warning(self.log_my_name()+' '+text)
 
     def logger_error(self,text):
+        """Error output wrapper that prepends *self.log_my_name()* to the
+        output"""
         logging.error(self.log_my_name()+' '+text)
 
     def logger_info(self,text):
+        """Info output wrapper that prepends *self.log_my_name()* to the
+        output"""
         logging.info(self.log_my_name()+' '+text)
 
     def set_rise_threshold(self,value):
@@ -87,7 +100,18 @@ class CharBase(object):
 
         self.include_netlists.append(netlist)
 
+    def add_static_signals(self,signals):
+        for signal,related in self.itersignals(signals):
+            if self.added_timing_signals:
+                if self.timing_signals.has_key(signal) or self.source_signals.has_key(signal) or self.clocks.has_key(signal):
+                    raise Exception('Static signal '+signal+' has already been defined as a timing or clock signal.')
+            self.static_signals[signal] = value
+
+        self.added_static_signals = True
+
     def get_rising_edges(self,signal_name):
+        """Access the rising edges that have been extracted with
+        *parse_print_file()*."""
         edges = None
         if not self.use_spectre:
             signal_name = signal_name.lower()
@@ -103,6 +127,8 @@ class CharBase(object):
         return edges
 
     def get_falling_edges(self,signal_name):
+        """Access the falling edges that have been extracted with
+        *parse_print_file()*."""
         edges = None
         if not self.use_spectre:
             signal_name = signal_name.lower()
@@ -125,14 +151,6 @@ class CharBase(object):
 
         self.append_out('')
 
-    def add_static_signals(self,signals):
-        for signal,related in self.itersignals(signals):
-            if self.added_timing_signals:
-                if self.timing_signals.has_key(signal) or self.source_signals.has_key(signal) or self.clocks.has_key(signal):
-                    raise Exception('Static signal '+signal+' has already been defined as a timing or clock signal.')
-            self.static_signals[signal] = value
-
-        self.added_static_signals = True
 
     def generate_instance(self):
         # spectre needs an extra instantiation of the circuit
@@ -228,6 +246,8 @@ class CharBase(object):
             return 1.e9
 
     def run(self):
+        """Start the actual simulation for the current step using
+        *subprocess.call()*."""
         import subprocess
         call = []
         if not self.use_spectre:
@@ -259,6 +279,15 @@ class CharBase(object):
             return 1
 
     def write_spice_file(self):
+        """Write the spice file for the current step. This calls::
+
+            self.write_header()
+            self.generate_static_signals()
+            self.generate_timing_signals()
+            self.generate_additional_probes()
+            self.generate_instance()
+
+        """
 
         self.write_header()
         self.generate_static_signals()
@@ -285,8 +314,8 @@ class CharBase(object):
 
     def itersignals(self,signals,eval_index_expression=False):
         """This is a generator function that iterates over the signals in the
-        input dict. The input dict can contain multiple signals or buses. For
-        buses the individual signal bits will be yielded. If
+        input dict (*signals*). The input dict can contain multiple signals or
+        buses. For buses the individual signal bits will be yielded. If
         eval_index_expression is set to True, the item at position 1 of the
         list that is associated with each signals is checked for index
         expressions.
@@ -337,4 +366,19 @@ class CharBase(object):
     def set_initial_condition(self,signal_name,value):
         self.append_out('.IC V('+signal_name+')='+str(value))
         self.append_out('.NODESET V('+signal_name+')='+str(value))
+
+    def _add_edge(self, at, tran, from_level, to_level):
+        """Append two lines to the spice file output, the add an edge to a
+        piecewise linear source. Both lines start with a '+' sign (spice
+        multi-line statements). *at* and *tran* must be given in nano seconds.
+        *from_level* and *to_level* in volt or ampere."""
+
+        self.append_out('+ '+str(at-tran*0.5)+'e-9 '+str(from_level)+'e+00')
+        self.append_out('+ '+str(at+tran*0.5)+'e-09 '+str(to_level)+'e+00')
+
+    def add_output_rise_edge(self, at, tran):
+        self._add_edge(at, tran, self.low_value, self.high_value)
+
+    def add_output_fall_edge(self, at, tran):
+        self._add_edge(at, tran, self.high_value, self.low_value)
 

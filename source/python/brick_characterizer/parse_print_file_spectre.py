@@ -57,6 +57,7 @@ def parse_print_file(filename,rise_th,fall_th):
                     read_numbers = True
                     # print "Found signal name "+current_signal_name
                 else:
+                    pass
                     # print "No signal name found"
                     # print line
                     #m = signal_name_wrap.match(line)
@@ -210,6 +211,7 @@ def parse_print_file_tran(filename,rise_th,fall_th,slew_lower_rise,slew_upper_ri
                     read_numbers = True
                     # print "Found signal name "+current_signal_name
                 else:
+                    pass
                     # print "No signal name found"
                     # print line
                     #m = signal_name_wrap.match(line)

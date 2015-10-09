@@ -27,7 +27,7 @@ def start_setup_hold_thread(run):
 
 def start_delay_thread(run):
 
-    print "Starting thread for "+run.whats_my_name()
+    logging.debug("Starting thread for "+run.whats_my_name())
     OK = True
     while run.has_steps():
         if not run.next_step() == 0:
@@ -54,8 +54,9 @@ def append_wait_check_pool(size,jobs,function,constraint_template):
     # append a worker for each entry in the list of jobs
     results = []
     for run in jobs:
-        print "Appending job "+run.whats_my_name()+" to Pool"
         results.append(pool.apply_async(function,(run,)))
+        logging.info("Appending job "+run.whats_my_name() \
+                    +" to Pool at position "+str(len(results)-1))
     # don't allow further entries into the pool (this is mandatory for later join())
     pool.close()
     # The while loop polls for the results of the processes
@@ -215,7 +216,12 @@ def do_characterization(
 
             for i in range(len(constraint_template[0])):
                 for j in range(len(constraint_template[1])):
-                    setup_hold_runs.append(SetupHold_Char(cell_name,output_netlist_file,temperature,use_spectre))
+                    setup_hold_runs.append(SetupHold_Char(cell_name,
+                                                          output_netlist_file,
+                                                          temperature,
+                                                          # output capacitance
+                                                          delay_template[1][0],
+                                                          use_spectre))
                     setup_hold_runs[len(setup_hold_runs)-1].set_powers(powers)
                     for netlist in inc_netlists:
                         setup_hold_runs[len(setup_hold_runs)-1].add_include_netlist(netlist)
@@ -247,7 +253,7 @@ def do_characterization(
                     delay_runs[len(delay_runs)-1].add_timing_signals(clocks,output_timing_signals)
                     delay_runs[len(delay_runs)-1].add_pseudo_static_signals(input_timing_signals)
 
-                    delay_runs[len(delay_runs)-1].set_input_rise_time(delay_template[0][i])
+                    delay_runs[len(delay_runs)-1].set_clock_rise_time(delay_template[0][i])
                     delay_runs[len(delay_runs)-1].set_load_capacitance(delay_template[1][j])
 
 
