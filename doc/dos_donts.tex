@@ -35,11 +35,17 @@
 		Sources and generating rundirs can both be located in external repositories.
 		The recursing rundir can then decide (upon existance of external repositories) whether to use a local file or rundir as an input or to generate its necessary inputs.
 \end{description}
+    \item Connect analog blocks in your top level \textit{SystemVerilog} code
+        with signals of type \texttt{interconnect}.
+    \item Make heavy use of structs and interfaces. This results in better
+        readable code. And it avoids using the slicing operator too much.
 \end{itemize}
 \section{Dont's}
 \begin{itemize}
-	\item Don't instantiate arrays of AMS modules in pure verilog or SystemVerilog code, because otherwise \tf{ncelab} will tell you:
-\begin{lstbashplain}
-ncelab: *E,ILANAOI (...): Only pure digital array of instances are allowed in AMS.
-\end{lstbashplain}
+    \item Don't instantiate arrays of AMS modules in pure verilog or
+        SystemVerilog code, because otherwise \tf{ncelab} will tell you:
+        \begin{lstbashplain}
+        ncelab: *E,ILANAOI (...):
+           Only pure digital array of instances are allowed in AMS.
+        \end{lstbashplain}
 \end{itemize}
