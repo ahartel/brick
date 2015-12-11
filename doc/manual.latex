@@ -44,7 +44,7 @@
 
 \newenvironment{lstbashplain}{%
 \VerbatimEnvironment
-\begin{minted}[numbersep=5pt]{bash}}
+\begin{minted}[numbersep=5pt,autogobble=true]{bash}}
 {%
 \end{minted}}
 
