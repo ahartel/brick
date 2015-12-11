@@ -6,6 +6,7 @@ from verilog_scanner import scan_verilog_task
 from vhdl_scanner import vhdl_scanner
 from waflib import Task,TaskGen,ConfigSet,Configure
 from brick_general import ChattyBrickTask
+from waflib.Utils import to_list
 
 def options(opt):
 	opt.add_option('--xilinxlib', action='store', help='Define the path to the xilinxlib')
@@ -45,7 +46,7 @@ def get_worklib_path_from_string(self,lib):
 	return worklib
 
 @TaskGen.taskgen_method
-def check_create_worklib_task(self,lib):
+def check_create_modelsim_worklib_task(self,lib):
 	worklib = self.get_worklib_path_from_string(lib)
 	worklib_gen_output = worklib.find_node('_info')
 	if worklib_gen_output is None and not getattr(self,'worklib_task',None):
@@ -143,18 +144,40 @@ TaskGen.declare_chain(
 
 class ModelsimSvlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${MODEL_VLOG} -l ${gen.logfile} -sv ${VLOG_SV_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
+	run_str = '${MODEL_VLOG} -l ${gen.logfile} -sv ${gen.VLOG_SV_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${gen.source_string_sv}'
 
 class ModelsimVlogTask(Task.Task):
 	scan = scan_verilog_task
-	run_str = '${MODEL_VLOG} -l ${gen.logfile} ${VLOG_V_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
+	run_str = '${MODEL_VLOG} -l ${gen.logfile} ${gen.VLOG_V_OPTIONS} -work ${gen.WORKLIB.abspath()} ${VERILOG_INC_DIRS} ${gen.source_string_v}'
 
 
 @TaskGen.before('process_source')
 @TaskGen.feature('modelsim')
 def modelsim_vlog_prepare(self):
+	if hasattr(self,'use'):
+		self.VLOG_SV_OPTIONS = []
+		self.VLOG_V_OPTIONS = []
+		uses = to_list(self.use)
+		print self.name,'uses',uses
+		for use in uses:
+			if 'VLOG_SV_OPTIONS_'+use in self.env:
+				self.VLOG_SV_OPTIONS.extend(self.env['VLOG_SV_OPTIONS_'+use])
+			if 'VLOG_V_OPTIONS_'+use in self.env:
+				self.VLOG_V_OPTIONS.extend(self.env['VLOG_V_OPTIONS_'+use])
+	else:
+		if 'VLOG_SV_OPTIONS' in self.env:
+			self.VLOG_SV_OPTIONS = self.env.VLOG_SV_OPTIONS
+		else:
+			self.VLOG_SV_OPTIONS = []
+		if 'VLOG_V_OPTIONS' in self.env:
+			self.VLOG_V_OPTIONS = self.env.VLOG_V_OPTIONS
+		else:
+			self.VLOG_V_OPTIONS = []
+
+	print self.name,'has',self.VLOG_SV_OPTIONS
+
 	# create task to generate worklib (if necessary)
-	self.WORKLIB,worklib_gen_output = self.check_create_worklib_task(getattr(self,'worklib','worklib'))
+	(self.WORKLIB,worklib_gen_output) = self.check_create_modelsim_worklib_task(getattr(self,'worklib','worklib'))
 	#
 	# transform search paths to the format used for ncvlog
 	#
