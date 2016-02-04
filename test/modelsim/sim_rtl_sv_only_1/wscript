@@ -1,0 +1,32 @@
+
+def configure(conf):
+    conf.load('modelsim')
+    conf.env.VSIM_OPTIONS = ['-vopt','-voptargs=+acc']
+    conf.env.MODELSIM_WORKLIBS = ['worklib']
+
+def build(bld):
+
+    bld (
+        name = 'compile_top',
+        source = bld.convert_string_paths(
+            [
+                '../../source/vhdl/counter.vhd',
+                '../../source/vhdl/counter_tb.vhd',
+            ])
+            ,
+        features = 'modelsim',
+        verilog_search_paths = bld.convert_string_paths(['../../source/vhdl'])
+    )
+
+
+def run(bld):
+    bld (
+        features = 'vsim',
+        toplevel = 'worklib.counter_tb',
+    )
+
+from waflib.Build import BuildContext
+class one(BuildContext):
+    cmd = 'run'
+    fun = 'run'
+

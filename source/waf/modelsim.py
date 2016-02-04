@@ -23,8 +23,8 @@ def configure(conf):
 	conf.env.INCLUDES_VENDOR = [
 		os.environ['MODEL_SIM_ROOT']+'/include/',
 	]
-	conf.env.VSIM_OPTIONS = []
-	conf.env.MODELSIM_WORKLIBS = []
+	conf.env.VSIM_OPTIONS = ['-64']
+	conf.env.MODELSIM_WORKLIBS = ['-64']
 
 	conf.find_program('vlog',var='MODEL_VLOG')
 	conf.find_program('vcom',var='MODEL_VCOM')
