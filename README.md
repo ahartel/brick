@@ -1,8 +1,8 @@
-﻿#################
-# brICk specification
-#################
-# Author: Andreas Hartel
-# Date: 2011-07-13
+﻿# brICk #
+
+> Implemented between 2011 and 2016
+> Author: Andreas Hartel
+> Insititution: Kirchhoff-Insititut for Physics, Heidelberg University
 
 brICk is a waf-based IC design work flow tool that offers design-independent build folder management. Multiple build runs of an IC design can be kept in parallel and can be switched between. Design source files, such as i.e. HDL code, tcl scripts and full custom design files can be copied into the components folder of the tool's directory structure. Their paths, given in a text file, will be used by brICk to hook into and allow it to execute the necessary tasks. These tasks may include
 
@@ -19,82 +19,4 @@ Later on in the development of brICk, it should be possible to maintain differen
 
 brICk stands for |b|ackend |r|apid |IC| |k|it. It is intended as a hardware development counterpart to symap2IC, the central software build flow of the Electronic Vision(s) group which is also based on waf.
 
-*file tree structure*
-------------------------
-
-brICk
- |------ wscript: main waf control script
- |------ config: config directory containing XML files with paths to hooks in the source tree folder
- |------ build: folder containing one uniquely named folder for each build run
- |------ resources: (mostly) symbolic links to shared and non-IC-specific IP repositories
- \------ components: working copies of IC-specific input files
-
-*XML configuration file structure*
------------------------------------
-
-<brICk>
-    <projectName>FG miniasic</projectName>
-    <projectShortName>fg_miniasic</projectShortName>
-    <tasks>
-        <step class="abstract">
-            <analib>UMC_18_CMOS</analib>
-            <techlib>UMC_18_CMOS_FAR</techlib>
-            <cell name="hicann_outamp_top" lib="fc_opamp">
-                <cellBaseDir>components/ncf-hicann-fc/units/fc_opamp/abstract</cellBaseDir>
-                <cdsLibFile>components/ncf-hicann-fc/units/fc_opamp/abstract/cds.lib</cdsLibFile>
-                <cdsLibPath>components/ncf-hicann-fc/units/fc_opamp/cdslib/fc_opamp</cdsLibPath>
-                <subStep name="genLEF">
-                    <skillScript>scripts/fc_opamp.absgen.il</skillScript>
-                </subStep>
-                <subStep name="genLIB">
-                </subStep>
-                <subStep name="genDB">
-                </subStep>
-            </cell>
-            ...
-        </step>
-        <step class="dc">
-            <stepBaseDir>components/mccfc/units/top/rtl2gds/dc_shell</stepBaseDir>
-            <subStep name="compile">
-                <TCLscript>scripts/Top_pins.dc.tcl</TCLscript>
-                <outputFile>Top_pins.v</outputFile>
-                <after>genLIB</after>
-            </subStep>
-        </step>
-        <step class="encounter">
-            <stepBaseDir>components/mccfc/units/top/rtl2gds/encounter</stepBaseDir>
-            <subStep name="bind">
-                <TCLscript>scripts/bind.tcl</TCLscript>
-                <outputFile>results/encounter/Top_pins_enc/Top_pins_bind.enc</outputFile>
-            </subStep>
-            <subStep name="floorplan">
-                <TCLscript>scripts/floorplan.tcl</TCLscript>
-                <outputFile>results/encounter/Top_pins_enc/Top_pins_floorplan.enc</outputFile>
-                <after>bind</after>
-            </subStep>
-            ...
-        </step>
-    </tasks>
-    <tests>
-        <sources>
-            <group name="bla">
-                a.v,b.sv
-            </group>
-            <group name="blubb">
-                c.vhdl,...
-            </group>
-            ...
-        </sources>
-        <testcases>
-            <testcase name="huhu">
-                <sourcegroups>bla,blubb</sourcegroups>
-                <options tool="NCVLOG" mode="rtl">
-                </options>
-                <options tool="NCVLOG" mode="mixed-signal">
-                </options>
-                ...
-            </testcase>
-        </testcases>
-    </tests>
-</brICk>
 
