@@ -17,6 +17,4 @@ Files resulting from these operations will always be avoided to be copied to the
 In a future version, the user should be able to switch back to old runs and continue to work on them at any later point and at any given state. This can involve an abandonment of the strict distinction between source (i.e. input) file tree and result (i.e. output) file tree and make it necessary to copy the current task's tcl scripts and/or necessary other input files to the current run directory. To allow for continuation of past build runs, brICk will at least have to force the user to commit the current source file tree's state to the version control system and save the commit ID for later resumption.
 Later on in the development of brICk, it should be possible to maintain different configurations to be able to keep one single brICk folder, holding in it's components folder the source files of different IC designs and making it even possible to switch between different designs.
 
-brICk stands for |b|ackend |r|apid |IC| |k|it. It is intended as a hardware development counterpart to symap2IC, the central software build flow of the Electronic Vision(s) group which is also based on waf.
-
-
+brICk stands for |b|ackend |r|apid |IC| |k|it. It is intended as a hardware development counterpart to symwaf2ic, the central software build flow of the Electronic Vision(s) group which is also based on waf.
