@@ -1,4 +1,5 @@
 import re
+import copy
 import os, logging
 
 class CharBase(object):
@@ -344,20 +345,22 @@ class CharBase(object):
 
                 for index in range(smaller,larger+1):
                     cur_sig = re.sub(r"\[\d+:\d+\]","["+str(index)+"]",name)
+                    cur_rel = copy.copy(related)
                     if eval_index_expression is True:
-                        cur_probe = related[1]
                         tests = []
                         tests.append(re.compile(r"=(index)="))
                         tests.append(re.compile(r"=([\*\d\%\+\/\-]*index[\*\d\%\+\/\-]*)="))
 
                         match = None
                         for test in tests:
-                            match = test.search(related[1])
+                            match = test.search(cur_rel[1])
                             while match:
-                                cur_probe = test.sub(str(int(eval(match.group(1)))),cur_probe,count=1)
-                                match = test.search(cur_probe)
+                                evaluated_index = int(eval(match.group(1)))
+                                cur_rel[1] = test.sub(str(evaluated_index),
+                                                     cur_rel[1], count=1)
+                                match = test.search(cur_rel[1])
 
-                    yield cur_sig,related
+                    yield cur_sig,cur_rel
 
             else:
                 yield name,related

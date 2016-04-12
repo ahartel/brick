@@ -35,7 +35,9 @@ def create_calibre_lvs_task(self):
 
 
 	f = open(self.rule_file.abspath(),"w")
-	f.write("""
+	f.write("""#!tvf
+tvf::VERBATIM {{
+
 LAYOUT PATH "{0}"
 LAYOUT PRIMARY {1}
 LAYOUT SYSTEM GDSII
@@ -77,8 +79,9 @@ DRC ICSTATION YES
 		f.write(line+'\n')
 
 	for inc in self.includes:
-		f.write('\nINCLUDE '+inc.abspath())
+		f.write('\nINCLUDE "'+inc.abspath()+'"')
 
+	f.write('\n}')
 	f.close()
 
 	if hasattr(self,'hcells'):

@@ -1,7 +1,8 @@
 import os, datetime
 
 def options(opt):
-    pass
+	opt.add_option('--rule-file', action='store',
+		help='Give the path to the Calibre rule file.')
 
 def configure(conf):
     conf.load('brick_general')
@@ -24,6 +25,15 @@ def configure(conf):
     conf.env.CELL_NAME_LAYOUT = ('brick_test','sr_data_ffs','layout')
     conf.env.CELL_NAME_SOURCE = ('brick_test','sr_data_ffs','schematic')
 
+    conf.env.RULE_FILE = os.path.join(os.environ['TSMC_DIR'],
+                'PDK_CRN65LP_v1.7a_Official_IC61_20120914/Calibre/rcx/calibre.rcx')
+
+    if conf.options.rule_file:
+        conf.env.RULE_FILE = conf.options.rule_file
+    else:
+        if not os.path.exists(conf.env.RULE_FILE):
+            raise Exception("Rule file not found and not specified.")
+
 def build(bld):
     bld ( features = 'cds_write_libs' )
 
@@ -40,14 +50,13 @@ def build(bld):
         include = os.environ['BRICK_DIR']+'/source/spice/tsmc_special_cells.net'
     )
 
-
     bld (
         features = 'calibre_lvs',
         layout_cellname = bld.env.CELL_NAME_LAYOUT[1],
         source_cellname = bld.env.CELL_NAME_SOURCE[1],
         layout_gds = ffs_streamout.get_cadence_strmout_gds_node(),
         source_netlist = ffs_netlist.get_cds_netlist_lvs_node(),
-        includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
+        includes = [bld.root.find_node(bld.env.RULE_FILE)],
         mixins = [
                 'LVS RECOGNIZE GATES ALL',
         ]
@@ -58,7 +67,7 @@ def build(bld):
         features = 'calibre_pex',
         cellname = bld.env.CELL_NAME_LAYOUT[1],
         layout_gds = ffs_streamout.get_cadence_strmout_gds_node(),
-        includes = [bld.root.find_node(os.environ['BRICK_DIR']+'/source/calibre/pex.rules')],
+        includes = [bld.root.find_node(bld.env.RULE_FILE)],
         only_extract_nets = [
                 'd_in?',
                 'd_out?'
@@ -90,8 +99,6 @@ def build(bld):
             ],
 
         static_signals = {
-            #'pc_confb[3:0]': 0,
-            #'w_conf[7:0]': 0,
             },
 
         powers = {
@@ -106,10 +113,6 @@ def build(bld):
         input_timing_signals = {
             'd_in[1:0]': ['clk','d_in_ff[=index=]','positive_unate'],
             'd_out_ff[1:0]': ['clk','d_out[=index=]','positive_unate'],
-            #'write_mask_data[0:63]'   : ['clk', 'N_XI12[=index=]_wd_int_q_XI12[=index=]_MM2_g', 'positive_unate'],
-            #'write_mask_config[0:63]' : ['clk', 'N_XI12[=index=]_wc_int_q_XI12[=index=]_MM27_g', 'positive_unate'],
-            #'addr[6:0]' : ['clk', 'XI1_XI15_q[=index=]', 'positive_unate'],
-            #'d_in[0:511]' : ['clk', 'XI12[=index/8=]_Xdriver_pre[=index%8=]_net047', 'positive_unate'],
             },
 
         output_timing_signals = {
@@ -142,7 +145,7 @@ def build(bld):
         ],
 
         parasitics_report = pex.get_calibre_pex_output_file_node('.pex.report'),
-        logfile = './logfiles/brick_characterize_data_ffs_'+str(datetime.datetime.now())+'.log',
+        logfile = './brick_characterize_data_ffs_'+str(datetime.datetime.now())+'.log',
 
         # debugging switch
         only_rewrite_lib_file = False,

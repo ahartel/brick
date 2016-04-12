@@ -44,8 +44,8 @@ class SetupHold_Char(CharBase):
         self.signal_rise_time = 0.1 #ns
         self.point_of_failure = 1.1 # 10 percent of delay
 
-        self.max_setup_steps = 9
-        self.max_hold_steps = 9
+        self.max_setup_steps = 15
+        self.max_hold_steps = 15
 
         super(SetupHold_Char,self).__init__(temperature,use_spectre)
 

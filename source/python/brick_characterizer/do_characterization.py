@@ -236,6 +236,7 @@ def do_characterization(
             setup_hold_failed,setups,holds = append_wait_check_pool(9,setup_hold_runs,start_setup_hold_thread,constraint_template)
 
 
+        # Characterize Output timing and rise and fall times
         if not skip_delays and not setup_hold_failed:
             from brick_characterizer.CellRiseFall_Char import CellRiseFall_Char
 
@@ -250,7 +251,8 @@ def do_characterization(
                     for netlist in inc_netlists:
                         delay_runs[len(delay_runs)-1].add_include_netlist(netlist)
                     delay_runs[len(delay_runs)-1].add_static_signals(static_signals)
-                    delay_runs[len(delay_runs)-1].add_timing_signals(clocks,output_timing_signals)
+                    delay_runs[len(delay_runs)-1].add_clock_signals(clocks)
+                    delay_runs[len(delay_runs)-1].add_timing_signals(output_timing_signals)
                     delay_runs[len(delay_runs)-1].add_pseudo_static_signals(input_timing_signals)
 
                     delay_runs[len(delay_runs)-1].set_clock_rise_time(delay_template[0][i])

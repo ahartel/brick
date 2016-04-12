@@ -74,31 +74,53 @@ class CellRiseFall_Char(CharBase):
     def get_current_filename(self):
         import os
         name,ext = os.path.splitext(self.output_filename)
-        return name+'_inTr'+str(self.get_clock_rise_time())+'_cap'+str(self.load_capacitance)+'_'+self.state+ext
+        return name+'_inTr'+str(self.get_clock_rise_time())+'_cap' \
+               +str(self.load_capacitance)+'_'+self.state+ext
 
-    def add_timing_signals(self,clocks,tim_sig):
+    def add_clock_signals(self,clocks):
 
+        # Add clock signals
         self.clocks = clocks
-
+        # Check if one of the clocks is alreay given as a static signal
         if self.added_static_signals:
             for name in clocks.iterkeys():
                 if self.static_signals.has_key(name):
-                    raise Exception('Clock signal '+name+' has already been defined as a static signal.')
+                    raise Exception('Clock signal '+name+' has already been'
+                                    + ' defined as a static signal.')
 
-        for signal,related in self.itersignals(tim_sig,
+    def add_timing_signals(self,tim_sig):
+        """This function adds the timing signals for this characterization run.
+        Ther parameter tim_sig has the following data structure:
+
+            {
+                'd_out[1:0]' : ['clk', 'd_out_ff[=index=]', 'positive_unate'],
+                'd_in_ff[1:0]' : ['clk', 'd_in[=index=]', 'positive_unate'],
+            }
+
+        There are two signals involved: The measured signal (in this case
+        d_out[1:0] and d_in_ff[1:0]) and the stimulus_signal (in this case
+        d_out_ff[1:0] and d_in[1:0])."""
+
+        # Add the actual timing signals
+        for signal, related in self.itersignals(tim_sig,
                                                eval_index_expression=True):
-                if self.added_static_signals:
-                    if self.static_signals.has_key(signal):
-                        raise Exception('Timing signal '+signal+' has already been defined as a static signal.')
 
-                t = TimingSignal(signal,related)
-                self.timing_signals[signal] = t
-                # The following list stores a unique list of the stimulus
-                # signals for later pulse source generation in the net list
-                self.stimulus_signals.append(t.stimulus())
 
-                self.delays[signal] = []
-                self.transitions[signal] = []
+            # Check if one of the clocks is alreay given as a static signal
+            if self.added_static_signals:
+                if self.static_signals.has_key(signal):
+                    raise Exception('Timing signal '+signal+' has ' \
+                                    + 'already been defined as a ' \
+                                    + 'static signal.')
+
+            t = TimingSignal(signal,related)
+            self.timing_signals[signal] = t
+            # The following list stores a unique list of the stimulus
+            # signals for later pulse source generation in the net list
+            self.stimulus_signals.append(t.stimulus())
+
+            self.delays[signal] = []
+            self.transitions[signal] = []
 
         self.stimulus_signals = set(self.stimulus_signals)
         self.added_timing_signals = True
@@ -195,10 +217,13 @@ class CellRiseFall_Char(CharBase):
         It assigns zero to all of them during simulation."""
 
         if not self.added_timing_signals:
-            raise Exception('Cannot add pseudo-static signals before timing_signals have been added. Please call this function afterwards.')
+            raise Exception('Cannot add pseudo-static signals before' \
+                            + ' timing_signals have been added. Please call' \
+                            + ' this function afterwards.')
 
         not_known = lambda name: not name in self.stimulus_signals and not self.clocks.has_key(name)
-        for signal,related in self.itersignals(signals):
+        for signal,related in self.itersignals(signals,
+                                               eval_index_expression=True):
             if not_known(signal):
                 self.static_signals[signal] = 0
 
