@@ -1,3 +1,3 @@
 
 pdf:
-	pdflatex -shell-escape manual.latex
+	pdflatex -interaction=nonstopmode -shell-escape manual.latex
