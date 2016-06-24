@@ -4,7 +4,7 @@ import string
 #import types
 from verilog_scanner import scan_verilog_task
 from vhdl_scanner import vhdl_scanner
-from waflib import Task, TaskGen, ConfigSet, Configure
+from waflib import Task, TaskGen, ConfigSet, Configure, Errors
 from brick_general import ChattyBrickTask
 from waflib.Utils import to_list
 
@@ -21,11 +21,17 @@ def configure(conf):
     conf.env.VCOM_LOGFILE = '/vcom.log'
     conf.env.VSIM_LOGFILE = conf.env.BRICK_LOGFILES+'/vsim.log'
 
-    conf.env.INCLUDES_VENDOR = [
-        os.environ['MODEL_SIM_ROOT']+'/include/',
-    ]
+    try:
+        conf.env.INCLUDES_VENDOR = [
+            os.environ['MODEL_SIM_ROOT']+'/include/',
+            ]
+    except KeyError:
+        raise Errors.ConfigurationError('It seems that modelsim hasn\'t been' \
+                                        +' installed. Please make sure that' \
+                                        +' variable MODEL_SIM_ROOT is defined.')
+
     conf.env.VSIM_OPTIONS = ['-64']
-    conf.env.MODELSIM_WORKLIBS = ['-64']
+    conf.env.MODELSIM_WORKLIBS = []
 
     conf.find_program('vlog',var='MODEL_VLOG')
     conf.find_program('vcom',var='MODEL_VCOM')
