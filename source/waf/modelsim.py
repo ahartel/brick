@@ -38,14 +38,6 @@ def configure(conf):
     conf.find_program('vsim',var='MODEL_VSIM')
     conf.find_program('vlib',var='MODEL_VLIB')
 
-#@Configure.conf
-#def check_create_worklib(self,name):
-#   worklib = self.path.get_bld()
-#   if not os.path.exists(worklib.abspath()):
-#       worklib.mkdir()
-#   worklib = worklib.make_node(name)
-#   # add path to worklib to vsim_options
-#   self.env.MODELSIM_WORKLIBS.extend(['-L',worklib.abspath()])
 
 @TaskGen.taskgen_method
 def get_worklib_path_from_string(self,lib):

@@ -230,7 +230,7 @@ def fix_verilog_name_cellview(cellview):
 	ret = split_cellview(cellview)
 	return ret[0]+'.'+fix_verilog_name(ret[1])+':'+ret[2]
 
-class vlibTask(Task.Task):
+class cdsWorklibTask(Task.Task):
 	def run(self):
 		run_str = """mkdir -p ${TGT[0].parent.abspath()} && echo '<?xml version="1.0"?>
 
@@ -246,7 +246,7 @@ def check_create_worklib_task(self,lib):
 	worklib = self.path.get_bld().find_node(lib+'/.oalib')
 	if not worklib and not getattr(self,'worklib_task',None):
 		worklib = self.path.get_bld().make_node(lib+'/.oalib')
-		worklib_task = self.create_task('vlibTask',None,worklib.get_bld())
+		worklib_task = self.create_task('cdsWorklibTask',None,worklib.get_bld())
 		return worklib_task
 	else:
 		return None
