@@ -7,6 +7,7 @@ def configure(conf):
 	conf.load('cadence_netlist')
 	conf.load('cadence_config')
 
+        conf.env['CDS_MIXED_SIGNAL'] = True
 
 @TaskGen.feature('cds_mixed_signal')
 def gen_cds_mixed_signal_tasks(self):

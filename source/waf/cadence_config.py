@@ -10,7 +10,6 @@ class CDSconfigTask(Task.Task):
 	def run(self):
 		cellname = fix_verilog_name(self.generator.cellname)
 		with open(self.outputs[0].abspath(),'w') as expand_cfg:
-			expand_cfg.write('//Revision 5\n')
 			expand_cfg.write('config ' + cellname + ';\n')
 			expand_cfg.write('design ' + self.generator.design + ';\n')
 			expand_cfg.write('liblist ' + self.generator.liblist + ';\n')
@@ -47,7 +46,7 @@ def gen_cds_config_task(self):
 	(self.libname,self.cellname,self.viewname) = self.get_cadence_lib_cell_view_from_cellview()
 	# save viewlist
 	try:
-		self.viewlist = ",".join(getattr(self,'viewlist',['schematic','symbol']))
+		self.viewlist = ", ".join(getattr(self,'viewlist',['schematic','symbol']))
 	except TypeError:
 		Logs.error('Please specify the viewlist as a list with the feature \'cds_config\'.')
 		return
