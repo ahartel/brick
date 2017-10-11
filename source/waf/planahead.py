@@ -13,12 +13,39 @@ def configure(conf):
 def scan_planAhead_script(self):
 	self.tcl_file_node = self.path.find_node(getattr(self,'tcl_file',None))
 	if not self.tcl_file_node:
-		raise Errors.ConfigurationError('A TCL file for planAhread could not be found: '+getattr(self,'tcl_file',None))
+		raise Errors.ConfigurationError('A TCL file for planAhead could not be found: '+getattr(self,'tcl_file',None))
+
+	# check if constraints and netlists for planahead exist
+	# both rel and abs paths are needed due to tcl parsing behaviour below
+	# ugly but works ...
+	self.constraints_node = []
+	self.c_path = {'rel': [],
+                       'abs': []}
+	for constraint in self.constraints:
+		temp = self.path.find_node(constraint)
+		if not temp:
+			raise Errors.ConfigurationError('A constraint file for planAhead could not be found: ' + temp)
+		self.constraints_node.append(temp)
+		self.c_path['rel'].append(constraint)
+		self.c_path['abs'].append(temp.abspath())
+	self.netlists_node = []
+	self.n_path = {'rel': [],
+                       'abs': []}
+	for netlist in self.netlists:
+		temp = self.path.find_node(netlist)
+		if not temp:
+			raise Errors.ConfigurationError('A ngc netlist file for planAhead could not be found: ' + temp)
+		self.netlists_node.append(temp)
+		self.n_path['rel'].append(netlist)
+		self.n_path['abs'].append(temp.abspath())
 
 	inputs = [self.tcl_file_node]
 	outputs = []
 	variables = {'BRICK_RESULTS': './results',
-				'PROJECT_ROOT': self.env.PROJECT_ROOT}
+                     'PROJECT_ROOT': self.env.PROJECT_ROOT,
+                     'PROJECT_NAME': self.project_name,
+                     'CONSTRAINTS': ' '.join(self.c_path['rel']),
+                     'NETLISTS': ' '.join(self.n_path['rel'])}
 
 	# help file
 	project_file_name = os.path.split(self.tcl_file_node.abspath())[1]
@@ -26,6 +53,9 @@ def scan_planAhead_script(self):
 	with open(help_file.abspath(),'w') as hf:
 		hf.write('set BRICK_RESULTS ./results\n')
 		hf.write('set PROJECT_ROOT '+self.env.PROJECT_ROOT+'\n')
+		hf.write('set PROJECT_NAME '+self.project_name+'\n')
+		hf.write('set CONSTRAINTS [list '+' '.join(self.c_path['abs'])+']\n')
+		hf.write('set NETLISTS [list '+' '.join(self.n_path['abs'])+']\n')
 
 	#
 	# Project file parsing
